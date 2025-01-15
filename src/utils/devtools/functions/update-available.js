@@ -3,13 +3,9 @@ import { store } from "/state/store.js";
 
 export function emitSyntheticUpdateAvailable() {
   const hasUpdateEvent = {
-    type: 'system-state',
-    data: {
-      update: {
-        updateAvailable: !store.getContext("sys").updateAvailable
-      }
-    }
+    type: 'system-update-available',
+    update: true
   }
   
-  sysController.ingestSystemStateUpdate(hasUpdateEvent.data)
+  sysController.ingestSystemStateUpdate(hasUpdateEvent)
 }

@@ -135,7 +135,7 @@ class SocketChannel {
           pkgController.ingestProgressUpdate(data);
           break;
 
-        case "system-updates-available":
+        case "system-update-available":
           sysController.ingestSystemUpdatesAvailable(data)
           break;
 

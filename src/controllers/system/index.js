@@ -27,7 +27,7 @@ class SysController {
     }
   }
 
-  ingestSystemUpdatesAvailable() {
+  ingestSystemUpdateAvailableEvent() {
     // When an update is available, Dogeboxd emits a 'system-update-available' event
     // We pay no regard to the payload. The fact the message is received
     // is sufficient enough to toggle the client state to show update indicators.

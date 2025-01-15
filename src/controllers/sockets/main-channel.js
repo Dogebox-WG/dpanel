@@ -136,7 +136,7 @@ class SocketChannel {
           break;
 
         case "system-update-available":
-          sysController.ingestSystemUpdatesAvailable(data)
+          sysController.ingestSystemUpdateAvailableEvent(data)
           break;
 
         case "recovery":

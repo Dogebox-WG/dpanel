@@ -7,5 +7,5 @@ export function emitSyntheticUpdateAvailable() {
     update: true
   }
   
-  sysController.ingestSystemStateUpdate(hasUpdateEvent)
+  sysController.ingestSystemUpdateAvailableEvent(hasUpdateEvent)
 }

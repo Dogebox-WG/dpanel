@@ -27,7 +27,7 @@ class SysController {
     }
   }
 
-  ingestSystemStateUpdate(data) {
+  ingestSystemUpdatesAvailable(data) {
     let err;
 
     try {

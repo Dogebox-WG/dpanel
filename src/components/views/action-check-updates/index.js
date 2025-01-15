@@ -368,7 +368,8 @@ export class CheckUpdatesView extends LitElement {
 
   async pollForUpdateChange() {
     let attempts = 0;
-    const maxAttempts = 12 // 24*5000ms = 120 seconds;
+    const pollEveryMs = 5000
+    const maxAttempts = 120 // 120*0500ms/1000ms/60 = 10 minutes of waiting;
 
     const intervalId = setInterval(async () => {
       try {
@@ -403,7 +404,7 @@ export class CheckUpdatesView extends LitElement {
       } finally {
         attempts++;
       }
-    }, 5000);
+    }, pollEveryMs);
 
     return () => clearInterval(intervalId);
   }

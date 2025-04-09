@@ -47,6 +47,9 @@ import { getSetupBootstrap } from "/api/system/get-bootstrap.js";
 import { postHostReboot } from "/api/system/post-host-reboot.js";
 import { postHostShutdown } from "/api/system/post-host-shutdown.js";
 
+// Main WebSocket channel (singleton)
+import { mainChannel } from "/controllers/sockets/main-channel.js";
+
 // Do this once to set the location of shoelace assets (icons etc..)
 setBasePath("/vendor/@shoelace/cdn@2.14.0/");
 
@@ -80,7 +83,7 @@ class AppModeApp extends LitElement {
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
     this.installationMode = "";
-
+    this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
   }
@@ -100,6 +103,9 @@ class AppModeApp extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.isLoggedIn = !!store.networkContext.token;
+
+    // Instantiate a web socket connection and add main app as an observer
+    this.mainChannel.addObserver(this);
   }
 
   async fetchSetupState() {
@@ -191,6 +197,7 @@ class AppModeApp extends LitElement {
   };
 
   disconnectedCallback() {
+    this.mainChannel.removeObserver(this);
     super.disconnectedCallback();
   }
 

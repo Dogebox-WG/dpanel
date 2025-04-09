@@ -72,6 +72,7 @@ class AppModeApp extends LitElement {
     isFirstTimeSetup: { type: Boolean },
     isForbidden: { type: Boolean },
     installationMode: { type: String },
+    isInstalled: { type: Boolean },
   };
 
   constructor() {
@@ -83,6 +84,7 @@ class AppModeApp extends LitElement {
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
     this.installationMode = "";
+    this.isInstalled = false;
     this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
@@ -135,6 +137,7 @@ class AppModeApp extends LitElement {
       hasConfiguredNetwork,
       isForbidden,
       installationMode,
+      isInstalled,
     } = setupState;
 
     if (isForbidden) {
@@ -147,6 +150,10 @@ class AppModeApp extends LitElement {
 
     if (installationMode) {
       this.installationMode = installationMode;
+    }
+
+    if (isInstalled !== undefined) {
+      this.isInstalled = isInstalled;
     }
 
     // If we're already fully set up, or if we've generated a key, show our login step.
@@ -353,7 +360,8 @@ class AppModeApp extends LitElement {
                       <action-select-install-location
                         style="z-index: 999"
                         mode=${this.installationMode}
-                        ?open=${["canInstall", "mustInstall", "isInstalled"].includes(
+                        ?isInstalled=${this.isInstalled}
+                        ?open=${["canInstall", "mustInstall"].includes(
                           this.installationMode,
                         )}
                       ></action-select-install-location>

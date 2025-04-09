@@ -22,6 +22,7 @@ export class LocationPickerView extends LitElement {
   static get properties() {
     return {
       mode: { type: String }, // either canInstall or mustInstall
+      isInstalled: { type: Boolean },
       open: { type: Boolean, reflect: true },
       _ready: { type: Boolean },
       _inflight_disks: { type: Boolean },
@@ -38,6 +39,7 @@ export class LocationPickerView extends LitElement {
   constructor() {
     super();
     this.mode = "";
+    this.isInstalled = false;
     this.mainDialogOpen = true;
     this.existingInstallationDialogOpen = false;
     this._ready = false;
@@ -111,8 +113,9 @@ export class LocationPickerView extends LitElement {
     console.log('mode', this.mode);
     console.log('mainDialogOpen', this.mainDialogOpen);
     console.log('existingInstallationDialogOpen', this.existingInstallationDialogOpen);
+    console.log('isInstalled', this.isInstalled);
 
-    if (this.mode === 'isInstalled') {
+    if (this.isInstalled) {
       this.existingInstallationDialogOpen = true;
       return this.renderExistingInstall();
     }
@@ -145,6 +148,7 @@ export class LocationPickerView extends LitElement {
             <div>
               <sl-button style="margin-block-start: 2em;" @click=${() => { 
                 this.mode = 'canInstall';
+                this.isInstalled = false;
                 this.existingInstallationDialogOpen = false;
                 this.mainDialogOpen = true; }}>I know what I'm doing - I want to reinstall</sl-button>
             </div>

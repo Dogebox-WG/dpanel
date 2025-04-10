@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { getNetworks } from "/api/network/get-networks.js";
 import { putNetwork } from "/api/network/set-network.js";
 import { postSetupBootstrap } from "/api/system/post-bootstrap.js";
@@ -38,6 +38,7 @@ class SelectNetwork extends LitElement {
   static get properties() {
     return {
       showSuccessAlert: { type: Boolean },
+      showRecoveryOptions: { type: Boolean },
       reflectorToken: { type: String },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
@@ -55,6 +56,7 @@ class SelectNetwork extends LitElement {
     this._setNetworkFields = {};
     this._setNetworkValues = {};
     this._networks = [];
+    this.showRecoveryOptions = true;
 
     // Set initial fields
     this.updateSetNetworkFields();
@@ -75,68 +77,74 @@ class SelectNetwork extends LitElement {
   }
 
   updateSetNetworkFields() {
+    const fields = [
+      {
+        name: "network",
+        label: "Select Network",
+        labelAction: { name: "refresh", label: "Refresh" },
+        type: "select",
+        required: true,
+        options: this._networks
+      },
+      {
+        name: "network-ssid",
+        label: "Network SSID",
+        type: "text",
+        required: true,
+        revealOn: (state) => state.network?.value == "hidden"
+      },
+      {
+        name: "network-encryption",
+        label: "Network Encryption",
+        type: "select",
+        required: true,
+        revealOn: (state) => state.network?.value === 'hidden',
+        options: [
+          { value: 'wep', label: 'WEP' },
+          { value: 'wpa', label: 'WPA' },
+          { value: 'wpa2-psk', label: 'WPA2 Personal' },
+          { value: 'none', label: 'None' },
+        ]
+      },
+      {
+        name: "network-pass",
+        label: "Network Password",
+        type: "password",
+        required: true,
+        passwordToggle: true,
+        revealOn: (state) => {
+          // If the selected network is a broadcast wifi network with encryption, show.
+          if (state.network?.encryption) return true
+
+          // If we've selected a hidden wifi network, _and_ configured the encryption to be NOT none, show.
+          if (state.network?.value === 'hidden') {
+            if (state['network-encryption'] && state['network-encryption'].value !== 'none') {
+              return true
+            }
+          }
+
+          return false
+        }
+      }
+    ];
+
+    // Only add SSH key field if showRecoveryOptions is true
+    if (this.showRecoveryOptions) {
+      fields.push({
+        name: "ssh-key",
+        label: "SSH Key (Optional)",
+        type: "text",
+        required: false,
+        placeholder: "Pasting an SSH key here will also enable SSH"
+      });
+    }
+
     this._setNetworkFields = {
       sections: [
         {
           name: "select-network",
           submitLabel: "Much Connect",
-          fields: [
-            {
-              name: "network",
-              label: "Select Network",
-              labelAction: { name: "refresh", label: "Refresh" },
-              type: "select",
-              required: true,
-              options: this._networks
-            },
-            {
-              name: "network-ssid",
-              label: "Network SSID",
-              type: "text",
-              required: true,
-              revealOn: (state) => state.network?.value == "hidden"
-            },
-            {
-              name: "network-encryption",
-              label: "Network Encryption",
-              type: "select",
-              required: true,
-              revealOn: (state) => state.network?.value === 'hidden',
-              options: [
-                { value: 'wep', label: 'WEP' },
-                { value: 'wpa', label: 'WPA' },
-                { value: 'wpa2-psk', label: 'WPA2 Personal' },
-                { value: 'none', label: 'None' },
-              ]
-            },
-            {
-              name: "network-pass",
-              label: "Network Password",
-              type: "password",
-              required: true,
-              passwordToggle: true,
-              revealOn: (state) => {
-                // If the selected network is a broadcast wifi network with encryption, show.
-                if (state.network?.encryption) return true
-
-                // If we've selected a hidden wifi network, _and_ configured the encryption to be NOT none, show.
-                if (state.network?.value === 'hidden') {
-                  if (state['network-encryption'] && state['network-encryption'].value !== 'none') {
-                    return true
-                  }
-                }
-
-                return false
-              }
-            },
-            {
-              name: "ssh-key",
-              label: "SSH Key (Optional)",
-              type: "text",
-              required: false,
-              placeholder: "Pasting an SSH key here will also enable SSH"
-            }
-          ],
+          fields: fields
         },
       ],
     };
@@ -331,12 +339,14 @@ class SelectNetwork extends LitElement {
             </dynamic-form>
             `: nothing }
 
-            <div style="margin: 2em 8px">
-              <sl-alert variant="warning" open>
-                <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-                After you hit connect it may take up to 10 minutes while your Dogebox is configured!
-              </sl-alert>
-            </div>
+            ${this.showRecoveryOptions ? html`
+              <div style="margin: 2em 8px">
+                <sl-alert variant="warning" open>
+                  <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+                  After you hit connect it may take up to 10 minutes while your Dogebox is configured!
+                </sl-alert>
+              </div>
+            ` : nothing}
         </div>
       </div>
     `;

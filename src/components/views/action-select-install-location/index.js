@@ -147,7 +147,6 @@ export class LocationPickerView extends LitElement {
             </sl-button>
             <div>
               <sl-button style="margin-block-start: 2em;" @click=${() => { 
-                this.mode = 'canInstall';
                 this.isInstalled = false;
                 this.existingInstallationDialogOpen = false;
                 this.mainDialogOpen = true; }}>I know what I'm doing - I want to reinstall</sl-button>

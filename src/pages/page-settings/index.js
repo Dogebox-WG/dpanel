@@ -10,6 +10,7 @@ import "/components/views/action-check-updates/index.js";
 import "/components/views/action-remote-access/index.js";
 import "/components/views/x-log-viewer/index.js";
 import "/components/views/x-activity-log.js";
+import "/components/views/action-select-network/index.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
@@ -91,6 +92,13 @@ class SettingsPage extends LitElement {
     this.showImportLogsModal = false;
   }
 
+  handleSelectNetwork(e) {
+    e.preventDefault();
+    store.updateState({ dialogContext: { name: 'select-network' }});
+    const router = getRouter();
+    router.go('/settings/select-network', { replace: true });
+  }
+
   handleDialogClose() {
     store.updateState({ dialogContext: { name: null }});
     const router = getRouter();
@@ -163,7 +171,7 @@ class SettingsPage extends LitElement {
   render() {
     const { updateAvailable } = store.getContext('sys')
     const dialog = store.getContext('dialog')
-    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain"].includes(dialog.name);
+    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "select-network"].includes(dialog.name);
     
     // Debug logging
     console.log('Settings page render:', {
@@ -186,8 +194,8 @@ class SettingsPage extends LitElement {
             <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" @click=${notYet}>
               Check for updates
             </action-row>
-            <action-row prefix="wifi" label="Wifi" @click=${notYet}>
-              Add or remove Wifi networks
+            <action-row prefix="wifi" label="Select Network" href="/settings/select-network" @click=${this.handleSelectNetwork}>
+              Select a network to connect to
             </action-row>
             <action-row prefix="key" label="Remote Access" href="/settings/remote-access" @click=${notYet}>
               Manage SSH settings and keys
@@ -227,6 +235,7 @@ class SettingsPage extends LitElement {
         ${choose(dialog.name, [
           ["updates", () => html`<x-action-check-updates></x-action-check-updates>`],
           ["remote-access", () => html`<x-action-remote-access></x-action-remote-access>`],
+          ["select-network", () => html`<x-action-select-network .showRecoveryOptions=${false}></x-action-select-network>`],
           ["versions", () => renderVersionsDialog(store, this.handleDialogClose)],
           ["import-blockchain", () => this.renderImportBlockchainDialog()],
         ])}

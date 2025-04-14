@@ -80,6 +80,7 @@ class SystemSettings extends LitElement {
       disk: '',
       'device-name': '',
       use_fdn_pup_binary_cache: true,
+      use_fdn_os_binary_cache: true,
     };
     this._show_disk_size_warning = false;
     this._show_disk_size_in_use_warning = false;
@@ -146,6 +147,7 @@ class SystemSettings extends LitElement {
     store.updateState({
       setupContext: {
         useFoundationPupBinaryCache: this._changes.use_fdn_pup_binary_cache,
+        useFoundationOSBinaryCache: this._changes.use_fdn_os_binary_cache,
       },
     });
 
@@ -193,6 +195,26 @@ class SystemSettings extends LitElement {
     this._is_boot_media = diskObject.bootMedia;
     this._show_disk_size_warning = !diskObject?.suitability?.storage?.sizeOK;
     this._show_disk_in_use_warning = diskObject?.suitability?.isAlreadyUsed;
+  }
+
+  _getBinaryCacheAlertVariant() {
+    return this._changes.use_fdn_pup_binary_cache && this._changes.use_fdn_os_binary_cache ? 'primary' : 'warning';
+  }
+
+  _getBinaryCacheAlertIcon() {
+    return this._changes.use_fdn_pup_binary_cache && this._changes.use_fdn_os_binary_cache ? 'info-circle' : 'exclamation-triangle';
+  }
+
+  _getBinaryCacheAlertMessage() {
+    if (this._changes.use_fdn_pup_binary_cache && this._changes.use_fdn_os_binary_cache) {
+      return 'Using a binary cache saves time. Binaries are still validated for authenticity before installation.';
+    }
+
+    const disabledCaches = [];
+    if (!this._changes.use_fdn_pup_binary_cache) disabledCaches.push('Pup');
+    if (!this._changes.use_fdn_os_binary_cache) disabledCaches.push('OS');
+    
+    return `Just a heads up. You may experience longer ${disabledCaches.join(' and ')} install times down the track (up to 30 minutes in some cases)`;
   }
 
   handleCheckboxChange(e) {
@@ -271,7 +293,7 @@ class SystemSettings extends LitElement {
           </div>
 
           <sl-details class="advanced" summary="Advanced Settings">
-            <h4>Binary Cache
+            <h4>Binary Caches
               <sl-tooltip>
                 <div slot="content">
                   A binary cache stores pre-compiled packages to speed up installation and reduce build time. Instead of compiling everything from source code, the system can download ready-to-use binaries from the Dogecoin Foundation's cache: https://nix.dogecoin.org/
@@ -280,23 +302,30 @@ class SystemSettings extends LitElement {
               </sl-tooltip>
             <div class="form-control">
               <sl-checkbox
+                name="use_fdn_os_binary_cache"
+                ?checked=${this._changes.use_fdn_os_binary_cache}
+                .value=${this._changes.use_fdn_os_binary_cache}
+                @sl-change=${(e) => { this._changes.use_fdn_os_binary_cache = e.target.checked; this.requestUpdate(); }}
+                help-text="Uncheck to opt out of using the Dogecoin Foundation OS binary cache">
+                Use Dogecoin FDN OS binary cache
+              </sl-checkbox>
+              <sl-checkbox
                 name="use_fdn_pup_binary_cache"
                 ?checked=${this._changes.use_fdn_pup_binary_cache}
                 .value=${this._changes.use_fdn_pup_binary_cache}
                 @sl-change=${(e) => { this._changes.use_fdn_pup_binary_cache = e.target.checked; this.requestUpdate(); }}
-                help-text="Uncheck to opt out of using the Dogecoin Foundation binary cache">
-                Use Dogecoin FDN binary cache
+                help-text="Uncheck to opt out of using the Dogecoin Foundation Pup binary cache">
+                Use Dogecoin FDN Pup binary cache
               </sl-checkbox>
             </div>
 
-            <sl-alert ?open=${this._changes.use_fdn_pup_binary_cache}>
-              <sl-icon slot="icon" name="info-circle"></sl-icon>
-              Using a binary cache saves time. Binaries are still validated for authenticity before installation.
-            </sl-alert>
-
-            <sl-alert variant="warning" ?open=${!this._changes.use_fdn_pup_binary_cache}>
-              <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-              Just a heads up. You may experience longer Pup install times down the track (up to 30 minutes in some cases)
+            <sl-alert 
+              variant=${this._getBinaryCacheAlertVariant()}
+              open
+              style="margin-top: 1em;"
+            >
+              <sl-icon slot="icon" name=${this._getBinaryCacheAlertIcon()}></sl-icon>
+              ${this._getBinaryCacheAlertMessage()}
             </sl-alert>
 
           </sl-details>

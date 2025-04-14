@@ -44,6 +44,7 @@ import { instruction } from "/components/common/instruction.js";
 
 // APIS
 import { getSetupBootstrap } from "/api/system/get-bootstrap.js";
+import { getRecoveryBootstrap } from "/api/system/get-recovery-bootstrap.js";
 import { postHostReboot } from "/api/system/post-host-reboot.js";
 import { postHostShutdown } from "/api/system/post-host-shutdown.js";
 
@@ -72,6 +73,7 @@ class AppModeApp extends LitElement {
     isFirstTimeSetup: { type: Boolean },
     isForbidden: { type: Boolean },
     installationMode: { type: String },
+    isInstalled: { type: Boolean },
   };
 
   constructor() {
@@ -83,9 +85,11 @@ class AppModeApp extends LitElement {
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
     this.installationMode = "";
+    this.isInstalled = false;
     this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
+    
   }
 
   set setupState(newValue) {
@@ -128,13 +132,25 @@ class AppModeApp extends LitElement {
     this.loading = false;
   }
 
+  async fetchRecoveryState() {
+    const response = await getRecoveryBootstrap({ noLogoutRedirect: true });
+
+    if (!response.recoveryFacts) {
+      // TODO (error handling)
+      alert("Failed to fetch bootstrap.");
+      return;
+    }
+    
+    this.isInstalled = response.recoveryFacts.isInstalled ?? false;
+    this.installationMode = response.recoveryFacts.installationMode ?? "";
+  }
+
   _determineStartingStep(setupState) {
     const {
       hasCompletedInitialConfiguration,
       hasGeneratedKey,
       hasConfiguredNetwork,
       isForbidden,
-      installationMode,
     } = setupState;
 
     if (isForbidden) {
@@ -143,10 +159,6 @@ class AppModeApp extends LitElement {
 
     if (!hasCompletedInitialConfiguration) {
       this.isFirstTimeSetup = true;
-    }
-
-    if (installationMode) {
-      this.installationMode = installationMode;
     }
 
     // If we're already fully set up, or if we've generated a key, show our login step.
@@ -167,7 +179,8 @@ class AppModeApp extends LitElement {
 
   firstUpdated() {
     this.fetchSetupState();
-
+    this.fetchRecoveryState();
+    
     // Prevent dialog closures on overlay click
     this.dialogMgmt = this.shadowRoot.querySelector("#MgmtDialog");
     this.dialogMgmt.addEventListener("sl-request-close", (event) => {
@@ -353,6 +366,7 @@ class AppModeApp extends LitElement {
                       <action-select-install-location
                         style="z-index: 999"
                         mode=${this.installationMode}
+                        ?isInstalled=${this.isInstalled}
                         ?open=${["canInstall", "mustInstall"].includes(
                           this.installationMode,
                         )}

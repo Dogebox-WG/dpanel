@@ -110,10 +110,6 @@ export class LocationPickerView extends LitElement {
   }
 
   render() {  
-    console.log('mode', this.mode);
-    console.log('mainDialogOpen', this.mainDialogOpen);
-    console.log('existingInstallationDialogOpen', this.existingInstallationDialogOpen);
-    console.log('isInstalled', this.isInstalled);
 
     if (this.isInstalled) {
       this.existingInstallationDialogOpen = true;
@@ -135,11 +131,22 @@ export class LocationPickerView extends LitElement {
   
   }
 
+  renderHeader = () => {
+    return html`
+      <div class="header-container">
+        <img class="logo" src="/static/img/dogebox-logo-small.png" alt="Dogebox Logo">
+        <h1>${this._header}</h1>
+      </div>
+    `;
+  }
+
   renderExistingInstall = () => {
     return html`
       <sl-dialog ?open=${this.existingInstallationDialogOpen} no-header>
-        <div class="wrap">
-            <h1 style="margin-bottom: 24px;">Dogebox OS is already installed on this device</h1>
+        <div class="dialog-content">
+          ${this.renderHeader()}
+          <div class="wrap">
+            <h2 style="margin-bottom: 24px;">Dogebox OS is already installed on this device</h2>
             <p>If you just installed, you might have forgotten to <u>remove the installation media</u>. Please power off and try again.</p>
             <sl-button variant="warning" @click=${promptPowerOff} style="margin-block-start: 1em;">
               <sl-icon name="power"></sl-icon>
@@ -151,15 +158,16 @@ export class LocationPickerView extends LitElement {
                 this.existingInstallationDialogOpen = false;
                 this.mainDialogOpen = true; }}>I know what I'm doing - I want to reinstall</sl-button>
             </div>
+          </div>
         </div>
       </sl-dialog>
     `;
-  }
+  } 
 
   renderIntro = () => {
     return html`
       <div class="page">
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Where you install Dogebox OS is up to you</p>
 
         <div class="choice-wrap">
@@ -209,7 +217,7 @@ export class LocationPickerView extends LitElement {
           Back
         </sl-button>
 
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Select from the following disks:</p>
 
         <div class="disk-wrap">
@@ -251,7 +259,7 @@ export class LocationPickerView extends LitElement {
           Back
         </sl-button>
 
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Selected disk: <strong>${selectedDisk.name} (${selectedDisk.sizePretty})</strong></p>
 
         <sl-alert open variant="warning" style="text-align: left">
@@ -279,7 +287,7 @@ export class LocationPickerView extends LitElement {
     return html`
       <div class="page">
 
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Installing on disk: <strong>${selectedDisk.name} (${selectedDisk.sizePretty})</strong></p>
 
         ${!this._inflight_install && this._install_outcome === "success" ? html`
@@ -379,19 +387,41 @@ export class LocationPickerView extends LitElement {
       background-color: rgba(0,0,0,0.85);
     }
 
+    .dialog-content {
+      text-align: center;
+    }
+
     .wrap {
       text-align: center;
       position: relative;
-
-      h1 {
-        display: block;
-        margin-top: 0px;
-        margin-bottom: -24px;
-        font-family: 'Comic Neue';
-        font-weight: bold;
-      }
-
     }
+
+    h1 {
+      display: block;
+      margin-top: 0px;
+      margin-bottom: 0px;
+      font-family: 'Comic Neue';
+      font-weight: bold;
+    }
+
+    h2 {
+      display: block;
+      font-family: 'Comic Neue';
+      font-weight: bold;
+      margin-top: 0px;
+    }
+
+    .header-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo {
+      width: 100px;
+      height: auto;
+    }
+
     .button {
       height: 275px;
       width: 175px;

@@ -269,7 +269,8 @@ class SelectNetwork extends LitElement {
       // Temporarily don't submit reflectorToken until the service is up and running.
       reflectorToken: this.reflectorToken,
       reflectorHost: store.networkContext.reflectorHost,
-      useFoundationPupBinaryCache: store.setupContext.useFoundationPupBinaryCache
+      useFoundationPupBinaryCache: store.setupContext.useFoundationPupBinaryCache,
+      useFoundationOSBinaryCache: store.setupContext.useFoundationOSBinaryCache
     }).catch(() => { console.log('bootstrap called but no response returned')});
 
     // if (!finalSystemBootstrap) {

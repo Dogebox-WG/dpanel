@@ -55,6 +55,7 @@ class Store {
       hashedPassword: null,
       view: null,
       useFoundationPupBinaryCache: false,
+      useFoundationOSBinaryCache: false,
     };
 
     // Hydrate state from localStorage unless flush parameter is present.

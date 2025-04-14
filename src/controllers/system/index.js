@@ -27,17 +27,13 @@ class SysController {
     }
   }
 
-  ingestSystemStateUpdate(data) {
+  ingestSystemUpdateAvailableEvent() {
+    // When an update is available, Dogeboxd emits a 'system-update-available' event
+    // We pay no regard to the payload. The fact the message is received
+    // is sufficient enough to toggle the client state to show update indicators.
     let err;
-
     try {
-      // validate
-      if (!data.update) {
-        console.warn('SystemStateUpdate failed validation', { data });
-        err = true;
-      }
-      // do stuff
-      store.updateState({ sysContext: { ...data.update }});
+      store.updateState({ sysContext: { updateAvailable: true }});
     } catch (err) {
       console.error('Failed to process system state update', err);
     } finally {

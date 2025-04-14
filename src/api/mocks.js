@@ -78,5 +78,5 @@ export const mocks = [
   deleteSSHPublicKeyResponse,
   addSSHPublicKeyResponse,
   updateSSHStateResponse,
-  getSSHStateResponse
+  getSSHStateResponse,
 ];

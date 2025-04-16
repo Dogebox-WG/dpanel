@@ -33,6 +33,9 @@ class SelectNetwork extends LitElement {
     h1 {
       font-family: "Comic Neue", sans-serif;
     }
+    sl-icon {
+      margin-right: 0.5em;
+    }
   `;
 
   static get properties() {
@@ -87,7 +90,12 @@ class SelectNetwork extends LitElement {
               labelAction: { name: "refresh", label: "Refresh" },
               type: "select",
               required: true,
-              options: this._networks
+              options: this._networks.map(network => ({
+                ...network,
+                label: network.type === 'ethernet' 
+                  ? html`${this._renderIcon('ethernet')} ${network.label}`
+                  : html`${this._getSignalIcon(network.signal)} ${network.label}`
+              }))
             },
             {
               name: "network-ssid",
@@ -165,8 +173,10 @@ class SelectNetwork extends LitElement {
       if (network.type === 'wifi') {
         this._networks.push({
           interface: network.interface,
-          label: `🛜 Hidden Wi-Fi Network (${network.interface})`,
-          value: 'hidden'
+          label: `Hidden Wi-Fi Network (${network.interface})`,
+          value: 'hidden',
+          quality: 0.85,
+          signal: "-45dBm"
         })
 
         return network.ssids.map((s) => {
@@ -174,7 +184,9 @@ class SelectNetwork extends LitElement {
             interface: network.interface,
             ssid: s.ssid,
             encryption: s.encryption,
-            label: `🛜 ${s.ssid} (${network.interface}, ${s.encryption ?? 'Open'})`,
+            quality: s.quality,
+            signal: s.signal,
+            label: `${s.ssid} (${network.interface}, ${s.encryption ?? 'Open'})`,
             value: `${network.interface}-${s.bssid}`
           })
         })
@@ -312,6 +324,27 @@ class SelectNetwork extends LitElement {
     if (this.onSuccess) {
       await this.onSuccess();
     }
+  }
+
+  _renderIcon(name) {
+    return html`<sl-icon name=${name}></sl-icon>`;
+  }
+
+  _getSignalIcon(signal) {
+    if (!signal) return this._renderIcon('wifi-off');
+    
+    // Remove 'dBm' suffix and parse the number
+    const signalNum = parseFloat(signal.replace('dBm', ''));
+    if (isNaN(signalNum)) {
+      console.warn(`Invalid signal value: ${signal}`);
+      return this._renderIcon('wifi-off');
+    }
+
+    if (signalNum >= -45) return this._renderIcon('wifi'); // Excellent
+    if (signalNum >= -55) return this._renderIcon('wifi'); // Good
+    if (signalNum >= -65) return this._renderIcon('wifi-2'); // Fair
+    if (signalNum >= -75) return this._renderIcon('wifi-1'); // Poor
+    return this._renderIcon('wifi-off'); // Very poor
   }
 
   render() {

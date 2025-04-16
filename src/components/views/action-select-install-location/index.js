@@ -284,6 +284,7 @@ export class LocationPickerView extends LitElement {
   };
 
   renderInstallation = () => {
+    const selectedDisk = this._installDisks[this._selected_disk_index];
     return html`
       <div class="page">
 

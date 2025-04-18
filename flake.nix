@@ -11,11 +11,6 @@
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = [ pkgs.nodejs_23 pkgs.screen ];
-          shellHook = ''
-            pushd ${p}
-              npm install
-            popd
-          '';
         };
 
         dbxSessionName = "dpanel";

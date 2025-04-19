@@ -15,7 +15,7 @@
 
         dbxSessionName = "dpanel";
         dbxStartCommand = "npm start";
-        dbxDevCwd = "dev";
+        dbxCWD = "dev";
       }
     );
 }

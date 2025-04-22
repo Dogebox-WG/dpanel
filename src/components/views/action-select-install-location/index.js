@@ -9,6 +9,7 @@ import { createAlert } from "/components/common/alert.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import "/components/common/action-row/action-row.js";
 import "/components/views/x-activity-log.js";
+import "/components/common/text-loader/text-loader.js";
 import { getDisks, postInstallToDisk } from "/api/disks/disks.js";
 import { promptPowerOff } from "/pages/page-settings/power-helpers.js";
 import { mainChannel } from "/controllers/sockets/main-channel.js";
@@ -23,6 +24,7 @@ export class LocationPickerView extends LitElement {
     return {
       mode: { type: String }, // either canInstall or mustInstall
       isInstalled: { type: Boolean },
+      renderReady: { type: Boolean },
       open: { type: Boolean, reflect: true },
       _ready: { type: Boolean },
       _inflight_disks: { type: Boolean },
@@ -40,6 +42,7 @@ export class LocationPickerView extends LitElement {
     super();
     this.mode = "";
     this.isInstalled = false;
+    this.renderReady = false;
     this.mainDialogOpen = true;
     this.existingInstallationDialogOpen = false;
     this._ready = false;
@@ -109,8 +112,13 @@ export class LocationPickerView extends LitElement {
     // Otherwise, do nothing, allow close.
   }
 
-  render() {  
+  render() {
+    //Show loading spinner while renderReady is false
+    if (!this.renderReady) {
+      return this.renderLoadingSpinner();
+    }
 
+    // Show existing installation dialog if already installed
     if (this.isInstalled) {
       this.existingInstallationDialogOpen = true;
       return this.renderExistingInstall();
@@ -128,7 +136,6 @@ export class LocationPickerView extends LitElement {
         </div>
       </sl-dialog>
     `;
-  
   }
 
   renderHeader = () => {
@@ -159,6 +166,22 @@ export class LocationPickerView extends LitElement {
                 this.mainDialogOpen = true; }}>I know what I'm doing - I want to reinstall</sl-button>
             </div>
           </div>
+        </div>
+      </sl-dialog>
+    `;
+  } 
+
+  renderLoadingSpinner = () => {
+    return html`
+      <sl-dialog ?open=${true} no-header>
+        <div class="loader-overlay">
+          <sl-spinner class="spinner"></sl-spinner>
+          <text-loader
+                loop
+                .texts=${["HOdL tight"]}
+                ?loopEnd=${this.renderReady}
+              >
+              </text-loader>
         </div>
       </sl-dialog>
     `;
@@ -388,6 +411,12 @@ export class LocationPickerView extends LitElement {
       background-color: rgba(0,0,0,0.85);
     }
 
+    sl-dialog::part(body) {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
     .dialog-content {
       text-align: center;
     }
@@ -395,6 +424,19 @@ export class LocationPickerView extends LitElement {
     .wrap {
       text-align: center;
       position: relative;
+    }
+
+    .loader-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .spinner {
+      font-size: 4rem;
+      --indicator-color: #bbb;
     }
 
     h1 {

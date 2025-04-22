@@ -74,6 +74,7 @@ class AppModeApp extends LitElement {
     isForbidden: { type: Boolean },
     installationMode: { type: String },
     isInstalled: { type: Boolean },
+    renderReady: { type: Boolean },
   };
 
   constructor() {
@@ -86,6 +87,7 @@ class AppModeApp extends LitElement {
     this.isForbidden = false;
     this.installationMode = "";
     this.isInstalled = false;
+    this.renderReady = false;
     this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
@@ -140,9 +142,10 @@ class AppModeApp extends LitElement {
       alert("Failed to fetch bootstrap.");
       return;
     }
-    
+
     this.isInstalled = response.recoveryFacts.isInstalled ?? false;
     this.installationMode = response.recoveryFacts.installationMode ?? "";
+    this.renderReady = true;
   }
 
   _determineStartingStep(setupState) {
@@ -367,6 +370,7 @@ class AppModeApp extends LitElement {
                         style="z-index: 999"
                         mode=${this.installationMode}
                         ?isInstalled=${this.isInstalled}
+                        ?renderReady=${this.renderReady}
                         ?open=${["canInstall", "mustInstall"].includes(
                           this.installationMode,
                         )}

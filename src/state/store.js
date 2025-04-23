@@ -51,6 +51,7 @@ class Store {
       name: null,
     }),
       (this.setupContext = {
+        isCompleted: false,
         hashedPassword: null,
         view: null,
       });

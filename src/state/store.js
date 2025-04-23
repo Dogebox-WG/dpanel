@@ -54,6 +54,14 @@ class Store {
         hashedPassword: null,
         view: null,
       });
+    this.installationContext = {
+      isCompleted: false,
+      selectedDisk: {
+        name: null,
+        sizePretty: null
+      },
+      logs: []
+    };
 
     // Hydrate state from localStorage unless flush parameter is present.
     if (!isUnauthedRoute() && !hasFlushParam()) {
@@ -94,6 +102,7 @@ class Store {
         const savedState = JSON.parse(localStorage.getItem("storeState"));
         if (savedState) {
           this.networkContext = savedState.networkContext;
+          this.installationContext = savedState.installationContext || this.installationContext;
           // Load other slices as needed
         }
       } catch (error) {
@@ -109,6 +118,7 @@ class Store {
       try {
         const stateToPersist = {
           networkContext: this.networkContext,
+          installationContext: this.installationContext,
           // Include other slices of state as needed
         };
         localStorage.setItem("storeState", JSON.stringify(stateToPersist));
@@ -177,6 +187,12 @@ class Store {
       this.setupContext = {
         ...this.setupContext,
         ...partialState.setupContext,
+      };
+    }
+    if (partialState.installationContext) {
+      this.installationContext = {
+        ...this.installationContext,
+        ...partialState.installationContext,
       };
     }
     // Other slices..

@@ -149,6 +149,11 @@ class AppModeApp extends LitElement {
       this.installationMode = installationMode;
     }
 
+    // If setup has been completed, show the DONE step
+    if (this.context.store.setupContext.isCompleted) {
+      return STEP_DONE;
+    }
+
     // If we're already fully set up, or if we've generated a key, show our login step.
     if ((hasCompletedInitialConfiguration || hasGeneratedKey) && !this.isLoggedIn) {
       return STEP_LOGIN;
@@ -194,6 +199,16 @@ class AppModeApp extends LitElement {
   _nextStep = () => {
     this.isLoggedIn = this.context.store.networkContext.token;
     this.activeStepNumber++;
+    
+    // Set setup as completed when reaching the DONE step
+    if (this.activeStepNumber === STEP_DONE) {
+      store.updateState({
+        setupContext: {
+          ...this.context.store.setupContext,
+          isCompleted: true
+        }
+      });
+    }
   };
 
   disconnectedCallback() {

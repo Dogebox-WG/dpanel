@@ -12,6 +12,7 @@ import "/components/views/x-activity-log.js";
 import { getDisks, postInstallToDisk } from "/api/disks/disks.js";
 import { promptPowerOff } from "/pages/page-settings/power-helpers.js";
 import { mainChannel } from "/controllers/sockets/main-channel.js";
+import { store } from "/state/store.js";
 
 const PAGE_ONE = "intro";
 const PAGE_TWO = "disk_selection";
@@ -40,16 +41,16 @@ export class LocationPickerView extends LitElement {
     this.mode = "";
     this.open = false;
     this._ready = false;
-    this._page = PAGE_ONE;
+    this._page = store.installationContext.isCompleted ? PAGE_FOUR : PAGE_ONE;
     this._allDisks = [];
     this._installDisks = [];
     this._bootMediaDisk = null;
     this._selected_disk_index = null;
     this._confirmation_checked = false;
     this._inflight_install = false;
-    this._install_outcome = "";
+    this._install_outcome = store.installationContext.isCompleted ? "success" : "";
     this._header = "Such Install"
-    this._logs = [];
+    this._logs = store.installationContext.logs || [];
     this._unsubscribe = null;
   }
 
@@ -93,17 +94,8 @@ export class LocationPickerView extends LitElement {
   }
 
   denyClose (e) {
-    // If we're installing, prevent close.
-    if (this._inflight_install) {
-      e.preventDefault();
-    }
-
-    // If we MUST install, prevent close.
-    if (this.mode === 'mustInstall') {
-      e.preventDefault();
-    }
-
-    // Otherwise, do nothing, allow close.
+    // Always prevent install dialog from closing
+    e.preventDefault();
   }
 
   render() {
@@ -241,7 +233,7 @@ export class LocationPickerView extends LitElement {
   };
 
   renderInstallation = () => {
-    const selectedDisk = this._installDisks[this._selected_disk_index]
+    const selectedDisk = this._installDisks[this._selected_disk_index] || store.installationContext.selectedDisk;
     return html`
       <div class="page">
 
@@ -337,6 +329,20 @@ export class LocationPickerView extends LitElement {
     } finally {
       this._inflight_install = false;
       this._install_outcome = didErr ? "error" : "success"
+
+      if (this._install_outcome === "success") {
+              // Update store with installation completion and logs
+      store.updateState({
+        installationContext: {
+          isCompleted: true,
+          selectedDisk: {
+            name: diskName,
+            sizePretty: this._installDisks[this._selected_disk_index].sizePretty
+          },
+          logs: this._logs
+        }
+        });
+      }
     }
   }
 

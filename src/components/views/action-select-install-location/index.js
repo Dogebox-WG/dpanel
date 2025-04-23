@@ -93,17 +93,8 @@ export class LocationPickerView extends LitElement {
   }
 
   denyClose (e) {
-    // If we're installing, prevent close.
-    if (this._inflight_install) {
-      e.preventDefault();
-    }
-
-    // If we MUST install, prevent close.
-    if (this.mode === 'mustInstall') {
-      e.preventDefault();
-    }
-
-    // Otherwise, do nothing, allow close.
+    // Always prevent install dialog from closing
+    e.preventDefault();
   }
 
   render() {

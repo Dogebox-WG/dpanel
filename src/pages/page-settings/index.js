@@ -65,7 +65,7 @@ class SettingsPage extends LitElement {
             <action-row prefix="info-circle" label="Version" href="/settings/versions" @click=${notYet}>
               View version details
             </action-row>
-            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" @click=${notYet}>
+            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates">
               Check for updates
             </action-row>
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>

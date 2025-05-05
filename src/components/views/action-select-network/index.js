@@ -90,60 +90,65 @@ class SelectNetwork extends LitElement {
               labelAction: { name: "refresh", label: "Refresh" },
               type: "select",
               required: true,
-              options: this._networks.map(network => ({
+              options: this._networks.map((network) => ({
                 ...network,
-                label: network.type === 'ethernet' 
-                  ? html`${this._renderIcon('ethernet')} ${network.label}`
-                  : html`${this._getSignalIcon(network.signal)} ${network.label}`
-              }))
+                label:
+                  network.type === "ethernet"
+                    ? html`${this._renderIcon("ethernet")} ${network.label}`
+                    : html`${this._getSignalIcon(network.signal)}
+                      ${network.label}`,
+              })),
             },
             {
               name: "network-ssid",
               label: "Network SSID",
               type: "text",
               required: true,
-              revealOn: (state) => state.network?.value == "hidden"
+              revealOn: (state) => state.network?.value == "hidden",
             },
             {
               name: "network-encryption",
               label: "Network Encryption",
               type: "select",
               required: true,
-              revealOn: (state) => state.network?.value === 'hidden',
+              revealOn: (state) => state.network?.value === "hidden",
               options: [
-                { value: 'wep', label: 'WEP' },
-                { value: 'wpa', label: 'WPA' },
-                { value: 'wpa2-psk', label: 'WPA2 Personal' },
-                { value: 'none', label: 'None' },
-              ]
+                { value: "wep", label: "WEP" },
+                { value: "wpa", label: "WPA" },
+                { value: "wpa2-psk", label: "WPA2 Personal" },
+                { value: "none", label: "None" },
+              ],
             },
             {
               name: "network-pass",
               label: "Network Password",
-              type: "password",
+              type: "wifiPassword",
               required: true,
               passwordToggle: true,
               revealOn: (state) => {
                 // If the selected network is a broadcast wifi network with encryption, show.
-                if (state.network?.encryption) return true
+                if (state.network?.encryption) return true;
 
                 // If we've selected a hidden wifi network, _and_ configured the encryption to be NOT none, show.
-                if (state.network?.value === 'hidden') {
-                  if (state['network-encryption'] && state['network-encryption'].value !== 'none') {
-                    return true
+                if (state.network?.value === "hidden") {
+                  if (
+                    state["network-encryption"] &&
+                    state["network-encryption"].value !== "none"
+                  ) {
+                    return true;
                   }
                 }
 
-                return false
-              }
+                return false;
+              },
             },
             {
               name: "ssh-key",
               label: "SSH Key (Optional)",
               type: "text",
               required: false,
-              placeholder: "Pasting an SSH key here will also enable SSH"
-            }
+              placeholder: "Pasting an SSH key here will also enable SSH",
+            },
           ],
         },
       ],
@@ -159,25 +164,25 @@ class SelectNetwork extends LitElement {
 
     const { networks } = response;
 
-    this._networks = []
+    this._networks = [];
 
     networks.forEach((network) => {
-      if (network.type === 'ethernet') {
+      if (network.type === "ethernet") {
         return this._networks.push({
           ...network,
           label: `Ethernet - ${network.interface}`,
-          value: network.interface
-        })
+          value: network.interface,
+        });
       }
 
-      if (network.type === 'wifi') {
+      if (network.type === "wifi") {
         this._networks.push({
           interface: network.interface,
           label: `Hidden Wi-Fi Network (${network.interface})`,
-          value: 'hidden',
+          value: "hidden",
           quality: 0.85,
-          signal: "-45dBm"
-        })
+          signal: "-45dBm",
+        });
 
         return network.ssids.map((s) => {
           return this._networks.push({
@@ -186,12 +191,12 @@ class SelectNetwork extends LitElement {
             encryption: s.encryption,
             quality: s.quality,
             signal: s.signal,
-            label: `${s.ssid} (${network.interface}, ${s.encryption ?? 'Open'})`,
-            value: `${network.interface}-${s.bssid}`
-          })
-        })
+            label: `${s.ssid} (${network.interface}, ${s.encryption ?? "Open"})`,
+            value: `${network.interface}-${s.bssid}`,
+          });
+        });
       }
-    })
+    });
 
     // Networks have been retrieved, ensure they are supplied
     // as the network picker's options.
@@ -203,8 +208,8 @@ class SelectNetwork extends LitElement {
     if (selectedNetwork) {
       this._setNetworkValues = {
         ...this._setNetworkValues,
-        network: selectedNetwork.value
-      }
+        network: selectedNetwork.value,
+      };
     }
 
     // Stop label spinner
@@ -238,23 +243,29 @@ class SelectNetwork extends LitElement {
 
   _attemptSetNetwork = async (data, form, dynamicFormInstance) => {
     // Check if any field is invalid
-    const formFields = this.shadowRoot.querySelectorAll('sl-input, sl-textarea, sl-select');
-    const hasInvalidField = Array.from(formFields).some(field => field.hasAttribute('data-invalid'));
+    const formFields = this.shadowRoot.querySelectorAll(
+      "sl-input, sl-textarea, sl-select",
+    );
+    const hasInvalidField = Array.from(formFields).some((field) =>
+      field.hasAttribute("data-invalid"),
+    );
 
     if (hasInvalidField) {
-      createAlert('warning', 'Uh oh, invalid data detected.');
+      createAlert("warning", "Uh oh, invalid data detected.");
       return;
     }
 
-    const state = dynamicFormInstance.getState()
-    const isHiddenNetwork = state.network.value === 'hidden'
+    const state = dynamicFormInstance.getState();
+    const isHiddenNetwork = state.network.value === "hidden";
 
     const apiData = {
       interface: state.network.interface,
-      ssid: isHiddenNetwork ? state['network-ssid'] : state.network.ssid,
-      password: state['network-pass'],
-      encryption: isHiddenNetwork ? state['network-encryption'].value : state.network.encryption
-    }
+      ssid: isHiddenNetwork ? state["network-ssid"] : state.network.ssid,
+      password: state["network-pass"],
+      encryption: isHiddenNetwork
+        ? state["network-encryption"].value
+        : state.network.encryption,
+    };
 
     const response = await putNetwork(apiData).catch(this.handleFault);
 
@@ -272,16 +283,18 @@ class SelectNetwork extends LitElement {
 
     // temp: wait, because this needs to move to being an async call inside dogeboxd
     //       so that the putNetwork above can "complete".
-    await asyncTimeout(5000)
+    await asyncTimeout(5000);
 
     // temp: also call our final initialisation API here.
     // TODO: move this into post-network flow.
     const finalSystemBootstrap = await postSetupBootstrap({
-      initialSSHKey: state['ssh-key'],
+      initialSSHKey: state["ssh-key"],
       // Temporarily don't submit reflectorToken until the service is up and running.
       reflectorToken: this.reflectorToken,
-      reflectorHost: store.networkContext.reflectorHost
-    }).catch(() => { console.log('bootstrap called but no response returned')});
+      reflectorHost: store.networkContext.reflectorHost,
+    }).catch(() => {
+      console.log("bootstrap called but no response returned");
+    });
 
     // if (!finalSystemBootstrap) {
     //   dynamicFormInstance.retainChanges(); // stops spinner
@@ -319,7 +332,12 @@ class SelectNetwork extends LitElement {
 
   async handleSuccess() {
     if (this.showSuccessAlert) {
-      createAlert("success", "Network configuration saved.", "check-square", 4000);
+      createAlert(
+        "success",
+        "Network configuration saved.",
+        "check-square",
+        4000,
+      );
     }
     if (this.onSuccess) {
       await this.onSuccess();
@@ -331,20 +349,20 @@ class SelectNetwork extends LitElement {
   }
 
   _getSignalIcon(signal) {
-    if (!signal) return this._renderIcon('wifi-off');
-    
+    if (!signal) return this._renderIcon("wifi-off");
+
     // Remove 'dBm' suffix and parse the number
-    const signalNum = parseFloat(signal.replace('dBm', ''));
+    const signalNum = parseFloat(signal.replace("dBm", ""));
     if (isNaN(signalNum)) {
       console.warn(`Invalid signal value: ${signal}`);
-      return this._renderIcon('wifi-off');
+      return this._renderIcon("wifi-off");
     }
 
-    if (signalNum >= -45) return this._renderIcon('wifi'); // Excellent
-    if (signalNum >= -55) return this._renderIcon('wifi'); // Good
-    if (signalNum >= -65) return this._renderIcon('wifi-2'); // Fair
-    if (signalNum >= -75) return this._renderIcon('wifi-1'); // Poor
-    return this._renderIcon('wifi-off'); // Very poor
+    if (signalNum >= -45) return this._renderIcon("wifi"); // Excellent
+    if (signalNum >= -55) return this._renderIcon("wifi"); // Good
+    if (signalNum >= -65) return this._renderIcon("wifi-2"); // Fair
+    if (signalNum >= -75) return this._renderIcon("wifi-1"); // Poor
+    return this._renderIcon("wifi-off"); // Very poor
   }
 
   render() {
@@ -352,24 +370,27 @@ class SelectNetwork extends LitElement {
       <div class="page">
         <div class="padded">
           ${renderBanner()}
-          ${this._setNetworkFields ? html`
-            <dynamic-form
-              .fields=${this._setNetworkFields}
-              .values=${this._setNetworkValues}
-              .onSubmit=${this._attemptSetNetwork}
-              requireCommit
-              theme="yellow"
-              style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
-            >
-            </dynamic-form>
-            `: nothing }
+          ${this._setNetworkFields
+            ? html`
+                <dynamic-form
+                  .fields=${this._setNetworkFields}
+                  .values=${this._setNetworkValues}
+                  .onSubmit=${this._attemptSetNetwork}
+                  requireCommit
+                  theme="yellow"
+                  style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
+                >
+                </dynamic-form>
+              `
+            : nothing}
 
-            <div style="margin: 2em 8px">
-              <sl-alert variant="warning" open>
-                <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-                After you hit connect it may take up to 10 minutes while your Dogebox is configured!
-              </sl-alert>
-            </div>
+          <div style="margin: 2em 8px">
+            <sl-alert variant="warning" open>
+              <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+              After you hit connect it may take up to 10 minutes while your
+              Dogebox is configured!
+            </sl-alert>
+          </div>
         </div>
       </div>
     `;

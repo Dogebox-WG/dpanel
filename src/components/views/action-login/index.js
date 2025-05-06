@@ -1,6 +1,8 @@
 import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postLogin } from "/api/login/login.js";
 import { store } from "/state/store.js";
+import { showWelcomeModal } from "/components/common/welcome-modal.js";
+import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 
 // Components
 import "/components/common/dynamic-form/dynamic-form.js";
@@ -149,7 +151,16 @@ class LoginView extends LitElement {
     }
   }
 
-  handleSuccess() {
+  async handleSuccess() {
+    try {
+      // Fetch bootstrap data to check if this is first login
+      const bootstrap = await getBootstrapV2();
+      if (bootstrap?.flags && !bootstrap.flags.isFirstTimeWelcomeComplete) {
+        showWelcomeModal();
+      }
+    } catch (err) {
+      console.warn('Failed to fetch bootstrap data:', err);
+    }
     window.location = "/";
   }
 

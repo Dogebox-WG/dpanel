@@ -61,9 +61,8 @@ const STEP_SYS_SETTINGS = 2;
 const STEP_SET_PASSWORD = 3;
 const STEP_GENERATE_KEY = 4;
 const STEP_NETWORK = 5;
-const STEP_INSTALL_PUP_COLLECTION = 6;
-const STEP_DONE = 7;
-const STEP_INSTALL = 8;
+const STEP_DONE = 6;
+const STEP_INSTALL = 7;
 
 class AppModeApp extends LitElement {
   static styles = [appModeStyles, navStyles];
@@ -155,7 +154,6 @@ class AppModeApp extends LitElement {
       hasCompletedInitialConfiguration,
       hasGeneratedKey,
       hasConfiguredNetwork,
-      hasSelectedPupCollection,
       isForbidden,
     } = setupState;
 
@@ -182,9 +180,6 @@ class AppModeApp extends LitElement {
       }
       if (!hasConfiguredNetwork) {
         return STEP_NETWORK;
-      }
-      if (!hasSelectedPupCollection) {
-        return STEP_INSTALL_PUP_COLLECTION;
       }
       return STEP_DONE;
     }
@@ -363,13 +358,6 @@ class AppModeApp extends LitElement {
                             }}
                             .reflectorToken=${reflectorToken}
                           ></x-action-select-network>`,
-                      ],
-                      [
-                        STEP_INSTALL_PUP_COLLECTION,
-                        () =>
-                          html`<x-action-select-install-pup-collection
-                            .onSuccess=${this._nextStep}
-                          ></x-action-select-install-pup-collection>`,
                       ],
                       [
                         STEP_DONE,

@@ -155,7 +155,6 @@ export function renderNav(isFirstTimeSetup) {
     { name: "pass", label: "Set Password" },
     { name: "key", label: "Create Key" },
     { name: "connect", label: "Connect" },
-    { name: "pups", label: "Pup Collection" },
   ];
 
   return html`

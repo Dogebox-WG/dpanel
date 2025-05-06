@@ -274,6 +274,26 @@ class SelectNetwork extends LitElement {
     //       so that the putNetwork above can "complete".
     await asyncTimeout(5000)
 
+    // temp: also call our final initialisation API here.
+    // TODO: move this into post-network flow.
+    const finalSystemBootstrap = await postSetupBootstrap({
+      initialSSHKey: state['ssh-key'],
+      // Temporarily don't submit reflectorToken until the service is up and running.
+      reflectorToken: this.reflectorToken,
+      reflectorHost: store.networkContext.reflectorHost
+    }).catch(() => { console.log('bootstrap called but no response returned')});
+
+    // if (!finalSystemBootstrap) {
+    //   dynamicFormInstance.retainChanges(); // stops spinner
+    //   return;
+    // }
+
+    // if (finalSystemBootstrap.error) {
+    //   dynamicFormInstance.retainChanges(); // stops spinner
+    //   this.handleError(finalSystemBootstrap.error);
+    //   return;
+    // }
+
     // Handle success
     dynamicFormInstance.retainChanges(); // stops spinner
     dynamicFormInstance.toggleCelebrate();
@@ -343,6 +363,13 @@ class SelectNetwork extends LitElement {
             >
             </dynamic-form>
             `: nothing }
+
+            <div style="margin: 2em 8px">
+              <sl-alert variant="warning" open>
+                <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+                After you hit connect it may take up to 10 minutes while your Dogebox is configured!
+              </sl-alert>
+            </div>
         </div>
       </div>
     `;

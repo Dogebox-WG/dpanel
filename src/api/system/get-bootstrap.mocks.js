@@ -6,7 +6,6 @@ export const getResponse = {
     success: true,
     setupFacts: {
       hasGeneratedKey: false,
-      hasSelectedPupCollection: false,
       hasConfiguredNetwork: false,
       hasCompletedInitialConfiguration: false
     },

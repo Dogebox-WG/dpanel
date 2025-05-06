@@ -1,6 +1,7 @@
 import { html, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { LitElement, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postWelcomeComplete } from "/api/system/post-welcome-complete.js";
+import { postInstallPupCollection } from "/api/system/post-install-pup-collection.js";
 
 class WelcomeModal extends LitElement {
   static styles = css`
@@ -46,6 +47,7 @@ class WelcomeModal extends LitElement {
       gap: 1.5em;
       cursor: pointer;
       transition: all 0.2s ease;
+      position: relative;
     }
     .card:hover {
       border-color: var(--sl-color-primary-500);
@@ -98,8 +100,8 @@ class WelcomeModal extends LitElement {
     .core-image {
       background-image: url('/static/img/pup-collection-core.png');
     }
-    .experience-image {
-      background-image: url('/static/img/pup-collection-dogebox-experience.png');
+    .essentials-image {
+      background-image: url('/static/img/pup-collection-essentials.png');
     }
     .custom-image {
       background-image: url('/static/img/pup-collection-custom.png');
@@ -109,13 +111,44 @@ class WelcomeModal extends LitElement {
       justify-content: flex-end;
       gap: 1em;
     }
+    .installing-content {
+      text-align: center;
+      padding: 2em;
+    }
+    .installing-image {
+      width: 150px;
+      height: 150px;
+      margin: 0 auto 2em;
+      background-image: url('/static/img/celebrate.png');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .installing-text {
+      font-size: 1.2em;
+      color: var(--sl-color-neutral-700);
+      line-height: 1.5;
+      margin-bottom: 2em;
+    }
+    .recommended-label {
+      position: absolute;
+      top: 0.5em;
+      right: 0.5em;
+      background-color: #FFD700;
+      color: #000000;
+      padding: 0.25em 0.75em;
+      border-radius: var(--sl-border-radius-small);
+      font-size: 0.8em;
+      font-weight: bold;
+    }
   `;
 
   static get properties() {
     return {
       open: { type: Boolean },
       onClose: { type: Function },
-      selectedOption: { type: String }
+      selectedOption: { type: String },
+      isInstalling: { type: Boolean }
     };
   }
 
@@ -124,6 +157,7 @@ class WelcomeModal extends LitElement {
     this.open = false;
     this.onClose = () => {};
     this.selectedOption = null;
+    this.isInstalling = false;
   }
 
   firstUpdated() {
@@ -137,13 +171,18 @@ class WelcomeModal extends LitElement {
   }
 
   async handleNext() {
+    if (this.selectedOption === 'custom') {
+      this.onClose();
+      return;
+    }
+
+    this.isInstalling = true;
     try {
       console.log('sending complete');
-    //   await postWelcomeComplete();
-      this.onClose();
+      await postWelcomeComplete();
+      await postInstallPupCollection(this.selectedOption);
     } catch (err) {
       console.warn('Failed to mark welcome as complete:', err);
-      this.onClose(); // Still close the modal even if the API call fails
     }
   }
 
@@ -153,6 +192,29 @@ class WelcomeModal extends LitElement {
 
   render() {
     if (!this.open) return nothing;
+
+    if (this.isInstalling) {
+      return html`
+        <sl-dialog 
+          label="Welcome to Dogebox"
+          ?open=${this.open}
+          @sl-hide=${this.onClose}
+          no-header
+        >
+          <div class="installing-content">
+            <div class="installing-image"></div>
+            <div class="installing-text">
+              Your pups are now being installed in the background.<br>Navigate to the pup page to see progress
+            </div>
+            <div class="footer">
+              <sl-button variant="primary" @click=${this.onClose}>
+                Done
+              </sl-button>
+            </div>
+          </div>
+        </sl-dialog>
+      `;
+    }
 
     return html`
       <sl-dialog 
@@ -168,25 +230,26 @@ class WelcomeModal extends LitElement {
             <p>Please select one of the following Pup Collections you'd like to have automatically installed on your Dogebox.</p>
           </div>
 
+            <div class="card ${this.selectedOption === 'essentials' ? 'selected' : ''}"
+                 @click=${() => this.handleOptionSelect('essentials')}>
+              <div class="recommended-label">Recommended</div>
+              <div class="card-header">
+                <div class="card-image essentials-image"></div>
+                <div class="card-content">
+                  <div class="card-title">Essentials</div>
+                  <div class="card-subtitle">Gets you up and running with Dogecoin Core, Dogenet, DogeMap, Identity</div>
+                </div>
+              </div>
+            </div>
+
           <div class="card-grid">
             <div class="card ${this.selectedOption === 'core' ? 'selected' : ''}" 
                  @click=${() => this.handleOptionSelect('core')}>
               <div class="card-header">
                 <div class="card-image core-image"></div>
                 <div class="card-content">
-                  <div class="card-title">Core</div>
-                  <div class="card-subtitle">Dogecoin Core, nothing else</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="card ${this.selectedOption === 'experience' ? 'selected' : ''}"
-                 @click=${() => this.handleOptionSelect('experience')}>
-              <div class="card-header">
-                <div class="card-image experience-image"></div>
-                <div class="card-content">
-                  <div class="card-title">The Dogebox Experience</div>
-                  <div class="card-subtitle">The full Dogebox experience including Core, Dogenet, Dogemap and Identity</div>
+                  <div class="card-title">Core Only</div>
+                  <div class="card-subtitle">Nothing but Dogecoin Core</div>
                 </div>
               </div>
             </div>
@@ -197,7 +260,7 @@ class WelcomeModal extends LitElement {
                 <div class="card-image custom-image"></div>
                 <div class="card-content">
                   <div class="card-title">Custom</div>
-                  <div class="card-subtitle">No pups will be automatically installed.<br>Build your own setup from scratch</div>
+                  <div class="card-subtitle">Choose your own adventure.  No preinstalled pups</div>
                 </div>
               </div>
             </div>

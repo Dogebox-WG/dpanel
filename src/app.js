@@ -149,10 +149,6 @@ class DPanelApp extends LitElement {
       }
 
       // Check if we should show the welcome modal
-      console.log('isFirstTimeWelcomeComplete ', res?.flags?.isFirstTimeWelcomeComplete)
-      // set false for testing
-      res.flags.isFirstTimeWelcomeComplete = false;
-      console.log('isFirstTimeWelcomeComplete now (hardcoded false for testing) ?', res?.flags?.isFirstTimeWelcomeComplete)
       if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
         showWelcomeModal();
       }

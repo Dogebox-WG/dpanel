@@ -143,7 +143,7 @@ class StoreView extends LitElement {
   }
 
   updatePups() {
-    this.pups = this.pkgController.pups;
+    this.pups = [...this.pkgController.pups];
     this.requestUpdate('pups');
   }
 

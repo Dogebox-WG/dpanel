@@ -25,6 +25,7 @@ import "/components/views/action-system-settings/index.js";
 import "/components/views/setup-dislaimer/index.js";
 import "/components/views/confirmation-prompt/index.js";
 import "/pages/page-recovery/index.js";
+import "/components/views/action-select-install-pup-collection/index.js";
 
 // Components
 import "/components/common/dynamic-form/dynamic-form.js";
@@ -156,28 +157,35 @@ class AppModeApp extends LitElement {
       isForbidden,
     } = setupState;
 
+    // First check if we're forbidden
     if (isForbidden) {
       return STEP_LOGIN;
     }
 
+    // Handle first-time setup
     if (!hasCompletedInitialConfiguration) {
       this.isFirstTimeSetup = true;
-    }
-
-    // If we're already fully set up, or if we've generated a key, show our login step.
-    if ((hasCompletedInitialConfiguration || hasGeneratedKey) && !this.isLoggedIn) {
-      return STEP_LOGIN;
-    }
-
-    if (!hasGeneratedKey) {
       return STEP_INTRO;
     }
 
-    if (!hasConfiguredNetwork) {
-      return STEP_NETWORK;
+    // If we're already fully set up, or if we've generated a key, show our login step.
+    if (!this.isLoggedIn && (hasCompletedInitialConfiguration || hasGeneratedKey)) {
+      return STEP_LOGIN;
     }
 
-    return STEP_DONE;
+    // If we're logged in, follow the setup sequence
+    if (this.isLoggedIn) {
+      if (!hasGeneratedKey) {
+        return STEP_GENERATE_KEY;
+      }
+      if (!hasConfiguredNetwork) {
+        return STEP_NETWORK;
+      }
+      return STEP_DONE;
+    }
+
+    // Default to login if none of the above conditions are met
+    return STEP_LOGIN;
   }
 
   firstUpdated() {
@@ -287,17 +295,16 @@ class AppModeApp extends LitElement {
               <nav class="${navClasses}">
                 ${guard(
                   [
-                    this.isFirstTimeSetup,
                     this.activeStepNumber,
                     this.context.store.networkContext.token,
                   ],
-                  () => this.renderNav(this.isFirstTimeSetup),
+                  () => this.renderNav(this.activeStepNumber > STEP_LOGIN && this.activeStepNumber < STEP_DONE),
                 )}
               </nav>
 
               <main
                 id="Main"
-                style="padding-top: ${this.isFirstTimeSetup ? "0px;" : "100px"}"
+                style="padding-top: ${this.activeStepNumber > STEP_LOGIN && this.activeStepNumber < STEP_DONE ? "0px;" : "100px"}"
               >
                 <div class="${stepWrapperClasses}">
                   ${choose(
@@ -327,7 +334,7 @@ class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-change-pass
                             label="Secure your Dogebox"
-                            buttonLabel="Continue"
+                            buttonLabel="Next"
                             description="Devise a secure password used to encrypt your Dogebox Master Key."
                             retainHash
                             noSubmit

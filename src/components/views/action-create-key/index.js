@@ -310,26 +310,29 @@ class CreateKey extends LitElement {
               ${!this._keyListLoading && !hasMasterKey
                 ? html`
                     ${emptyKey}
-                    <sl-button
-                      id="GenKeyBtn"
-                      @click=${this.handleGenKeyClick}
-                      variant="primary"
-                      ?disabled=${this._keyReady}
-                      >Generate Master Key</sl-button
-                    >
+                    <div style="text-align: right;">
+                      <sl-button
+                        id="GenKeyBtn"
+                        @click=${this.handleGenKeyClick}
+                        variant="primary"
+                        ?disabled=${this._keyReady}
+                        >Generate Master Key</sl-button
+                      >
+                    </div>
                   `
                 : nothing}
               ${!this._keyListLoading && hasMasterKey
                 ? html`
                     ${masterKeyEl}
                     <sl-divider></sl-divider>
-                    <sl-button
-                      @click=${this._handleContinueClick}
-                      class="pink"
-                      style="width:100%"
-                      variant="warning"
-                      >Continue</sl-button
-                    >
+                    <div style="text-align: right;">
+                      <sl-button
+                        @click=${this._handleContinueClick}
+                        class="pink"
+                        variant="warning"
+                        >Next</sl-button
+                      >
+                    </div>
                   `
                 : nothing}
             </sl-tab-panel>

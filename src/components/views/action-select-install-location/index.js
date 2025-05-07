@@ -361,8 +361,8 @@ export class LocationPickerView extends LitElement {
   }
 
   handleStay() {
-    console.log('clicked');
     this.mainDialogOpen = false;
+    this.open = false;
     return;
   }
 

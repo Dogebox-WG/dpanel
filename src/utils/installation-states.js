@@ -10,7 +10,6 @@
 export function getInstallationStateProperties(stateId) {
     
   if (!stateId) {
-    console.log('No stateId provided, returning unknown state');
     return {
       class: "unknown",
       icon: "question-circle-fill",
@@ -19,7 +18,6 @@ export function getInstallationStateProperties(stateId) {
   }
 
   const state = stateId.toUpperCase();
-  console.log('state', state);
   switch(state) {
     case 'READY':
       return {
@@ -74,7 +72,6 @@ export function getInstallationStateProperties(stateId) {
  */
 export function isInstallationLoadingState(stateId) {
   if (!stateId) {
-    console.log('No stateId provided, returning false');
     return false;
   }
   const state = stateId.toUpperCase();

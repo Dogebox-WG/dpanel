@@ -1,38 +1,23 @@
 import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { getInstallationStateProperties, isInstallationLoadingState } from "../../../utils/installation-states.js";
 
 export function renderStatus() {
-  const pupContext = this.context.store.pupContext
   const pkg = this.getPup();
 
   const installationId = pkg?.computed?.installationId;
   const installationLabel = pkg?.computed?.installationLabel;
-
-  const isInstalled = installationId === 'ready' && pkg.computed.isInstalled;
-  const isBroken = installationId === 'broken';
-  const isLoadingStatus = ["installing"].includes(installationId);
-
-  const normalisedLabel = () => {
-    if (isBroken) {
-      return "Broken"
-    } else if (!isInstalled) {
-      return "Not installed"
-    } else {
-      return "Installed"
-    }
-  }
-
-  const installationLabelClass = classMap({
-    "installed": isInstalled,
-    "not_installed": !isInstalled,
-    "broken": isBroken,
-  })
+  const status = getInstallationStateProperties(installationId?.id);
+  const isLoadingStatus = isInstallationLoadingState(installationId?.id);
 
   return html`
     <div style="display: flex; flex-direction: row; gap: 1em;">
       ${pkg.def.logoBase64 ? html`<img style="width: 82px; height: 82px;" src="${pkg.def.logoBase64}" />` : nothing}
       <div style="width: 100%;">
         <div class="section-title">
-          <h3 class="installation-label ${installationLabelClass}">${normalisedLabel()}</h3>
+          <h3 class="installation-label ${status.class}">
+            <sl-icon name="${status.icon}"></sl-icon>
+            ${installationLabel || "Unknown"}
+          </h3>
         </div>
         <div>
           <span class="status-label">${pkg.def.versions[pkg.def.latestVersion].meta.name}</span>
@@ -42,33 +27,50 @@ export function renderStatus() {
     </div>
     <style>${styles}</style>
   `
-};
+}
 
 const styles = css`
+  .installation-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0;
+    font-family: 'Comic Neue', sans-serif;
+  }
+
+  .installation-label sl-icon {
+    font-size: 1.2em;
+  }
+
+  .installation-label.installed {
+    color: var(--sl-color-success-500);
+  }
+
+  .installation-label.installing,
+  .installation-label.uninstalling {
+    color: var(--sl-color-neutral-500);
+  }
+
+  .installation-label.broken {
+    color: var(--sl-color-danger-500);
+  }
+
+  .installation-label.not_installed {
+    color: var(--sl-color-neutral-500);
+  }
+
+  .installation-label.unknown {
+    color: var(--sl-color-neutral-500);
+  }
+
   .status-label {
-    font-size: 2em;
-    line-height: 1.5;
     display: block;
-    padding-bottom: 0.5rem;
-    font-family: 'Comic Neue';
-    text-transform: capitalize;
+    margin-bottom: 0.5em;
+    font-family: 'Comic Neue', sans-serif;
+    color: var(--sl-color-neutral-500);
   }
 
   .loading-bar {
-    --indicator-color:var(--sl-color-amber-700);
-    --height: 1px;
+    --indicator-color: var(--sl-color-primary-500);
   }
-
-  .wrapper section.status .section-title h3 {
-    font-weight: 100;
-    color: var(--sl-color-warning-700);
-
-    &.installing { color: var(--sl-color-warning-700); }
-    &.installed { color: rgb(0, 195, 255); }
-    &.broken { color: #fe5c5c; }
-  }
-
-  .wrapper.installed section.status .section-title h3 {
-    color: #00c3ff;
-  }
-`
+`;

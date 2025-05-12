@@ -25,7 +25,6 @@ import "/components/views/action-system-settings/index.js";
 import "/components/views/setup-dislaimer/index.js";
 import "/components/views/confirmation-prompt/index.js";
 import "/pages/page-recovery/index.js";
-import "/components/views/action-select-install-pup-collection/index.js";
 
 // Components
 import "/components/common/dynamic-form/dynamic-form.js";

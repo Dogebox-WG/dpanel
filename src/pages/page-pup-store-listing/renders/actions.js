@@ -6,6 +6,11 @@ export function openConfig() {
 }
 
 export function renderActions() {
+  // Initialize autoInstallDependencies if not already set
+  if (this.autoInstallDependencies === undefined) {
+    this.autoInstallDependencies = true;
+  }
+
   // const pupDefinitionContext = this.context.store?.pupDefinitionContext
 
   // const def = this.pkgController.getPupDefinition(pupDefinitionContext.source.id, pupDefinitionContext.id);
@@ -37,21 +42,40 @@ export function renderActions() {
         min-width: 180px;
       }
     }
+
+    .install-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      align-items: flex-start;
+    }
+
+    .install-container sl-button {
+      width: 180px;
+    }
   `;
 
   return html`
     <div class="action-wrap">
       ${!isInstalled && installationId !== "installing"
         ? html`
-            <sl-button
-              variant="warning"
-              size="large"
-              @click=${this.handleInstall}
-              ?disabled=${this.inflight}
-              ?loading=${this.inflight}
-            >
-              Such Install
-            </sl-button>
+            <div class="install-container">
+              <sl-button
+                variant="warning"
+                size="large"
+                @click=${this.handleInstall}
+                ?disabled=${this.inflight}
+                ?loading=${this.inflight}
+              >
+                Such Install
+              </sl-button>
+              <sl-checkbox
+                ?checked=${this.autoInstallDependencies}
+                @sl-change=${(e) => this.autoInstallDependencies = e.target.checked}
+              >
+                Install required dependencies if available
+              </sl-checkbox>
+            </div>
           `
         : nothing}
       ${isInstalled && installationId === "installing"
@@ -116,6 +140,7 @@ export async function handleInstall() {
     sourceId: pkg.def.source.id,
     pupName: pkg.def.versions[pkg.def.latestVersion].meta.name,
     pupVersion: pkg.def.latestVersion,
+    autoInstallDependencies: this.autoInstallDependencies
   };
 
   await this.pkgController.requestPupAction("--", "install", callbacks, body);

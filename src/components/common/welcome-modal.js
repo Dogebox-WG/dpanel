@@ -171,16 +171,15 @@ class WelcomeModal extends LitElement {
   }
 
   async handleNext() {
-    if (this.selectedOption === 'custom') {
-      this.onClose();
-      return;
-    }
-
-    this.isInstalling = true;
     try {
       console.log('sending complete');
       await postWelcomeComplete();
-      await postInstallPupCollection(this.selectedOption);
+      
+      if (this.selectedOption !== 'custom') {
+        await postInstallPupCollection(this.selectedOption);
+      }
+      
+      this.onClose();
     } catch (err) {
       console.warn('Failed to mark welcome as complete:', err);
     }

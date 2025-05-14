@@ -97,7 +97,8 @@ class DependencyList extends LitElement {
       pupId: pup.state.id,
       pupName: pup.state.manifest.meta.name,
       sourceName: pup.state.source.name,
-      sourceLocation: pup.state.source.location
+      sourceLocation: pup.state.source.location,
+      version: pup.state.version
     }
     return out;
   }
@@ -124,7 +125,8 @@ class DependencyList extends LitElement {
         <x-puplibrary-item
           id="${pup.pupId}"
           name=${pup.pupName}
-          location=${pup.sourceLocation}>
+          location=${pup.sourceLocation}
+          version=${pup.version}>
         </x-pup-item>
       `
     }
@@ -217,7 +219,8 @@ class DependencyList extends LitElement {
                         <x-puplibrary-item
                           id="${provider.pupId}"
                           name=${provider.pupName}
-                          location=${provider.sourceLocation}>
+                          location=${provider.sourceLocation}
+                          version=${provider.version}>
                         </x-pup-item>
                       </sl-menu-item>
                     `) : nothing
@@ -231,7 +234,8 @@ class DependencyList extends LitElement {
                       <sl-menu-item value="sourceLocation::${provider.sourceLocation}::pupName=${provider.pupName}">
                         <x-pupstore-item
                           name=${provider.pupName}
-                          location=${provider.sourceLocation}>
+                          location=${provider.sourceLocation}
+                          version=${provider.pupVersion}>
                         </x-pup-item>
                       </sl-menu-item>
                     `) : nothing
@@ -445,13 +449,14 @@ class PupStoreItem extends LitElement {
   static get properties() {
     return {
       name: { type: String },
-      location: { type: String }
+      location: { type: String },
+      version: { type: String }
     }
   }
   render() {
     return html`
       <span class="name">
-        ${this.name}
+        ${this.name}${this.version ? html` <small class="version">v${this.version}</small>` : nothing}
         <small class="tag">(Not installed)</small>
       </span><br>
       <small class="location">${this.location}</small>
@@ -479,24 +484,32 @@ class PupStoreItem extends LitElement {
       color: grey;
       font-weight: normal;
     }
+    .version {
+      font-size: 0.8rem;
+      color: var(--sl-color-neutral-500);
+      font-weight: normal;
+    }
     `
 }
 
 customElements.define('x-pupstore-item', PupStoreItem);
 
 class PupLibraryItem extends LitElement {
-
   static get properties() {
     return {
       name: { type: String },
       location: { type: String },
-      id: { type: String }
+      id: { type: String },
+      version: { type: String }
     }
   }
   render() {
     return html`
-      <span class="name">${this.name}</span><br>
-      <small class="location">${this.location}</small><br>
+      <span class="name">
+        ${this.name}${this.version ? html` <small class="version">v${this.version}</small>` : nothing}
+        <small class="tag">(Installed)</small>
+      </span><br>
+      <small class="location">${this.location}</small>
     `
   }
 
@@ -515,6 +528,16 @@ class PupLibraryItem extends LitElement {
     .location {
       font-size: 0.7rem;
       font-family: 'Comic Neue';
+    }
+    .version {
+      font-size: 0.8rem;
+      color: var(--sl-color-neutral-400);
+      font-weight: normal;
+    }
+    .tag {
+      font-size: 0.7rem;
+      color: var(--sl-color-neutral-400);
+      font-weight: normal;
     }
   `
 }

@@ -364,19 +364,17 @@ class AppModeApp extends LitElement {
                     () => html`<h1>Error</h1>`,
                   )}
                 </div>
-                ${true
-                  ? html`
-                      <action-select-install-location
-                        style="z-index: 999"
-                        mode=${this.installationMode}
-                        ?isInstalled=${this.isInstalled}
-                        ?renderReady=${this.hasLoaded}
-                        ?open=${["canInstall", "mustInstall"].includes(
-                          this.installationMode,
-                        )}
-                      ></action-select-install-location>
-                    `
-                  : nothing}
+                ${this.isFirstTimeSetup ? html`
+                  <action-select-install-location
+                    style="z-index: 999"
+                    mode=${this.installationMode}
+                    ?isInstalled=${this.isInstalled}
+                    ?renderReady=${this.hasLoaded}
+                    ?open=${["canInstall", "mustInstall"].includes(
+                      this.installationMode,
+                    )}
+                  ></action-select-install-location>
+                ` : nothing}
               </main>
             </div>
           `

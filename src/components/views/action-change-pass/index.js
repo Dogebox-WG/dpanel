@@ -156,16 +156,12 @@ class ChangePassView extends LitElement {
 
       if (!response) {
         dynamicFormInstance.retainChanges(); // stops spinner
-        dynamicFormInstance._loading = false; // reset loading state
-        dynamicFormInstance._checkForChanges(); // trigger change check
         return;
       }
 
       // Handle error
       if (response.error) {
         dynamicFormInstance.retainChanges(); // stops spinner
-        dynamicFormInstance._loading = false; // reset loading state
-        dynamicFormInstance._checkForChanges(); // trigger change check
         this.handleError(response.error);
         return;
       }
@@ -209,19 +205,6 @@ class ChangePassView extends LitElement {
       this.onSuccess();
     }
 
-    const form = this.shadowRoot.querySelector('dynamic-form');
-    if (form) {
-      // Clear all fields by setting their values to empty string
-      form._flattenedFields.forEach(field => {
-        form.setValue(field.name, '');
-        // If this is a password field with confirmation, clear the confirmation field too
-        if (field.type === 'password' && field.requireConfirmation) {
-          const { repeatKey } = form.propKeys(field.name);
-          form[repeatKey] = '';
-        }
-      });
-    }
-
     if (this.refreshAfterChange) {
       await asyncTimeout(2000);
       window.location.reload();
@@ -233,6 +216,11 @@ class ChangePassView extends LitElement {
       <div class="page">
         <div class="padded">
           ${renderBanner(this.label, this.description)}
+          ${this._invalid_creds ? html`
+            <div style="color: #ff6b6b; margin-bottom: 1em;">
+              Invalid credentials. Please check your current password or recovery phrase.
+            </div>
+          ` : ''}
           <dynamic-form
             .fields=${this._changePassFields}
             .onSubmit=${this._attemptChangePass}

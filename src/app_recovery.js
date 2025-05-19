@@ -404,6 +404,7 @@ class AppModeApp extends LitElement {
                   html` <x-action-change-pass
                     resetMethod="credentials"
                     showSuccessAlert
+                    refreshAfterChange
                   ></x-action-change-pass>`,
               ],
               [

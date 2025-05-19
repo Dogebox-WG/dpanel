@@ -132,6 +132,22 @@ class ChangePassView extends LitElement {
   }
 
   _attemptChangePass = async (data, form, dynamicFormInstance) => {
+    // Handle the toggle field data
+    if (this.resetMethod === "credentials") {
+      const resetMethod = data["reset-method"];
+      
+      if (resetMethod === 0 && data.seedphrase) {
+        // Using seedphrase
+        data.current_password = data.seedphrase;
+        delete data.seedphrase;
+      } else if (resetMethod === 1 && data.password) {
+        // Using current password
+        data.current_password = data.password;
+        delete data.password;
+      }
+      delete data["reset-method"];
+    }
+
     // TODO: Hash password
     // data.new_password = await hash(data.new_password);
 
@@ -140,12 +156,16 @@ class ChangePassView extends LitElement {
 
       if (!response) {
         dynamicFormInstance.retainChanges(); // stops spinner
+        dynamicFormInstance._loading = false; // reset loading state
+        dynamicFormInstance._checkForChanges(); // trigger change check
         return;
       }
 
       // Handle error
       if (response.error) {
         dynamicFormInstance.retainChanges(); // stops spinner
+        dynamicFormInstance._loading = false; // reset loading state
+        dynamicFormInstance._checkForChanges(); // trigger change check
         this.handleError(response.error);
         return;
       }
@@ -187,6 +207,19 @@ class ChangePassView extends LitElement {
     
     if (this.onSuccess) {
       this.onSuccess();
+    }
+
+    const form = this.shadowRoot.querySelector('dynamic-form');
+    if (form) {
+      // Clear all fields by setting their values to empty string
+      form._flattenedFields.forEach(field => {
+        form.setValue(field.name, '');
+        // If this is a password field with confirmation, clear the confirmation field too
+        if (field.type === 'password' && field.requireConfirmation) {
+          const { repeatKey } = form.propKeys(field.name);
+          form[repeatKey] = '';
+        }
+      });
     }
 
     if (this.refreshAfterChange) {

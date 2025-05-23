@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postLogin } from "/api/login/login.js";
 import { store } from "/state/store.js";
+import { hash } from "/utils/hash.js";
 
 // Components
 import "/components/common/dynamic-form/dynamic-form.js";
@@ -97,8 +98,8 @@ class LoginView extends LitElement {
   }
 
   _attemptLogin = async (data, form, dynamicFormInstance) => {
-    // TODO
-    // data.password = await hash(data.password);
+    data.password = await hash(data.password);
+    
     const loginResponse = await postLogin(data).catch(this.handleFault);
     if (!loginResponse) {
       dynamicFormInstance.retainChanges(); // stops spinner

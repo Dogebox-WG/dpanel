@@ -132,8 +132,24 @@ class ChangePassView extends LitElement {
   }
 
   _attemptChangePass = async (data, form, dynamicFormInstance) => {
-    // TODO: Hash password
-    // data.new_password = await hash(data.new_password);
+    // Handle the toggle field data
+    if (this.resetMethod === "credentials") {
+      const resetMethod = data["reset-method"];
+      
+      if (resetMethod === 0 && data.seedphrase) {
+        // User chose to reset using their 12-word recovery phrase
+        delete data.current_password; // Ensure no password is sent when using seedphrase
+      } else if (resetMethod === 1 && data.password) {
+        // User chose to reset using their existing password
+        data.current_password = await hash(data.password);
+        delete data.seedphrase; // Ensure no seedphrase is sent when using password
+      }
+      // Clean up the toggle field data as it's no longer needed
+      delete data["reset-method"];
+    }
+
+    // Hash new password
+    data.new_password = await hash(data.new_password);
 
     if (!this.noSubmit) {
       const response = await postChangePass(data).catch(this.handleFault);
@@ -200,6 +216,11 @@ class ChangePassView extends LitElement {
       <div class="page">
         <div class="padded">
           ${renderBanner(this.label, this.description)}
+          ${this._invalid_creds ? html`
+            <div style="color: #ff6b6b; margin-bottom: 1em;">
+              Invalid credentials. Please check your current password or recovery phrase.
+            </div>
+          ` : ''}
           <dynamic-form
             .fields=${this._changePassFields}
             .onSubmit=${this._attemptChangePass}

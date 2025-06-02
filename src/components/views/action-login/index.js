@@ -175,18 +175,21 @@ class LoginView extends LitElement {
             style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
           >
           </dynamic-form>
+
+          <sl-button variant="text" @click="${this.handleForgotPass}" style="margin-top: 1em;">
+            I forgot my password
+          </sl-button>
         </div>
-        ${false ? html`<sl-button variant="text" @click="${this.handleForgotPass}">
-          I forgot my password
-        </sl-button>` : nothing}
       </div>
 
       <sl-dialog id="ChangePassDialog">
         <x-action-change-pass
-          resetMethod="credentials"
+          resetMethod="seedphrase"
           showSuccessAlert
           refreshAfterChange
           .fieldDefaults=${{ resetMethod: 0 }}
+          label="Reset Password"
+          description="Reset your password using your recovery phrase or current password"
         ></x-action-change-pass>
       </sl-dialog>
     `;

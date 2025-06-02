@@ -68,6 +68,11 @@ class ChangePassView extends LitElement {
     super.connectedCallback();
     this.addEventListener("sl-hide", this.dismissErrors);
 
+    if (this.resetMethod === "seedphrase") {
+      this.label = "Reset Password with Recovery Phrase";
+      this.description = "Reset your password using your recovery phrase (12-words) or current password";
+    }
+
     const changePassFields = {
       sections: [
         {
@@ -87,26 +92,26 @@ class ChangePassView extends LitElement {
       ],
     };
 
-    if (this.resetMethod === "credentials") {
+    if (this.resetMethod === "credentials" || this.resetMethod === "seedphrase") {
       // Construct the field
       const resetByCredentialField = {
         name: "reset-method",
         type: "toggleField",
-        defaultTo: this.fieldDefaults.resetMethod || 0,
+        defaultTo: this.resetMethod === "seedphrase" ? 0 : (this.fieldDefaults.resetMethod || 1),
         labels: ["Alternatively, enter recovery-phrase (12 words)", "Alternatively, enter current password"],
         fields: [
-          {
-            name: "password",
-            label: "Enter Current Password",
-            type: "password",
-            passwordToggle: true,
-            required: true,
-          },
           {
             name: "seedphrase",
             label: "Enter Recovery Phrase (12-words)",
             type: "seedphrase",
             placeholder: "hungry tavern drumkit weekend dignified turmoil cucumber pants karate yacht treacle chump",
+            required: true,
+          },
+          {
+            name: "password",
+            label: "Enter Current Password",
+            type: "password",
+            passwordToggle: true,
             required: true,
           },
         ]
@@ -133,7 +138,7 @@ class ChangePassView extends LitElement {
 
   _attemptChangePass = async (data, form, dynamicFormInstance) => {
     // Handle the toggle field data
-    if (this.resetMethod === "credentials") {
+    if (this.resetMethod === "credentials" || this.resetMethod === "seedphrase") {
       const resetMethod = data["reset-method"];
       
       if (resetMethod === 0 && data.seedphrase) {

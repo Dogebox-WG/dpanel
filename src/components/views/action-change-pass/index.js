@@ -156,7 +156,7 @@ class ChangePassView extends LitElement {
 
     // Hash new password
     // data.new_password = await hash(data.new_password); //TODO: Hash password
-    data.new_password = data.password;
+    data.new_password = data.new_password;
     if (!this.noSubmit) {
       const response = await postChangePass(data).catch(this.handleFault);
 

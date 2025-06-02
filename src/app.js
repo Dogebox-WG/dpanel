@@ -125,7 +125,7 @@ class DPanelApp extends LitElement {
     this.router.addAfterHook(() => store.updateState({ appContext: { menuVisible: false }}))
 
     // Clear some contexts on route change
-    this.router.addBeforeHook(() => store.clearContext(['pupContext']));
+    this.router.addBeforeHook(() => store.clearContext(['pupContext, guiContext']));
 
     if (isUnauthedRoute()) {
       setTimeout(() => { this.ready = true; }, 1500)

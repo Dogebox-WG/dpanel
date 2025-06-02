@@ -73,10 +73,8 @@ export function renderActions(labels, hasLogs) {
           size="large"
           variant="warning"
           ?disabled="${statusId !== 'running'}"
-          @click=${() => {
-            window.open(`${window.location.protocol}//${window.location.hostname}:${entry.port}/`, "_blank");
-          }}
-        ">
+          href="/pups/${pkg.state.id}/ui/${encodeURIComponent(entry.name)}"
+        >
           <sl-icon slot="prefix" name="stars"></sl-icon>
           Launch ${entry.name}
         </sl-button>

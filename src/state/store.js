@@ -43,6 +43,10 @@ class Store {
       ready: false,
       result: null,
     };
+    this.guiContext = {
+      id: null,
+      ready: false,
+    };
     this.promptContext = {
       display: false,
       name: "transaction",
@@ -160,6 +164,9 @@ class Store {
     }
     if (partialState.pupContext) {
       this.pupContext = { ...this.pupContext, ...partialState.pupContext };
+    }
+    if (partialState.guiContext) {
+      this.guiContext = { ...this.guiContext, ...partialState.guiContext };
     }
     if (partialState.promptContext) {
       this.promptContext = {

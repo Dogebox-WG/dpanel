@@ -125,8 +125,10 @@ class AppModeApp extends LitElement {
     }
 
     if (!response.setupFacts) {
-      // TODO (error handling)
-      alert("Failed to fetch bootstrap.");
+      // Only show alert if we're logged in
+      if (this.isLoggedIn) {
+        alert("Failed to fetch bootstrap.");
+      }
       return;
     }
 
@@ -138,8 +140,10 @@ class AppModeApp extends LitElement {
     const response = await getRecoveryBootstrap({ noLogoutRedirect: true });
 
     if (!response.recoveryFacts) {
-      // TODO (error handling)
-      alert("Failed to fetch bootstrap.");
+      // Only show alert if we're logged in
+      if (this.isLoggedIn) {
+        alert("Failed to fetch bootstrap.");
+      }
       return;
     }
 

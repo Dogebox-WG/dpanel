@@ -146,7 +146,8 @@ class ChangePassView extends LitElement {
         delete data.current_password; // Ensure no password is sent when using seedphrase
       } else if (resetMethod === 1 && data.password) {
         // User chose to reset using their existing password
-        data.current_password = await hash(data.password);
+        // data.current_password = await hash(data.password); //TODO: Hash password
+        data.current_password = data.password;
         delete data.seedphrase; // Ensure no seedphrase is sent when using password
       }
       // Clean up the toggle field data as it's no longer needed
@@ -154,8 +155,8 @@ class ChangePassView extends LitElement {
     }
 
     // Hash new password
-    data.new_password = await hash(data.new_password);
-
+    // data.new_password = await hash(data.new_password); //TODO: Hash password
+    data.new_password = data.password;
     if (!this.noSubmit) {
       const response = await postChangePass(data).catch(this.handleFault);
 

@@ -98,7 +98,8 @@ class LoginView extends LitElement {
   }
 
   _attemptLogin = async (data, form, dynamicFormInstance) => {
-    data.password = await hash(data.password);
+    // data.password = await hash(data.password); //TODO: Hash password
+    data.password = data.password;
     
     const loginResponse = await postLogin(data).catch(this.handleFault);
     if (!loginResponse) {

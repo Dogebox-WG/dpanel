@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postLogin } from "/api/login/login.js";
 import { store } from "/state/store.js";
+import { hash } from "/utils/hash.js";
 
 // Components
 import "/components/common/dynamic-form/dynamic-form.js";
@@ -97,8 +98,9 @@ class LoginView extends LitElement {
   }
 
   _attemptLogin = async (data, form, dynamicFormInstance) => {
-    // TODO
-    // data.password = await hash(data.password);
+    // data.password = await hash(data.password); //TODO: Hash password
+    data.password = data.password;
+    
     const loginResponse = await postLogin(data).catch(this.handleFault);
     if (!loginResponse) {
       dynamicFormInstance.retainChanges(); // stops spinner
@@ -174,18 +176,21 @@ class LoginView extends LitElement {
             style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
           >
           </dynamic-form>
+
+          <sl-button variant="text" @click="${this.handleForgotPass}" style="margin-top: 1em;">
+            I forgot my password
+          </sl-button>
         </div>
-        ${false ? html`<sl-button variant="text" @click="${this.handleForgotPass}">
-          I forgot my password
-        </sl-button>` : nothing}
       </div>
 
       <sl-dialog id="ChangePassDialog">
         <x-action-change-pass
-          resetMethod="credentials"
+          resetMethod="seedphrase"
           showSuccessAlert
           refreshAfterChange
           .fieldDefaults=${{ resetMethod: 0 }}
+          label="Reset Password"
+          description="Reset your password using your recovery phrase or current password"
         ></x-action-change-pass>
       </sl-dialog>
     `;

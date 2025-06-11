@@ -68,6 +68,7 @@ export function renderSectionBody(ready, SKELS, hasItems) {
             ?updateAvailable=""
             href=${pkg.computed.storeURL}
             .source=${pkg.def.source}
+            .installationState=${{ id: pkg.computed.installationId, label: pkg.computed.installationLabel }}
           ></pup-install-card>
         `})}
       </div>

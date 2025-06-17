@@ -40,6 +40,9 @@ class PkgController {
       if (pupId === observer.pupId) {
         observer.requestUpdate(options);
       }
+      if (typeof observer.updatePups === "function") {
+        observer.updatePups();
+      }
     }
   }
 

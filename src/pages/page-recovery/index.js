@@ -146,11 +146,6 @@ class SetupCompleteView extends LitElement {
         ${!this.isFirstTimeSetup ? html`
           <h2>Recovery Actions</h2>
 
-          <p>
-            Insert your recovery USB at any time to perform the following
-            administrative actions
-          </p>
-
           ${this.renderRecoverActions()}
         ` : nothing}
 

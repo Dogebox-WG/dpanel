@@ -125,8 +125,10 @@ class AppModeApp extends LitElement {
     }
 
     if (!response.setupFacts) {
-      // TODO (error handling)
-      alert("Failed to fetch bootstrap.");
+      // Only show alert if we're logged in
+      if (this.isLoggedIn) {
+        alert("Failed to fetch bootstrap.");
+      }
       return;
     }
 
@@ -138,8 +140,10 @@ class AppModeApp extends LitElement {
     const response = await getRecoveryBootstrap({ noLogoutRedirect: true });
 
     if (!response.recoveryFacts) {
-      // TODO (error handling)
-      alert("Failed to fetch bootstrap.");
+      // Only show alert if we're logged in
+      if (this.isLoggedIn) {
+        alert("Failed to fetch bootstrap.");
+      }
       return;
     }
 
@@ -370,19 +374,17 @@ class AppModeApp extends LitElement {
                     () => html`<h1>Error</h1>`,
                   )}
                 </div>
-                ${true
-                  ? html`
-                      <action-select-install-location
-                        style="z-index: 999"
-                        mode=${this.installationMode}
-                        ?isInstalled=${this.isInstalled}
-                        ?renderReady=${this.hasLoaded}
-                        ?open=${["canInstall", "mustInstall"].includes(
-                          this.installationMode,
-                        )}
-                      ></action-select-install-location>
-                    `
-                  : nothing}
+                ${this.isFirstTimeSetup ? html`
+                  <action-select-install-location
+                    style="z-index: 999"
+                    mode=${this.installationMode}
+                    ?isInstalled=${this.isInstalled}
+                    ?renderReady=${this.hasLoaded}
+                    ?open=${["canInstall", "mustInstall"].includes(
+                      this.installationMode,
+                    )}
+                  ></action-select-install-location>
+                ` : nothing}
               </main>
             </div>
           `
@@ -412,6 +414,7 @@ class AppModeApp extends LitElement {
                   html` <x-action-change-pass
                     resetMethod="credentials"
                     showSuccessAlert
+                    refreshAfterChange
                   ></x-action-change-pass>`,
               ],
               [

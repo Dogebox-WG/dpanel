@@ -89,6 +89,14 @@ class SettingsPage extends LitElement {
             Gracefully restart your Dogebox
           </action-row>
         </section>
+
+        <section>
+          <div class="section-title">
+            <h3>Help</h3>
+          </div>
+            <action-row prefix="book" label="Documentation" href="https://dogebox-docs.dogecoin.org/" target="_blank">
+              View the Dogebox documentation
+            </action-row>
       </div>
 
       <sl-dialog no-header

@@ -172,7 +172,6 @@ class WelcomeModal extends LitElement {
 
   async handleNext() {
     try {
-      console.log('sending complete');
       await postWelcomeComplete();
       
       if (this.selectedOption !== 'custom') {

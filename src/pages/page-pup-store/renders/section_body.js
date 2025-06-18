@@ -53,7 +53,7 @@ export function renderSectionBody(ready, SKELS, hasItems) {
 
     ${ready && hasItems('packages') ? html`
       <div class="pup-card-grid">
-        ${repeat(this.packageList.getCurrentPageData(), (pkg) => `${pkg.def.source.id}-${pkg.def.key}`, (pkg) => {
+        ${repeat(this.packageList.getCurrentPageData(), (pkg) => `${pkg.def.source?.id || 'unknown'}-${pkg.def.key}`, (pkg) => {
           return html`
           <pup-install-card
             defaultIcon="box"

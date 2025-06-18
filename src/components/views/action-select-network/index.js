@@ -370,19 +370,17 @@ class SelectNetwork extends LitElement {
       <div class="page">
         <div class="padded">
           ${renderBanner()}
-          ${this._setNetworkFields
-            ? html`
-                <dynamic-form
-                  .fields=${this._setNetworkFields}
-                  .values=${this._setNetworkValues}
-                  .onSubmit=${this._attemptSetNetwork}
-                  requireCommit
-                  theme="yellow"
-                  style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
-                >
-                </dynamic-form>
-              `
-            : nothing}
+          ${this._setNetworkFields ? html`
+            <dynamic-form
+              .fields=${this._setNetworkFields}
+              .values=${this._setNetworkValues}
+              .onSubmit=${this._attemptSetNetwork}
+              requireCommit
+              theme="yellow"
+              style="--submit-btn-width: auto; --submit-btn-anchor: end;"
+            >
+            </dynamic-form>
+            `: nothing }
 
           <div style="margin: 2em 8px">
             <sl-alert variant="warning" open>

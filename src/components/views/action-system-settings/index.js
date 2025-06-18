@@ -50,6 +50,10 @@ class SystemSettings extends LitElement {
       gap: 1em;
       margin-bottom: 2em;
     }
+
+    .next-button {
+      margin-top: 2em;
+    }
   `;
 
   static get properties() {
@@ -276,8 +280,8 @@ class SystemSettings extends LitElement {
             }
 
             <sl-button
+              class="next-button"
               variant="primary"
-              style="width: 100px;"
               ?disabled=${this._inflight || (this._changes.disk && !this._is_boot_media && !this._confirmation_checked)}
               ?loading=${this._inflight}
               @click=${this._attemptSubmit}

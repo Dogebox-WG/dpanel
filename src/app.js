@@ -31,6 +31,7 @@ import "/components/views/prompt-system/index.js";
 import "/utils/devtools/debug-panel.js";
 import "/components/common/dot.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
+import { showWelcomeModal } from "/components/common/welcome-modal.js";
 
 // Render chunks
 import * as renderMethods from "/components/layouts/standard/renders/index.js";
@@ -146,6 +147,12 @@ class DPanelApp extends LitElement {
       if (res) {
         this.pkgController.setData(res);
       }
+
+      // Check if we should show the welcome modal
+      if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
+        showWelcomeModal();
+      }
+      
     } catch (err) {
       console.warn('Failed to fetch bootstrap')
     } finally {

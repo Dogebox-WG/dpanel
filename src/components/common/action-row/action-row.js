@@ -10,6 +10,7 @@ class ActionRow extends LitElement {
       variant: { type: String },
       loading: { type: Boolean },
       href: { type: String },
+      target: { type: String },
       disabled: { type: Boolean },
       expandable: { type: Boolean },
       expand: { type: Boolean, reflect: true },
@@ -27,6 +28,7 @@ class ActionRow extends LitElement {
     this.disabled = false;
     this.expandable = false;
     this.expand = false;
+    this.target = "_self";
   }
 
   static styles = css`
@@ -277,7 +279,7 @@ class ActionRow extends LitElement {
     `;
     return html`
       ${this.href
-        ? html` <a class="anchor" href="${this.href}" target="_self">${el}</a> `
+        ? html` <a class="anchor" href="${this.href}" target="${this.target}">${el}</a> `
         : el}
     `;
   }

@@ -154,7 +154,7 @@ class ActionRow extends LitElement {
       flex-direction: column;
       justify-content: center;
       border-bottom: 1px solid #333;
-      max-width: calc(100% - 80px);
+      max-width: calc(100% - 130px);
       gap: 0.25em;
 
       .label-wrap {

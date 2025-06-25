@@ -118,6 +118,9 @@ class PupInstallCard extends LitElement {
                 <span class="source">
                   ${this.renderSourceIcon(source?.type)}
                   ${source?.location}
+                  ${source?.error ? html`
+                    <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600); margin-left: 4px;"></sl-icon>
+                  ` : nothing}
                 </span>
                 <x-tag-set class="tag-set" .tags=${upstreamVersions} max=1></x-tag-set>
               </div>

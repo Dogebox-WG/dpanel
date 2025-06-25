@@ -223,9 +223,25 @@ export class SourceManagerView extends LitElement {
         ${this._ready ? html`
 
           ${this._sources.map((s) => html`
-            <action-row label="${s.name}" prefix="git" style="--row-height: 72px;">
+            <action-row 
+              label="${s.name}" 
+              prefix="git" 
+              variant=${s.error ? 'danger' : ''}
+              style="--row-height: ${s.error ? '120px' : '72px'};">
               ${s.location}
+              ${s.error ? html`
+                <div class="error-indicator">
+                  <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600);"></sl-icon>
+                  <span class="error-text">${s.error}</span>
+                </div>
+              ` : nothing}
               <div slot="more" class="source-stats">
+                ${s.error ? html`
+                  <div class="stat error">
+                    <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600);"></sl-icon>
+                    <span class="stat-label">Error</span>
+                  </div>
+                ` : nothing}
                 <div class="stat green">
                   <span class="stat-value">${s.pupCount}</span>
                   <span clas="stat-label">Pups</span>
@@ -318,6 +334,35 @@ export class SourceManagerView extends LitElement {
     }
     .stat.green {
       color: var(--sl-color-green-600);
+    }
+    .stat.error {
+      color: var(--sl-color-danger-600);
+    }
+
+    .error-indicator {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5em;
+      margin-top: 0.5em;
+      padding: 0.5em;
+      background-color: var(--sl-color-danger-50);
+      border: 1px solid var(--sl-color-danger-200);
+      border-radius: var(--sl-border-radius-small);
+      width: 100%;
+      box-sizing: border-box;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: unset !important;
+    }
+
+    .error-text {
+      color: var(--sl-color-danger-700);
+      font-size: 0.875em;
+      font-family: 'Comic Neue', sans-serif;
+      flex: 1;
+      word-wrap: break-word;
+      white-space: normal;
+      line-height: 1.4;
     }
   ` 
 }

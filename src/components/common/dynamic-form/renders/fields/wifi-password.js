@@ -1,5 +1,5 @@
-import { testNetwork } from "../../../../../api/network/test-network";
-import debounce from "../../../../../utils/debounce";
+import { testNetwork } from "../../../../../api/network/test-network.js";
+import debounce from "../../../../../utils/debounce.js";
 import {
   html,
   ifDefined,

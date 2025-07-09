@@ -12,8 +12,11 @@ import { renderBanner } from "./banner.js";
 // Store
 import { store } from "/state/store.js";
 
+// Components and styles
+import { toggledSectionStyles } from "/components/common/toggled-section.js";
+
 class SystemSettings extends LitElement {
-  static styles = css`
+  static styles = [toggledSectionStyles, css`
     :host {
       display: block;
     }
@@ -51,10 +54,12 @@ class SystemSettings extends LitElement {
       margin-bottom: 2em;
     }
 
+    h4 { margin: 0.5em 0; display: flex; align-items: center; }
+
     .next-button {
       margin-top: 2em;
     }
-  `;
+  `];
 
   static get properties() {
     return {
@@ -77,7 +82,9 @@ class SystemSettings extends LitElement {
     this._changes = {
       keymap: 'us',
       disk: '',
-      'device-name': ''
+      'device-name': '',
+      use_fdn_pup_binary_cache: true,
+      use_fdn_os_binary_cache: true,
     };
     this._show_disk_size_warning = false;
     this._show_disk_size_in_use_warning = false;
@@ -127,7 +134,8 @@ class SystemSettings extends LitElement {
   async _attemptSubmit() {
     this._inflight = true;
 
-    const formFields = this.shadowRoot.querySelectorAll('sl-input, sl-select');
+    // Only input elements that have a name attribute are sent to backend.
+    const formFields = this.shadowRoot.querySelectorAll('sl-input[name], sl-select[name], sl-checkbox[name]');
     const hasInvalidField = Array.from(formFields).some(field => field.hasAttribute('data-invalid'));
 
     await asyncTimeout(2000);
@@ -139,6 +147,13 @@ class SystemSettings extends LitElement {
     }
 
     let didSucceed = false
+
+    store.updateState({
+      setupContext: {
+        useFoundationPupBinaryCache: this._changes.use_fdn_pup_binary_cache,
+        useFoundationOSBinaryCache: this._changes.use_fdn_os_binary_cache,
+      },
+    });
 
     try {
       await setHostname({ hostname: this._changes['device-name'] });
@@ -191,6 +206,26 @@ class SystemSettings extends LitElement {
     this._show_disk_in_use_warning = diskObject?.suitability?.isAlreadyUsed;
   }
 
+  _getBinaryCacheAlertVariant() {
+    return this._changes.use_fdn_pup_binary_cache && this._changes.use_fdn_os_binary_cache ? 'primary' : 'warning';
+  }
+
+  _getBinaryCacheAlertIcon() {
+    return this._changes.use_fdn_pup_binary_cache && this._changes.use_fdn_os_binary_cache ? 'info-circle' : 'exclamation-triangle';
+  }
+
+  _getBinaryCacheAlertMessage() {
+    if (this._changes.use_fdn_pup_binary_cache && this._changes.use_fdn_os_binary_cache) {
+      return 'Using a binary cache saves time. Binaries are still validated for authenticity before installation.';
+    }
+
+    const disabledCaches = [];
+    if (!this._changes.use_fdn_pup_binary_cache) disabledCaches.push('Pup');
+    if (!this._changes.use_fdn_os_binary_cache) disabledCaches.push('OS');
+    
+    return `Just a heads up. You may experience longer ${disabledCaches.join(' and ')} install times down the track (up to 30 minutes in some cases)`;
+  }
+
   handleCheckboxChange(e) {
     this._confirmation_checked = e.target.checked;
   }
@@ -208,6 +243,7 @@ class SystemSettings extends LitElement {
           <div class="form-control">
             <sl-button class="label-button" variant="text" @click=${this._generateName}>Randomize</sl-button>
             <sl-input
+              name="device-name"
               required
               label="Set Device Name (for your local network)"
               ?disabled=${this._inflight}
@@ -221,6 +257,7 @@ class SystemSettings extends LitElement {
 
           <div class="form-control">
             <sl-select
+              name="keymap"
               required
               label="Select Keyboard Layout" 
               ?disabled=${this._inflight}
@@ -240,6 +277,7 @@ class SystemSettings extends LitElement {
 
           <div class="form-control">
             <sl-select
+              name="disk"
               required
               label="Select Mass Storage Disk"
               ?disabled=${this._inflight}
@@ -262,6 +300,44 @@ class SystemSettings extends LitElement {
               You have selected a disk with less than 300GB capacity.  You can proceed, however syncing the Blockchain could exhaust your disk.
             </sl-alert>
           </div>
+
+          <sl-details class="advanced" summary="Advanced Settings">
+            <h4>Binary Caches
+              <sl-tooltip>
+                <div slot="content">
+                  A binary cache stores pre-compiled packages to speed up installation and reduce build time. Instead of compiling everything from source code, the system can download ready-to-use binaries from the Dogecoin Foundation's cache: https://nix.dogecoin.org/
+                  </div>
+                <sl-icon-button name="question-circle" label="Binary cache explaination"></sl-icon-button></h4>
+              </sl-tooltip>
+            <div class="form-control">
+              <sl-checkbox
+                name="use_fdn_os_binary_cache"
+                ?checked=${this._changes.use_fdn_os_binary_cache}
+                .value=${this._changes.use_fdn_os_binary_cache}
+                @sl-change=${(e) => { this._changes.use_fdn_os_binary_cache = e.target.checked; this.requestUpdate(); }}
+                help-text="Uncheck to opt out of using the Dogecoin Foundation OS binary cache">
+                Use Dogecoin FDN OS binary cache
+              </sl-checkbox>
+              <sl-checkbox
+                name="use_fdn_pup_binary_cache"
+                ?checked=${this._changes.use_fdn_pup_binary_cache}
+                .value=${this._changes.use_fdn_pup_binary_cache}
+                @sl-change=${(e) => { this._changes.use_fdn_pup_binary_cache = e.target.checked; this.requestUpdate(); }}
+                help-text="Uncheck to opt out of using the Dogecoin Foundation Pup binary cache">
+                Use Dogecoin FDN Pup binary cache
+              </sl-checkbox>
+            </div>
+
+            <sl-alert 
+              variant=${this._getBinaryCacheAlertVariant()}
+              open
+              style="margin-top: 1em;"
+            >
+              <sl-icon slot="icon" name=${this._getBinaryCacheAlertIcon()}></sl-icon>
+              ${this._getBinaryCacheAlertMessage()}
+            </sl-alert>
+
+          </sl-details>
 
           <sl-divider style="--spacing: 2rem;"></sl-divider>
 

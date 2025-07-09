@@ -47,13 +47,15 @@ class Store {
       display: false,
       name: "transaction",
     };
-    (this.dialogContext = {
+    this.dialogContext = {
       name: null,
-    }),
-      (this.setupContext = {
-        hashedPassword: null,
-        view: null,
-      });
+    };
+    this.setupContext = {
+      hashedPassword: null,
+      view: null,
+      useFoundationPupBinaryCache: false,
+      useFoundationOSBinaryCache: false,
+    };
 
     // Hydrate state from localStorage unless flush parameter is present.
     if (!isUnauthedRoute() && !hasFlushParam()) {

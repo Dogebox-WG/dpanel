@@ -66,7 +66,7 @@ export function renderDialog() {
         <h4>Important Notes:</h4>
         <ul>
           <li>The copy process can take a very long time depending on the blockchain size</li>
-          <li>Dogecoin Core blockchain is approximately 250GB+ (as of 2025)</li>
+          <li>Dogecoin Core blockchain is approximately 200GB+ (as of 2025)</li>
           <li>Ensure the pup has enough storage space for the blockchain data</li>
           <li>Always backup your blockchain data before importing</li>
         </ul>

@@ -14,6 +14,10 @@ import "/components/common/page-container.js";
 import "/components/common/sparkline-chart/sparkline-chart-v2.js";
 import "/components/views/x-metric/metric.js";
 import "/components/views/x-activity-log.js";
+import "/components/common/reveal-row/reveal-row.js";
+import "/components/views/x-version-card.js";
+import "/components/views/x-launcher-button/index.js";
+import "/components/views/x-log-viewer/index.js";
 import { bindToClass } from "/utils/class-bind.js";
 import * as renderMethods from "./renders/index.js";
 import { store } from "/state/store.js";
@@ -22,6 +26,9 @@ import { pkgController } from "/controllers/package/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
+import { renderDialog } from "./renders/dialog.js";
+import { renderActions, handleImportBlockchain } from "./renders/actions.js";
+import { renderStatus } from "./renders/status.js";
 
 class PupPage extends LitElement {
   static get properties() {
@@ -36,6 +43,7 @@ class PupPage extends LitElement {
       inflight_startstop: { type: Boolean },
       inflight_uninstall: { type: Boolean },
       inflight_purge: { type: Boolean },
+      inflight_import_blockchain: { type: Boolean },
       _HARDCODED_UNINSTALL_WAIT_TIME: { type: Number },
       activityLogs: { type: Array },
     };
@@ -55,6 +63,10 @@ class PupPage extends LitElement {
     this._confirmedName = "";
     this._HARDCODED_UNINSTALL_WAIT_TIME = 0;
     this.activityLogs = [];
+    this.renderDialog = renderDialog.bind(this);
+    this.renderActions = renderActions.bind(this);
+    this.renderStatus = renderStatus.bind(this);
+    this.handleImportBlockchain = handleImportBlockchain.bind(this);
   }
 
   getPup() {
@@ -328,6 +340,12 @@ class PupPage extends LitElement {
           Customize ${pkg.state.manifest.meta.name}
         </action-row>
       `}
+
+      ${labels.installationId === 'ready' && labels.statusId !== 'running' && (pkg.state.manifest?.meta?.name === 'Core' || pkg.state.manifest?.meta?.name === 'Dogecoin Core') ? html`
+        <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
+          Import existing blockchain data from external drive
+        </action-row>
+      ` : nothing}
 
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
         Ea sint dolor commodo.

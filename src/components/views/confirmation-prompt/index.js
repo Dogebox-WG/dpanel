@@ -5,28 +5,43 @@ export class ConfirmationPrompt extends LitElement {
     return {
       title: { type: String },
       description: { type: String },
-      leftButtonText: { type: String },
-      leftButtonVariant: { type: String },
-      leftButtonClick: { type: Function },
-      rightButtonText: { type: String },
-      rightButtonVariant: { type: String },
-      rightButtonClick: { type: Function },
+      topButtonText: { type: String },
+      topButtonVariant: { type: String },
+      topButtonClick: { type: Function },
+      bottomButtonText: { type: String },
+      bottomButtonVariant: { type: String },
+      bottomButtonClick: { type: Function },
     }
   }
+
+  static styles = css`
+    p { 
+      padding: 2em 10%;
+    }
+    .footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .33em;
+    }
+    .footer sl-button { 
+      width: 80%;
+    }
+  `
 
   constructor() {
     super();
 
     this.title = this.title ?? 'Are you sure?'
-    this.leftButtonVariant = this.leftButtonVariant ?? 'text'
-    this.rightButtonVariant = this.rightButtonVariant ?? 'danger'
+    this.topButtonVariant = this.topButtonVariant ?? 'primary'
+    this.bottomButtonVariant = this.bottomButtonVariant ?? 'text'
 
-    this._rightButtonClick = () => {
-      if (this.rightButtonClick) this.rightButtonClick()
+    this._bottomButtonClick = () => {
+      if (this.bottomButtonClick) this.bottomButtonClick()
     }
 
-    this._leftButtonClick = () => {
-      if (this.leftButtonClick) this.leftButtonClick()
+    this._topButtonClick = () => {
+      if (this.topButtonClick) this.topButtonClick()
     }
   }
 
@@ -36,9 +51,9 @@ export class ConfirmationPrompt extends LitElement {
         <h3>${this.title}</h3>
         <p>${this.description}</p>
       </div>
-      <div slot="footer" style="display: flex; justify-content: space-between;">
-        <sl-button variant="${this.leftButtonVariant}" @click=${this._leftButtonClick}>${this.leftButtonText}</sl-button>
-        <sl-button variant="${this.rightButtonVariant}" @click=${this._rightButtonClick}>${this.rightButtonText}</sl-button>
+      <div class="footer" slot="footer">
+        <sl-button variant="${this.topButtonVariant}" @click=${this._topButtonClick}>${this.topButtonText}</sl-button>
+        <sl-button variant="${this.bottomButtonVariant}" @click=${this._bottomButtonClick}>${this.bottomButtonText}</sl-button>
       </div>
     `;
   }

@@ -26,7 +26,8 @@ class StoreView extends LitElement {
       busy: { type: Boolean },
       inspectedPup: { type: String },
       searchValue: { type: String },
-      _showSourceManagementDialog: { type: Boolean }
+      _showSourceManagementDialog: { type: Boolean },
+      _hasSourceErrors: { type: Boolean }
     }
   }
 
@@ -41,6 +42,7 @@ class StoreView extends LitElement {
     this.pkgController = pkgController;
     this.packageList = new PaginationController(this, undefined, this.itemsPerPage,{ initialSort });
     this._showSourceManagementDialog = false;
+    this._hasSourceErrors = false;
 
     this.inspectedPup;
     this.showCategories = false;
@@ -67,6 +69,7 @@ class StoreView extends LitElement {
     this.addEventListener('manage-sources-closed', this.handleManageSourcesClosed.bind(this));
     this.addEventListener('source-change', this.updatePups.bind(this));
     this.fetchBootstrap();
+    this.checkForSourceErrors();
   }
 
   disconnectedCallback() {
@@ -132,6 +135,7 @@ class StoreView extends LitElement {
       const storeListingRes = await getStoreListing()
       this.pkgController.setStoreData(storeListingRes);
       this.packageList.setData(this.pkgController.pups);
+      this.checkForSourceErrors();
     } catch (err) {
       console.error(err);
       this.fetchError = true;
@@ -143,7 +147,8 @@ class StoreView extends LitElement {
   }
 
   updatePups() {
-    this.pups = this.pkgController.pups;
+    this.pups = [...this.pkgController.pups];
+    this.checkForSourceErrors();
     this.requestUpdate('pups');
   }
 
@@ -178,6 +183,11 @@ class StoreView extends LitElement {
     this._showSourceManagementDialog = true;
   }
 
+  checkForSourceErrors() {
+    const sources = this.pkgController.getSourceList();
+    this._hasSourceErrors = sources.some(source => source.error);
+  }
+
   render() {
     const ready = (
       !this.fetchLoading &&
@@ -199,8 +209,8 @@ class StoreView extends LitElement {
       <page-banner title="Pup Store" subtitle="Dogebox">
         <div class="slogan-wrap">
           Extend your Dogebox with Pups
-          <sl-button size="large" variant="text" ?disabled=${this.fetchLoading} @click=${this.handleManageSourcesClick}>
-            <sl-icon name="database-fill-add" slot="prefix"></sl-icon>
+          <sl-button size="large" variant="text" ?disabled=${this.fetchLoading} @click=${this.handleManageSourcesClick} class=${this._hasSourceErrors ? 'source-error' : ''}>
+            <sl-icon name=${this._hasSourceErrors ? 'exclamation-triangle-fill' : 'database-fill-add'} slot="prefix"></sl-icon>
             Manage Sources
           </sl-button>
         </div>
@@ -298,6 +308,14 @@ class StoreView extends LitElement {
         justify-content: center;
         align-items: center;
       }
+    }
+
+    .source-error {
+      color: var(--sl-color-warning-600) !important;
+    }
+
+    .source-error::part(base) {
+      color: var(--sl-color-warning-600) !important;
     }
   `
 }

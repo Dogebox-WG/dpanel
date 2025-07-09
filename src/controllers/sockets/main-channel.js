@@ -34,10 +34,12 @@ class SocketChannel {
   observers = [];
   reconnectInterval = 500;
   maxReconnectInterval = 10000;
+  recoveryLogs = ["Connecting to WebSocket"];
 
   constructor() {
     this.wsClient = null;
     this.isConnected = false;
+    
     this.setupSocketConnection();
 
     if (!this.isConnected) {
@@ -54,22 +56,26 @@ class SocketChannel {
       return;
     }
 
+    const wsUrl = `${store.networkContext.wsApiBaseUrl}/ws/state/`;
+    
     this.wsClient = new WebSocketClient(
-      `${store.networkContext.wsApiBaseUrl}/ws/state/`,
+      wsUrl,
       store.networkContext,
       mockedMainChannelRunner,
     );
 
     // Update component state based on WebSocket events
     this.wsClient.onOpen = () => {
+        
       this.isConnected = true;
       this.reconnectInterval = 1000; // reset.
-      console.log("CONNECTED!!@");
+      console.log("CONNECTED!!");
+      this.recoveryLogs = [...this.recoveryLogs, "Websocket connected"];
       this.notify();
     };
 
     this.wsClient.onMessage = async (event) => {
-      
+
       let err, data;
       try {
         data = JSON.parse(event.data);
@@ -132,17 +138,22 @@ class SocketChannel {
         case "system-state":
           sysController.ingestSystemStateUpdate(data)
           break;
+
+        case "recovery":
+          console.log("--RECOVERY", data.update);
+          this.recoveryLogs = [...this.recoveryLogs, data.update];
+          break;
       }
       this.notify();
     };
 
     this.wsClient.onError = (event) => {
-      console.log("ERERERRS", event);
+      console.log("ERRORS", event);
       this.notify();
     };
 
     this.wsClient.onClose = (event) => {
-      console.log("CLSOSSING");
+      console.log("CLOSING");
       this.isConnected = false;
       this.notify();
       this.attemptReconnect();
@@ -198,6 +209,22 @@ class SocketChannel {
   doThing() {
     this.notify();
   }
+
+    // Get current messages
+    getRecoveryLogs() {
+      return this.recoveryLogs || [];
+    }
+  
+    // Subscribe to message updates
+    subscribeToRecoveryLogs(callback) {
+      const messageObserver = {
+        requestUpdate: () => {
+          callback(this.recoveryLogs || []);
+        }
+      };
+      this.addObserver(messageObserver);
+      return () => this.removeObserver(messageObserver);
+    }
 }
 
 // Instance holder

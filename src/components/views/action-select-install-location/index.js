@@ -8,7 +8,11 @@ import {
 import { createAlert } from "/components/common/alert.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import "/components/common/action-row/action-row.js";
+import "/components/views/x-activity-log.js";
+import "/components/common/text-loader/text-loader.js";
 import { getDisks, postInstallToDisk } from "/api/disks/disks.js";
+import { promptPowerOff } from "/pages/page-settings/power-helpers.js";
+import { mainChannel } from "/controllers/sockets/main-channel.js";
 
 const PAGE_ONE = "intro";
 const PAGE_TWO = "disk_selection";
@@ -19,6 +23,8 @@ export class LocationPickerView extends LitElement {
   static get properties() {
     return {
       mode: { type: String }, // either canInstall or mustInstall
+      isInstalled: { type: Boolean },
+      renderReady: { type: Boolean },
       open: { type: Boolean, reflect: true },
       _ready: { type: Boolean },
       _inflight_disks: { type: Boolean },
@@ -28,13 +34,17 @@ export class LocationPickerView extends LitElement {
       _confirmation_checked: { type: Boolean },
       _inflight_install: { type: Boolean },
       _install_outcome: { type: String },
+      _logs: { type: Array, state: true },
     };
   }
 
   constructor() {
     super();
     this.mode = "";
-    this.open = false;
+    this.isInstalled = false;
+    this.renderReady = false;
+    this.mainDialogOpen = true;
+    this.existingInstallationDialogOpen = false;
     this._ready = false;
     this._page = PAGE_ONE;
     this._allDisks = [];
@@ -45,12 +55,19 @@ export class LocationPickerView extends LitElement {
     this._inflight_install = false;
     this._install_outcome = "";
     this._header = "Such Install"
+    this._logs = [];
+    this._unsubscribe = null;
   }
 
   firstUpdated() {
-    if (this.open) {
+    if (this.mainDialogOpen) {
       this._inflight_disks = true;
       this.fetchDisks();
+    }
+    // Set initial logs
+    const initialLogs = mainChannel.getRecoveryLogs();
+    if (initialLogs && initialLogs.length > 0) {
+      this._logs = initialLogs.map(msg => ({ msg }));
     }
   }
 
@@ -64,10 +81,20 @@ export class LocationPickerView extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener('sl-request-close', this.denyClose);
+
+    // Subscribe to message updates
+    this._unsubscribe = mainChannel.subscribeToRecoveryLogs((messages) => {
+      if (messages && messages.length > 0) {
+        this._logs = messages.map(msg => ({ msg }));
+      }
+    });
   }
 
   disconnectedCallback() {
     this.removeEventListener('sl-request-close', this.denyClose);
+    if (this._unsubscribe) {
+      this._unsubscribe(); // Cleanup subscription
+    }
     super.disconnectedCallback();
   }
 
@@ -86,8 +113,19 @@ export class LocationPickerView extends LitElement {
   }
 
   render() {
+    //Show loading spinner while renderReady is false
+    if (!this.renderReady) {
+      return this.renderLoadingSpinner();
+    }
+
+    // Show existing installation dialog if already installed
+    if (this.isInstalled) {
+      this.existingInstallationDialogOpen = true;
+      return this.renderExistingInstall();
+    }
+    
     return html`
-      <sl-dialog ?open=${this.open} no-header>
+      <sl-dialog ?open=${this.mainDialogOpen} no-header>
         <div class="wrap">
           ${choose(this._page, [
             [PAGE_ONE, this.renderIntro],
@@ -100,10 +138,59 @@ export class LocationPickerView extends LitElement {
     `;
   }
 
+  renderHeader = () => {
+    return html`
+      <div class="header-container">
+        <img class="logo" src="/static/img/dogebox-logo-small.png" alt="Dogebox Logo">
+        <h1>${this._header}</h1>
+      </div>
+    `;
+  }
+
+  renderExistingInstall = () => {
+    return html`
+      <sl-dialog ?open=${this.existingInstallationDialogOpen} no-header>
+        <div class="dialog-content">
+          ${this.renderHeader()}
+          <div class="wrap">
+            <h2 style="margin-bottom: 24px;">Dogebox OS is already installed on this device</h2>
+            <p>If you just installed, you might have forgotten to <u>remove the installation media</u>. Please power off and try again.</p>
+            <sl-button variant="warning" @click=${promptPowerOff} style="margin-block-start: 1em;">
+              <sl-icon name="power"></sl-icon>
+              Shutdown
+            </sl-button>
+            <div>
+              <sl-button style="margin-block-start: 2em;" @click=${() => { 
+                this.isInstalled = false;
+                this.existingInstallationDialogOpen = false;
+                this.mainDialogOpen = true; }}>I know what I'm doing - I want to reinstall</sl-button>
+            </div>
+          </div>
+        </div>
+      </sl-dialog>
+    `;
+  } 
+
+  renderLoadingSpinner = () => {
+    return html`
+      <sl-dialog ?open=${true} no-header>
+        <div class="loader-overlay">
+          <sl-spinner class="spinner"></sl-spinner>
+          <text-loader
+                loop
+                .texts=${["HOdL tight"]}
+                ?loopEnd=${this.renderReady}
+              >
+              </text-loader>
+        </div>
+      </sl-dialog>
+    `;
+  } 
+
   renderIntro = () => {
     return html`
       <div class="page">
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Where you install Dogebox OS is up to you</p>
 
         <div class="choice-wrap">
@@ -153,7 +240,7 @@ export class LocationPickerView extends LitElement {
           Back
         </sl-button>
 
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Select from the following disks:</p>
 
         <div class="disk-wrap">
@@ -195,7 +282,7 @@ export class LocationPickerView extends LitElement {
           Back
         </sl-button>
 
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Selected disk: <strong>${selectedDisk.name} (${selectedDisk.sizePretty})</strong></p>
 
         <sl-alert open variant="warning" style="text-align: left">
@@ -220,11 +307,11 @@ export class LocationPickerView extends LitElement {
   };
 
   renderInstallation = () => {
-    const selectedDisk = this._installDisks[this._selected_disk_index]
+    const selectedDisk = this._installDisks[this._selected_disk_index];
     return html`
       <div class="page">
 
-        <h1>${this._header}</h1>
+        ${this.renderHeader()}
         <p>Installing on disk: <strong>${selectedDisk.name} (${selectedDisk.sizePretty})</strong></p>
 
         ${!this._inflight_install && this._install_outcome === "success" ? html`
@@ -248,13 +335,22 @@ export class LocationPickerView extends LitElement {
         </sl-alert>
         `: nothing }
 
+        <div class="activity-log-wrap">
+          <x-activity-log .logs=${this._logs}></x-activity-log>
+        </div>
+
         ${this._inflight_install ? html`
           <p><small>This may take 10 minutes or more.  Do not refresh or power off your Dogebox while installation is in progress.</small></p>`
         : nothing }
 
         ${!this._inflight_install && this._install_outcome ? html`
-          <p><small>Please reboot your Dogebox</small></p>`
-        : nothing }
+          <p class="note-text">Please reboot your Dogebox</p>
+          <p class="note-text">While powered off, don't forget to remove the installation media</p>
+          <sl-button variant="warning" @click=${promptPowerOff} style="margin-block-start: 1em;">
+            <sl-icon name="power"></sl-icon>
+            Shutdown
+          </sl-button>
+        `: nothing }
 
       </div>
     `;
@@ -265,7 +361,7 @@ export class LocationPickerView extends LitElement {
   }
 
   handleStay() {
-    console.log('clicked');
+    this.mainDialogOpen = false;
     this.open = false;
     return;
   }
@@ -315,19 +411,60 @@ export class LocationPickerView extends LitElement {
       background-color: rgba(0,0,0,0.85);
     }
 
+    sl-dialog::part(body) {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dialog-content {
+      text-align: center;
+    }
+
     .wrap {
       text-align: center;
       position: relative;
-
-      h1 {
-        display: block;
-        margin-top: 0px;
-        margin-bottom: -24px;
-        font-family: 'Comic Neue';
-        font-weight: bold;
-      }
-
     }
+
+    .loader-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .spinner {
+      font-size: 4rem;
+      --indicator-color: #bbb;
+    }
+
+    h1 {
+      display: block;
+      margin-top: 0px;
+      margin-bottom: 0px;
+      font-family: 'Comic Neue';
+      font-weight: bold;
+    }
+
+    h2 {
+      display: block;
+      font-family: 'Comic Neue';
+      font-weight: bold;
+      margin-top: 0px;
+    }
+
+    .header-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo {
+      width: 100px;
+      height: auto;
+    }
+
     .button {
       height: 275px;
       width: 175px;
@@ -399,6 +536,15 @@ export class LocationPickerView extends LitElement {
       justify-content: center;
       gap: 1.5em;
       width: 100%;
+    }
+
+    .note-text {
+      margin-block-start: 0em;
+      margin-block-end: 0em;
+      
+    .activity-log-wrap {
+      text-align: left;
+      margin-top: 12px;
     }
   `;
 }

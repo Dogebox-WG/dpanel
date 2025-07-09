@@ -31,7 +31,6 @@ export default class WebSocketClient extends ReactiveClass {
     if (this.useMocks && this.mockEventGenerator) {
       this.startMocking();
     } else {
-      if (!this.token) return
       this.startWebSocketConnection();
     }
   }

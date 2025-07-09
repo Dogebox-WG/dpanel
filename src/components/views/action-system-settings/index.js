@@ -55,6 +55,10 @@ class SystemSettings extends LitElement {
     }
 
     h4 { margin: 0.5em 0; display: flex; align-items: center; }
+
+    .next-button {
+      margin-top: 2em;
+    }
   `];
 
   static get properties() {
@@ -169,8 +173,13 @@ class SystemSettings extends LitElement {
 
   _generateName() {
     const rando = Math.round(Math.random() * 1000);
-    this._changes['device-name'] = `my_dogebox_${rando}`;
+    this._changes["device-name"] = `my-dogebox-${rando}`;
     this.requestUpdate();
+  }
+
+  _handleInputChange(e) {
+    const field = e.target.getAttribute("data-field");
+    this._changes[field] = e.target.value;
   }
 
   _handleKeymapInputChange(e) {
@@ -347,8 +356,8 @@ class SystemSettings extends LitElement {
             }
 
             <sl-button
+              class="next-button"
               variant="primary"
-              style="width: 100px;"
               ?disabled=${this._inflight || (this._changes.disk && !this._is_boot_media && !this._confirmation_checked)}
               ?loading=${this._inflight}
               @click=${this._attemptSubmit}

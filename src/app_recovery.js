@@ -40,11 +40,16 @@ import { StoreSubscriber } from "/state/subscribe.js";
 // Utils
 import { bindToClass } from "/utils/class-bind.js";
 import { asyncTimeout } from "/utils/timeout.js";
+import { instruction } from "/components/common/instruction.js";
 
 // APIS
 import { getSetupBootstrap } from "/api/system/get-bootstrap.js";
+import { getRecoveryBootstrap } from "/api/system/get-recovery-bootstrap.js";
 import { postHostReboot } from "/api/system/post-host-reboot.js";
 import { postHostShutdown } from "/api/system/post-host-shutdown.js";
+
+// Main WebSocket channel (singleton)
+import { mainChannel } from "/controllers/sockets/main-channel.js";
 
 // Do this once to set the location of shoelace assets (icons etc..)
 setBasePath("/vendor/@shoelace/cdn@2.14.0/");
@@ -68,6 +73,8 @@ class AppModeApp extends LitElement {
     isFirstTimeSetup: { type: Boolean },
     isForbidden: { type: Boolean },
     installationMode: { type: String },
+    isInstalled: { type: Boolean },
+    renderReady: { type: Boolean },
   };
 
   constructor() {
@@ -79,9 +86,12 @@ class AppModeApp extends LitElement {
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
     this.installationMode = "";
-
+    this.isInstalled = false;
+    this.hasLoaded = false;
+    this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
+    
   }
 
   set setupState(newValue) {
@@ -99,6 +109,9 @@ class AppModeApp extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.isLoggedIn = !!store.networkContext.token;
+
+    // Instantiate a web socket connection and add main app as an observer
+    this.mainChannel.addObserver(this);
   }
 
   async fetchSetupState() {
@@ -112,8 +125,10 @@ class AppModeApp extends LitElement {
     }
 
     if (!response.setupFacts) {
-      // TODO (error handling)
-      alert("Failed to fetch bootstrap.");
+      // Only show alert if we're logged in
+      if (this.isLoggedIn) {
+        alert("Failed to fetch bootstrap.");
+      }
       return;
     }
 
@@ -121,51 +136,65 @@ class AppModeApp extends LitElement {
     this.loading = false;
   }
 
+  async fetchRecoveryState() {
+    const response = await getRecoveryBootstrap({ noLogoutRedirect: true });
+
+    if (!response.recoveryFacts) {
+      // Only show alert if we're logged in
+      if (this.isLoggedIn) {
+        alert("Failed to fetch bootstrap.");
+      }
+      return;
+    }
+
+    this.isInstalled = response.recoveryFacts.isInstalled ?? false;
+    this.installationMode = response.recoveryFacts.installationMode ?? "";
+    this.hasLoaded = true;
+  }
+
   _determineStartingStep(setupState) {
     const {
       hasCompletedInitialConfiguration,
-      hasConfiguredStorageLocation,
       hasGeneratedKey,
       hasConfiguredNetwork,
       isForbidden,
-      installationMode,
     } = setupState;
 
+    // First check if we're forbidden
     if (isForbidden) {
       return STEP_LOGIN;
     }
 
+    // Handle first-time setup
     if (!hasCompletedInitialConfiguration) {
       this.isFirstTimeSetup = true;
-    }
-
-    if (installationMode) {
-      this.installationMode = installationMode;
-    }
-
-    // If we're already fully set up, or if we've generated a key, show our login step.
-    if ((hasCompletedInitialConfiguration || hasGeneratedKey) && !this.isLoggedIn) {
-      return STEP_LOGIN;
-    }
-
-    if (!hasConfiguredStorageLocation) {
       return STEP_INTRO;
     }
 
-    if (!hasGeneratedKey) {
-      return STEP_SET_PASSWORD;
+    // If we're already fully set up, or if we've generated a key, show our login step.
+    if (!this.isLoggedIn && (hasCompletedInitialConfiguration || hasGeneratedKey)) {
+      return STEP_LOGIN;
     }
 
-    if (!hasConfiguredNetwork) {
-      return STEP_NETWORK;
+    // If we're logged in, follow the setup sequence
+    if (this.isLoggedIn) {
+      if (!hasGeneratedKey) {
+        return STEP_GENERATE_KEY;
+      }
+      if (!hasConfiguredNetwork) {
+        return STEP_NETWORK;
+      }
+      return STEP_DONE;
     }
 
-    return STEP_DONE;
+    // Default to login if none of the above conditions are met
+    return STEP_LOGIN;
   }
 
   firstUpdated() {
     this.fetchSetupState();
-
+    this.fetchRecoveryState();
+    
     // Prevent dialog closures on overlay click
     this.dialogMgmt = this.shadowRoot.querySelector("#MgmtDialog");
     this.dialogMgmt.addEventListener("sl-request-close", (event) => {
@@ -195,6 +224,7 @@ class AppModeApp extends LitElement {
   };
 
   disconnectedCallback() {
+    this.mainChannel.removeObserver(this);
     super.disconnectedCallback();
   }
 
@@ -207,34 +237,30 @@ class AppModeApp extends LitElement {
 
   triggerReboot = async () => {
     try {
+      instruction({
+        img: '/static/img/again.png',
+        text: 'Rebooted.',
+        subtext: 'Please re-reconnect to the same network as your Dogebox and refresh.',
+      });
+      await asyncTimeout(500);
       await postHostReboot();
     } catch {
       // Ignore.
     }
-
-    store.updateState({
-      setupContext: {
-        view: "post-reboot",
-        hideViewClose: true,
-        preventClose: true,
-      },
-    });
   };
 
   triggerPoweroff = async () => {
     try {
+      instruction({
+        img: '/static/img/bye.png',
+        text: 'Dogebox turned off successfully.<br>You may close this page.',
+        subtext: '',
+      });
+      await asyncTimeout(500);
       await postHostShutdown();
     } catch {
       // Ignore.
     }
-
-    store.updateState({
-      setupContext: {
-        view: "post-power-off",
-        hideViewClose: true,
-        preventClose: true,
-      },
-    });
   };
 
   _closeMgmtDialog = () => {
@@ -272,17 +298,16 @@ class AppModeApp extends LitElement {
               <nav class="${navClasses}">
                 ${guard(
                   [
-                    this.isFirstTimeSetup,
                     this.activeStepNumber,
                     this.context.store.networkContext.token,
                   ],
-                  () => this.renderNav(this.isFirstTimeSetup),
+                  () => this.renderNav(this.activeStepNumber > STEP_LOGIN && this.activeStepNumber < STEP_DONE),
                 )}
               </nav>
 
               <main
                 id="Main"
-                style="padding-top: ${this.isFirstTimeSetup ? "0px;" : "100px"}"
+                style="padding-top: ${this.activeStepNumber > STEP_LOGIN && this.activeStepNumber < STEP_DONE ? "0px;" : "100px"}"
               >
                 <div class="${stepWrapperClasses}">
                   ${choose(
@@ -312,7 +337,7 @@ class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-change-pass
                             label="Secure your Dogebox"
-                            buttonLabel="Continue"
+                            buttonLabel="Next"
                             description="Devise a secure password used to encrypt your Dogebox Master Key."
                             retainHash
                             noSubmit
@@ -349,17 +374,17 @@ class AppModeApp extends LitElement {
                     () => html`<h1>Error</h1>`,
                   )}
                 </div>
-                ${true
-                  ? html`
-                      <action-select-install-location
-                        style="z-index: 999"
-                        mode=${this.installationMode}
-                        ?open=${["canInstall", "mustInstall"].includes(
-                          this.installationMode,
-                        )}
-                      ></action-select-install-location>
-                    `
-                  : nothing}
+                ${this.isFirstTimeSetup ? html`
+                  <action-select-install-location
+                    style="z-index: 999"
+                    mode=${this.installationMode}
+                    ?isInstalled=${this.isInstalled}
+                    ?renderReady=${this.hasLoaded}
+                    ?open=${["canInstall", "mustInstall"].includes(
+                      this.installationMode,
+                    )}
+                  ></action-select-install-location>
+                ` : nothing}
               </main>
             </div>
           `
@@ -389,6 +414,7 @@ class AppModeApp extends LitElement {
                   html` <x-action-change-pass
                     resetMethod="credentials"
                     showSuccessAlert
+                    refreshAfterChange
                   ></x-action-change-pass>`,
               ],
               [
@@ -397,18 +423,19 @@ class AppModeApp extends LitElement {
                   <x-confirmation-prompt
                     title="Are you sure you want to reboot?"
                     description="Remove your USB recovery stick if you want to boot back into normal mode"
-                    leftButtonText="Cancel"
-                    .leftButtonClick=${this._closeMgmtDialog}
-                    rightButtonText="Reboot"
-                    .rightButtonClick=${this.triggerReboot}
+                    bottomButtonText="Cancel"
+                    .bottomButtonClick=${this._closeMgmtDialog}
+                    topButtonText="Reboot"
+                    .topButtonClick=${this.triggerReboot}
                   ></x-confirmation-prompt>
                 `,
               ],
               [
                 "post-reboot",
                 () =>
-                  html`Please re-reconnect to the same network as your Dogebox
-                  and refresh.`,
+                  html`
+                  <img style="width: 100%;" src="/static/img/again.png" />
+                  <p class="statement">Rebooting.<br><small>Please re-reconnect to the same network as your Dogebox and refresh.</small></p>`,
               ],
               [
                 "power-off",
@@ -416,17 +443,20 @@ class AppModeApp extends LitElement {
                   <x-confirmation-prompt
                     title="Are you sure you want to power off?"
                     description="Physical access may be required to turn your Dogebox on again"
-                    leftButtonText="Cancel"
-                    .leftButtonClick=${this._closeMgmtDialog}
-                    rightButtonText="Yes, turn it off."
-                    .rightButtonClick=${this.triggerPoweroff}
+                    bottomButtonText="Cancel"
+                    .bottomButtonClick=${this._closeMgmtDialog}
+                    topButtonText="Yes, turn it off."
+                    .topButtonClick=${this.triggerPoweroff}
                   ></x-confirmation-prompt>
                 `,
               ],
               [
                 "post-power-off",
                 () =>
-                  html`Dogebox turned off successfully. You may close this page.`,
+                  html`
+                    <img style="width: 100%;" src="/static/img/bye.png" />
+                    <p class="statement">Dogebox turned off successfully.<br>You may close this page.</p>
+                  `,
               ],
               [
                 "factory-reset",

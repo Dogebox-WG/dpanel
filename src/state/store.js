@@ -22,7 +22,7 @@ class Store {
       wsApiBaseUrl: `ws://${window.location.hostname}:3000`,
       overrideBaseUrl: false,
       overrideSocketBaseUrl: false,
-      useMocks: true,
+      useMocks: false,
       forceFailures: false,
       forceDelayInSeconds: 0,
       reqLogs: false,
@@ -33,8 +33,7 @@ class Store {
       logStateUpdates: false,
       logProgressUpdates: false,
       reflectorHost: `https://reflector.dogecoin.org`,
-      reflectorToken: Math.random().toString(36).substring(2, 14),
-      "mock::updates::/system/updates::get":true,
+      reflectorToken: Math.random().toString(36).substring(2, 14)
     };
     this.pupContext = {
       computed: null,

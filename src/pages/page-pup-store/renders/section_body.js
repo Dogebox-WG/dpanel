@@ -53,21 +53,22 @@ export function renderSectionBody(ready, SKELS, hasItems) {
 
     ${ready && hasItems('packages') ? html`
       <div class="pup-card-grid">
-        ${repeat(this.packageList.getCurrentPageData(), (pkg) => `${pkg.def.source.id}-${pkg.def.key}`, (pkg) => {
+        ${repeat(this.packageList.getCurrentPageData(), (pkg) => `${pkg.def?.source?.id || 'unknown'}-${pkg.def?.key || 'unknown'}`, (pkg) => {
           return html`
           <pup-install-card
             defaultIcon="box"
-            sourceId=${pkg.def.source.id}
-            defKey=${pkg.def.key}
-            pupName=${pkg.def.key}
-            version=${pkg.def.latestVersion}
-            logoBase64=${pkg.def.logoBase64}
-            .upstreamVersions=${pkg.def.versions[pkg.def.latestVersion]?.meta?.upstreamVersions || {}}
-            short="${pkg.def.versions[pkg.def.latestVersion]?.meta?.shortDescription}"
-            ?installed=${pkg.computed.isInstalled}
+            sourceId=${pkg.def?.source?.id || 'unknown'}
+            defKey=${pkg.def?.key || 'unknown'}
+            pupName=${pkg.def?.key || 'unknown'}
+            version=${pkg.def?.latestVersion || 'unknown'}
+            logoBase64=${pkg.def?.logoBase64 || ''}
+            .upstreamVersions=${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.upstreamVersions || {}}
+            short="${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.shortDescription || ''}"
+            ?installed=${pkg.computed?.isInstalled || false}
             ?updateAvailable=""
-            href=${pkg.computed.storeURL}
-            .source=${pkg.def.source}
+            href=${pkg.computed?.storeURL || '#'}
+            .source=${pkg.def?.source || null}
+            .installationState=${{ id: pkg.computed?.installationId || 'unknown', label: pkg.computed?.installationLabel || 'Unknown' }}
           ></pup-install-card>
         `})}
       </div>

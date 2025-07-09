@@ -11,6 +11,7 @@ import { notYet } from "/components/common/not-yet-implemented.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { getRouter } from "/router/index.js";
+import { promptPowerOff, promptReboot } from "./power-helpers.js";
 
 class SettingsPage extends LitElement {
   static styles = css`
@@ -61,16 +62,16 @@ class SettingsPage extends LitElement {
             <h3>Menu</h3>
           </div>
           <div class="list-wrap">
-            <action-row prefix="info-circle" label="Version" href="/settings/versions">
+            <action-row prefix="info-circle" label="Version" href="/settings/versions" @click=${notYet}>
               View version details
             </action-row>
-            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates">
+            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" @click=${notYet}>
               Check for updates
             </action-row>
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>
               Add or remove Wifi networks
             </action-row>
-            <action-row prefix="key" label="Remote Access" href="/settings/remote-access">
+            <action-row prefix="key" label="Remote Access" href="/settings/remote-access" @click=${notYet}>
               Manage SSH settings and keys
             </action-row>
           <div class="list-wrap">
@@ -80,14 +81,22 @@ class SettingsPage extends LitElement {
           <div class="section-title">
             <h3>Power</h3>
           </div>
-          <action-row prefix="power" label="Shutdown" @click=${notYet}>
+          <action-row prefix="power" label="Shutdown" @click=${promptPowerOff}>
             Gracefully shutdown your Dogebox
           </action-row>
 
-          <action-row prefix="arrow-counterclockwise" label="Restart" @click=${notYet}>
+          <action-row prefix="arrow-counterclockwise" label="Restart" @click=${promptReboot}>
             Gracefully restart your Dogebox
           </action-row>
         </section>
+
+        <section>
+          <div class="section-title">
+            <h3>Help</h3>
+          </div>
+            <action-row prefix="book" label="Documentation" href="https://dogebox-docs.dogecoin.org/" target="_blank">
+              View the Dogebox documentation
+            </action-row>
       </div>
 
       <sl-dialog no-header

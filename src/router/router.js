@@ -179,22 +179,36 @@ export class Router {
     // Backward will have the outgoing component on top and sliding down
     const topComponent = options.backward ? outgoingComponent : incomingComponent
     const bottomComponent = options.backward ? incomingComponent : outgoingComponent
-    topComponent.classList.add('top');
+    topComponent && topComponent.classList.add('top');
 
     // Apply animation classes depending on naviation direction
-    doAnimate && topComponent.classList.add(options.backward ? 'slide-out' : 'slide-in')
+    doAnimate && topComponent && topComponent.classList.add(options.backward ? 'slide-out' : 'slide-in')
 
     // Add the incoming component to the router-outlet.
     this.outlet.appendChild(incomingComponent);
 
     // Remove outgoing component after transition completes.
     // Reset styles of incoming component
+    const buffer = (options.back || !route.animate) ? 0 : transDuration * 1.25;
     this.currentTransition = setTimeout(() => {
-      doAnimate && incomingComponent.classList.remove('transitioning');
+      // After the allocated transition time,
+      // Firstly, remove the outgoing component from the DOM
       if (outgoingComponent) {
         this.outlet.removeChild(outgoingComponent);
       }
-      this.currentTransition = null; // Reset the current transition
+
+      // Then, after an additional buffer of time
+      // Remove the transitioning classes.
+      // Having this performed after the component is removed, prevents a flash of the outgoing component.
+      setTimeout(() => {
+        doAnimate && incomingComponent && incomingComponent.classList.remove('transitioning');
+
+        // Finally, on next frame, clear the transition.
+        requestAnimationFrame(() => {
+          this.currentTransition = null;
+        });
+
+      }, buffer);
     }, transDuration);
 
   }

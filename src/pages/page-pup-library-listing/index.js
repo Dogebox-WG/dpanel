@@ -27,7 +27,7 @@ import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
 import { renderDialog } from "./renders/dialog.js";
-import { renderActions, handleImportBlockchain } from "./renders/actions.js";
+import { renderActions } from "./renders/actions.js";
 import { renderStatus } from "./renders/status.js";
 
 class PupPage extends LitElement {
@@ -43,7 +43,6 @@ class PupPage extends LitElement {
       inflight_startstop: { type: Boolean },
       inflight_uninstall: { type: Boolean },
       inflight_purge: { type: Boolean },
-      inflight_import_blockchain: { type: Boolean },
       _HARDCODED_UNINSTALL_WAIT_TIME: { type: Number },
       activityLogs: { type: Array },
     };
@@ -66,7 +65,6 @@ class PupPage extends LitElement {
     this.renderDialog = renderDialog.bind(this);
     this.renderActions = renderActions.bind(this);
     this.renderStatus = renderStatus.bind(this);
-    this.handleImportBlockchain = handleImportBlockchain.bind(this);
   }
 
   getPup() {
@@ -340,12 +338,6 @@ class PupPage extends LitElement {
           Customize ${pkg.state.manifest.meta.name}
         </action-row>
       `}
-
-      ${labels.installationId === 'ready' && labels.statusId !== 'running' && (pkg.state.manifest?.meta?.name === 'Core' || pkg.state.manifest?.meta?.name === 'Dogecoin Core') ? html`
-        <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
-          Import existing blockchain data from external drive
-        </action-row>
-      ` : nothing}
 
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
         Ea sint dolor commodo.

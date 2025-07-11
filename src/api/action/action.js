@@ -6,8 +6,7 @@ import {
   stopMock,
   installMock,
   uninstallMock,
-  purgeMock,
-  importBlockchainMock
+  purgeMock
 } from './action.mocks.js'
 
 import { setProvider } from '../providers/providers.js';
@@ -34,9 +33,7 @@ export async function stopPup(pupId, body) {
   return client.post(`/pup/${pupId}/disable`, body, { mock: stopMock });
 }
 
-export async function importBlockchain(pupId, body) {
-  return client.post(`/pup/${pupId}/import-blockchain`, body, { mock: importBlockchainMock });
-}
+
 
 export function pickAndPerformPupAction(pupId, action, body) {
   switch(action) {
@@ -58,9 +55,7 @@ export function pickAndPerformPupAction(pupId, action, body) {
     case 'set-provider':
       return setProvider(pupId, body);
       break;
-    case 'import-blockchain':
-      return importBlockchain(pupId, body);
-      break;
+
     default:
       console.warn('unsupported pup action requested', action);
   }

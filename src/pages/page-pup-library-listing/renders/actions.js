@@ -35,31 +35,6 @@ export async function handlePurgeFunction() {
   await this.pkgController.requestPupAction(pupId, 'purge', callbacks);
 }
 
-export async function handleImportBlockchain() {
-  this.inflight_import_blockchain = true;
-  const pupId = this.getPup().state.id
-  this.requestUpdate();
-
-  const callbacks = {
-    onSuccess: async () => {
-      await doBootstrap();
-      this.inflight_import_blockchain = false;
-      this.requestUpdate();
-    },
-    onError: async () => {
-      await doBootstrap();
-      this.inflight_import_blockchain = false;
-      this.requestUpdate();
-    },
-    onTimeout: async () => {
-      await doBootstrap();
-      this.inflight_import_blockchain = false;
-      this.requestUpdate();
-    }
-  }
-  await this.pkgController.requestPupAction(pupId, 'import-blockchain', callbacks);
-}
-
 export function renderActions(labels, hasLogs) {
   const pkg = this.getPup();
   let { installationId, statusId, statusLabel } = labels

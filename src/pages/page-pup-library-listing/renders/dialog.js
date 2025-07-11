@@ -40,42 +40,6 @@ export function renderDialog() {
     </dynamic-form>
   `;
 
-  const importBlockchainEl = html`
-    <div style="padding: 1em;">
-      <h3>Import Dogecoin Core Blockchain Data</h3>
-      <p>This feature allows you to import existing Dogecoin Core blockchain data from an external drive, which can significantly speed up the initial synchronization process.</p>
-      
-      <div style="margin: 1em 0;">
-        <h4>Prerequisites:</h4>
-        <ul>
-          <li>An external drive containing Dogecoin Core blockchain data ('blocks' and 'chainstate' directories at the root level of the drive)</li>
-          <li>The Dogecoin Core pup must be installed (but doesn't need to be running)</li>
-        </ul>
-      </div>
-
-      <div style="margin: 1em 0;">
-        <h4>What happens:</h4>
-        <ol>
-          <li>Stops the Dogecoin Core pup if it's running</li>
-          <li>Copies the blockchain data to the pup's storage</li>
-          <li>Restarts the pup if it was previously running</li>
-        </ol>
-      </div>
-
-      <div style="margin: 1em 0;">
-        <h4>Important Notes:</h4>
-        <ul>
-          <li>The copy process can take a very long time depending on the blockchain size</li>
-          <li>Dogecoin Core blockchain is approximately 200GB+ (as of 2025)</li>
-          <li>Ensure the pup has enough storage space for the blockchain data</li>
-          <li>Always backup your blockchain data before importing</li>
-        </ul>
-      </div>
-    </div>
-    <sl-button slot="footer" variant="primary" @click=${() => { this.handleImportBlockchain(); this.clearDialog(); }} ?loading=${this.inflight_import_blockchain} ?disabled=${this.inflight_import_blockchain}>Start Import Process</sl-button>
-    <sl-button slot="footer" variant="neutral" @click=${this.clearDialog}>Cancel</sl-button>
-  `;
-
   const isStopped = !this.pupEnabled && statusId !== "running";
 
   return html`
@@ -87,7 +51,6 @@ export function renderDialog() {
         ["ints", () => intsEl],
         ["configure", () => configEl],
         ["uninstall", () => isStopped ? uninstallEl : preventUninstallEl],
-        ["import-blockchain", () => importBlockchainEl],
       ],
       () => html`<span>View not provided: ${this.open_dialog}</span>`,
     )}

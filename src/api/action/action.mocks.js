@@ -39,9 +39,3 @@ export const purgeMock = {
   res: postResponse
 }
 
-export const importBlockchainMock = {
-  name: '/pup/:pup/import-blockchain',
-  method: 'post',
-  group: 'pup actions',
-  res: postResponse
-}

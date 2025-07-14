@@ -1,5 +1,5 @@
 export const postResponse = {
-  name: '/system/import-blockchain',
+  name: '/system/import-blockchain-data',
   method: 'post',
   group: 'system actions',
   res: {

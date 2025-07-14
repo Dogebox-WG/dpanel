@@ -17,7 +17,7 @@ import { getRouter } from "/router/index.js";
 import { pkgController } from "/controllers/package/index.js";
 import { promptPowerOff, promptReboot } from "./power-helpers.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
-import { importBlockchain } from '/api/system/import-blockchain.js';
+import { importBlockchain } from '/api/system/import-blockchain-data.js';
 
 class SettingsPage extends LitElement {
   static styles = css`

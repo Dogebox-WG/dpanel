@@ -1,7 +1,5 @@
-// Import the actual animated-dots component
 import './animated-dots.js';
 
-// More on how to set up stories at: https://storybook.js.org/docs/writing-stories
 export default {
   title: 'Common/AnimatedDots',
   tags: ['autodocs'],
@@ -15,7 +13,6 @@ export default {
   },
 };
 
-// Basic story showing the animated dots
 export const Default = {
   args: {},
 }; 

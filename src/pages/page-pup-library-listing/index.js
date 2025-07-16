@@ -14,6 +14,10 @@ import "/components/common/page-container.js";
 import "/components/common/sparkline-chart/sparkline-chart-v2.js";
 import "/components/views/x-metric/metric.js";
 import "/components/views/x-activity-log.js";
+import "/components/common/reveal-row/reveal-row.js";
+import "/components/views/x-version-card.js";
+import "/components/views/x-launcher-button/index.js";
+import "/components/views/x-log-viewer/index.js";
 import { bindToClass } from "/utils/class-bind.js";
 import * as renderMethods from "./renders/index.js";
 import { store } from "/state/store.js";
@@ -22,6 +26,9 @@ import { pkgController } from "/controllers/package/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
+import { renderDialog } from "./renders/dialog.js";
+import { renderActions } from "./renders/actions.js";
+import { renderStatus } from "./renders/status.js";
 
 class PupPage extends LitElement {
   static get properties() {
@@ -55,6 +62,9 @@ class PupPage extends LitElement {
     this._confirmedName = "";
     this._HARDCODED_UNINSTALL_WAIT_TIME = 0;
     this.activityLogs = [];
+    this.renderDialog = renderDialog.bind(this);
+    this.renderActions = renderActions.bind(this);
+    this.renderStatus = renderStatus.bind(this);
   }
 
   getPup() {

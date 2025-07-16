@@ -40,6 +40,7 @@ import {
   getResponse as checkForUpdates,
   postResponse as commenceUpdate,
 } from "./system/updates.mocks.js";
+import { postResponse as importBlockchain } from "./system/import-blockchain-data.mocks.js";
 
 import {
   getSSHPublicKeysResponse,
@@ -79,6 +80,7 @@ export const mocks = [
   setHostname,
   checkForUpdates,
   commenceUpdate,
+  importBlockchain,
   getSSHPublicKeysResponse,
   deleteSSHPublicKeyResponse,
   addSSHPublicKeyResponse,

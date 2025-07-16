@@ -8,7 +8,7 @@ import "/components/views/action-dependency-manage/dependency.js";
 
 export function renderDialog() {
   const pkg = this.getPup();
-  const { statusId } = pkg.computed
+  const { statusId } = pkg.computed;
   const readmeEl = html`<div style="padding: 1em; text-align: center;"> Such empty. This pup does not provide a README.</div>`;
   const deps = pkg?.state?.manifest?.dependencies || [];
   const ints = pkg?.state?.manifest?.interfaces || [];

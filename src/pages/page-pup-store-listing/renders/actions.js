@@ -6,29 +6,9 @@ export function openConfig() {
 }
 
 export function renderActions() {
-  // Initialize autoInstallDependencies if not already set
-  if (this.autoInstallDependencies === undefined) {
-    this.autoInstallDependencies = true;
-  }
-
-  // const pupDefinitionContext = this.context.store?.pupDefinitionContext
-
-  // const def = this.pkgController.getPupDefinition(pupDefinitionContext.source.id, pupDefinitionContext.id);
-  // const pkg = this.pkgController.getPup(def.installedId)
-
-  // const installationId = pkg?.computed?.installationId;
-  // const installationLabel = pkg?.computed?.installationLabel;
-  // const statusId = pkg?.computed?.statusId;
-  // const statusLabel = pkg?.computed?.statusLabel;
-
-  const pupContext = this.context.store?.pupContext;
   const pkg = this.getPup();
-
   const installationId = pkg.computed.installationId;
-  const installationLabel = pkg.computed.installationLabel;
-
   const isInstalled = pkg.computed.isInstalled;
-  const isLoadingStatus = ["installing"].includes(installationId);
 
   const styles = css`
     .action-wrap {
@@ -69,12 +49,6 @@ export function renderActions() {
               >
                 Such Install
               </sl-button>
-              <sl-checkbox
-                ?checked=${this.autoInstallDependencies}
-                @sl-change=${(e) => this.autoInstallDependencies = e.target.checked}
-              >
-                Install required dependencies if available
-              </sl-checkbox>
             </div>
           `
         : nothing}
@@ -119,7 +93,6 @@ export function renderActions() {
 }
 
 export async function handleInstall() {
-  const pupContext = this.context.store.pupContext;
   const pkg = this.getPup();
   this.inflight = true;
   const callbacks = {
@@ -140,7 +113,8 @@ export async function handleInstall() {
     sourceId: pkg.def.source.id,
     pupName: pkg.def.versions[pkg.def.latestVersion].meta.name,
     pupVersion: pkg.def.latestVersion,
-    autoInstallDependencies: this.autoInstallDependencies
+    autoInstallDependencies: Boolean(this.autoInstallDependencies),
+    installWithDevModeEnabled: Boolean(this.installWithDevModeEnabled)
   };
 
   await this.pkgController.requestPupAction("--", "install", callbacks, body);

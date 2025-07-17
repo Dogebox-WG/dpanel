@@ -27,6 +27,8 @@ class PupInstallPage extends LitElement {
       busy: { type: Boolean },
       inflight: { type: Boolean },
       activityLogs: { type: Array },
+      autoInstallDependencies: { type: Boolean },
+      installWithDevModeEnabled: { type: Boolean },
     };
   }
 
@@ -43,6 +45,8 @@ class PupInstallPage extends LitElement {
     this.busy = false;
     this.inflight = false;
     this.activityLogs = [];
+    this.autoInstallDependencies = true;
+    this.installWithDevModeEnabled = false;
   }
 
   getPup() {
@@ -155,6 +159,7 @@ class PupInstallPage extends LitElement {
     const long = pkg.def.versions[pkg.def.latestVersion]?.meta?.longDescription || ''
     const noDescription = !short && !long
     const hasLogs = this.activityLogs.length
+    const isDevModeAvailable = pkg?.def?.devModeAvailable;
 
     return html`
       <div id="PageWrapper" class="${wrapperClasses}" ?data-freeze=${popover_page}>
@@ -166,11 +171,41 @@ class PupInstallPage extends LitElement {
 
         <section>
           <div class="section-title">
+            <h3>Install Options</h3>
+            <div>
+              <sl-checkbox
+                  ?checked=${this.autoInstallDependencies}
+                  @sl-change=${(e) => this.autoInstallDependencies = e.target.checked}
+                  size="small"
+                >
+                  Install required dependencies (if available)
+                </sl-checkbox>
+              </div>
+              ${isDevModeAvailable ? html`
+              <div>
+                <sl-checkbox
+                  ?checked=${this.installWithDevModeEnabled}
+                  @sl-change=${(e) => this.installWithDevModeEnabled = e.target.checked}
+                  size="small"
+                >
+                  Install with Development Mode enabled
+                </sl-checkbox>
+              </div>
+            ` : nothing}
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
             <h3>About</h3>
             <reveal-row">
               ${long
                 ? html`<p style="margin-top: -12px;>${long}</p>`
-                : html`<small style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">Such empty, no description.</small>`
+                : html`
+                  <span style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">
+                    Such empty, no description.
+                  </span>
+                `
               }
             </reveal-row>
           </div>

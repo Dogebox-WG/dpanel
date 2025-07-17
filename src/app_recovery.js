@@ -91,7 +91,6 @@ class AppModeApp extends LitElement {
     this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
-    
   }
 
   set setupState(newValue) {
@@ -172,7 +171,10 @@ class AppModeApp extends LitElement {
     }
 
     // If we're already fully set up, or if we've generated a key, show our login step.
-    if (!this.isLoggedIn && (hasCompletedInitialConfiguration || hasGeneratedKey)) {
+    if (
+      !this.isLoggedIn &&
+      (hasCompletedInitialConfiguration || hasGeneratedKey)
+    ) {
       return STEP_LOGIN;
     }
 
@@ -194,7 +196,7 @@ class AppModeApp extends LitElement {
   firstUpdated() {
     this.fetchSetupState();
     this.fetchRecoveryState();
-    
+
     // Prevent dialog closures on overlay click
     this.dialogMgmt = this.shadowRoot.querySelector("#MgmtDialog");
     this.dialogMgmt.addEventListener("sl-request-close", (event) => {
@@ -238,9 +240,10 @@ class AppModeApp extends LitElement {
   triggerReboot = async () => {
     try {
       instruction({
-        img: '/static/img/again.png',
-        text: 'Rebooted.',
-        subtext: 'Please re-reconnect to the same network as your Dogebox and refresh.',
+        img: "/static/img/again.png",
+        text: "Rebooted.",
+        subtext:
+          "Please re-reconnect to the same network as your Dogebox and refresh.",
       });
       await asyncTimeout(500);
       await postHostReboot();
@@ -252,9 +255,9 @@ class AppModeApp extends LitElement {
   triggerPoweroff = async () => {
     try {
       instruction({
-        img: '/static/img/bye.png',
-        text: 'Dogebox turned off successfully.<br>You may close this page.',
-        subtext: '',
+        img: "/static/img/bye.png",
+        text: "Dogebox turned off successfully.<br>You may close this page.",
+        subtext: "",
       });
       await asyncTimeout(500);
       await postHostShutdown();
@@ -301,13 +304,20 @@ class AppModeApp extends LitElement {
                     this.activeStepNumber,
                     this.context.store.networkContext.token,
                   ],
-                  () => this.renderNav(this.activeStepNumber > STEP_LOGIN && this.activeStepNumber < STEP_DONE),
+                  () =>
+                    this.renderNav(
+                      this.activeStepNumber > STEP_LOGIN &&
+                        this.activeStepNumber < STEP_DONE,
+                    ),
                 )}
               </nav>
 
               <main
                 id="Main"
-                style="padding-top: ${this.activeStepNumber > STEP_LOGIN && this.activeStepNumber < STEP_DONE ? "0px;" : "100px"}"
+                style="padding-top: ${this.activeStepNumber > STEP_LOGIN &&
+                this.activeStepNumber < STEP_DONE
+                  ? "0px;"
+                  : "100px"}"
               >
                 <div class="${stepWrapperClasses}">
                   ${choose(
@@ -374,17 +384,17 @@ class AppModeApp extends LitElement {
                     () => html`<h1>Error</h1>`,
                   )}
                 </div>
-                ${this.isFirstTimeSetup ? html`
-                  <action-select-install-location
-                    style="z-index: 999"
-                    mode=${this.installationMode}
-                    ?isInstalled=${this.isInstalled}
-                    ?renderReady=${this.hasLoaded}
-                    ?open=${["canInstall", "mustInstall"].includes(
-                      this.installationMode,
-                    )}
-                  ></action-select-install-location>
-                ` : nothing}
+                ${this.isFirstTimeSetup
+                  ? html`
+                      <action-select-install-location
+                        style="z-index: 999"
+                        mode=${this.installationMode}
+                        ?isInstalled=${this.isInstalled}
+                        ?renderReady=${this.hasLoaded}
+                        ?open=${["mustInstall"].includes(this.installationMode)}
+                      ></action-select-install-location>
+                    `
+                  : nothing}
               </main>
             </div>
           `
@@ -433,9 +443,13 @@ class AppModeApp extends LitElement {
               [
                 "post-reboot",
                 () =>
-                  html`
-                  <img style="width: 100%;" src="/static/img/again.png" />
-                  <p class="statement">Rebooting.<br><small>Please re-reconnect to the same network as your Dogebox and refresh.</small></p>`,
+                  html` <img style="width: 100%;" src="/static/img/again.png" />
+                    <p class="statement">
+                      Rebooting.<br /><small
+                        >Please re-reconnect to the same network as your Dogebox
+                        and refresh.</small
+                      >
+                    </p>`,
               ],
               [
                 "power-off",
@@ -452,11 +466,13 @@ class AppModeApp extends LitElement {
               ],
               [
                 "post-power-off",
-                () =>
-                  html`
-                    <img style="width: 100%;" src="/static/img/bye.png" />
-                    <p class="statement">Dogebox turned off successfully.<br>You may close this page.</p>
-                  `,
+                () => html`
+                  <img style="width: 100%;" src="/static/img/bye.png" />
+                  <p class="statement">
+                    Dogebox turned off successfully.<br />You may close this
+                    page.
+                  </p>
+                `,
               ],
               [
                 "factory-reset",

@@ -5,8 +5,8 @@ export const getResponse = {
   res: {
     success: true,
     recoveryFacts: {
-      installationMode: "",
-      isInstalled: false
-    }
-  }
-}; 
+      installationState: "notInstalled",
+      installationBootMedia: "ro",
+    },
+  },
+};

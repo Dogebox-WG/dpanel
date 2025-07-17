@@ -139,7 +139,7 @@ class PupInstallPage extends LitElement {
 
     if (!pkg) return;
 
-    const { statusId, statusLabel, installationId, installationLabel } = pkg?.computed
+    const { statusId, statusLabel, installationId, isInstalled, installationLabel } = pkg?.computed
     const popover_page = path[1];
 
     const wrapperClasses = classMap({
@@ -159,6 +159,7 @@ class PupInstallPage extends LitElement {
     const hasLogs = this.activityLogs.length
     const hasDependencies = pkg?.def?.versions[pkg?.def?.latestVersion]?.dependencies?.length > 0;
     const isDevModeAvailable = pkg?.def?.devModeAvailable;
+    const notInstalledOrBroken = !isInstalled && installationId !== "broken";
 
     // Only show Install Options section if there is at least one option to show
     const hasInstallOptions =
@@ -173,7 +174,7 @@ class PupInstallPage extends LitElement {
           ${this.renderActions()}
         </section>
 
-        ${hasInstallOptions ? html`
+        ${(notInstalledOrBroken || installationId === "installing") && hasInstallOptions ? html`
           <section>
             <div class="section-title">
               <h3>Install Options</h3>
@@ -181,6 +182,7 @@ class PupInstallPage extends LitElement {
               <div>
                 <sl-checkbox
                   ?checked=${this.autoInstallDependencies}
+                  ?disabled=${installationId === "installing"}
                   @sl-change=${(e) => this.autoInstallDependencies = e.target.checked}
                 >
                 <span style="display: flex; align-items: center; gap: 0.5em;">
@@ -196,6 +198,7 @@ class PupInstallPage extends LitElement {
               <div>
                 <sl-checkbox
                   ?checked=${this.installWithDevModeEnabled}
+                  ?disabled=${installationId === "installing"}
                   @sl-change=${(e) => this.installWithDevModeEnabled = e.target.checked}
                 >
                   <span style="display: flex; align-items: center; gap: 0.5em;">

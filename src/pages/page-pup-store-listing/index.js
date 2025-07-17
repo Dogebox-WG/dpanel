@@ -155,11 +155,15 @@ class PupInstallPage extends LitElement {
       `
     }
 
-    const short = pkg.def.versions[pkg.def.latestVersion]?.meta?.shortDescription || '';
-    const long = pkg.def.versions[pkg.def.latestVersion]?.meta?.longDescription || ''
-    const noDescription = !short && !long
+    const long = pkg?.def?.versions[pkg?.def?.latestVersion]?.meta?.longDescription || ''
     const hasLogs = this.activityLogs.length
+    const hasDependencies = pkg?.def?.versions[pkg?.def?.latestVersion]?.dependencies?.length > 0;
     const isDevModeAvailable = pkg?.def?.devModeAvailable;
+
+    // Only show Install Options section if there is at least one option to show
+    const hasInstallOptions =
+      hasDependencies ||
+      isDevModeAvailable;
 
     return html`
       <div id="PageWrapper" class="${wrapperClasses}" ?data-freeze=${popover_page}>
@@ -169,38 +173,50 @@ class PupInstallPage extends LitElement {
           ${this.renderActions()}
         </section>
 
-        <section>
-          <div class="section-title">
-            <h3>Install Options</h3>
-            <div>
-              <sl-checkbox
+        ${hasInstallOptions ? html`
+          <section>
+            <div class="section-title">
+              <h3>Install Options</h3>
+              ${hasDependencies ? html`
+              <div>
+                <sl-checkbox
                   ?checked=${this.autoInstallDependencies}
                   @sl-change=${(e) => this.autoInstallDependencies = e.target.checked}
-                  size="small"
                 >
-                  Install required dependencies (if available)
+                <span style="display: flex; align-items: center; gap: 0.5em;">
+                  Install dependencies 
+                  <sl-tooltip content="Install all dependencies that are available. Uncheck to install only the pup itself.">
+                    <sl-icon name="info-circle"></sl-icon>
+                  </sl-tooltip>
+                  </span>
                 </sl-checkbox>
               </div>
+              ` : nothing}
               ${isDevModeAvailable ? html`
               <div>
                 <sl-checkbox
                   ?checked=${this.installWithDevModeEnabled}
                   @sl-change=${(e) => this.installWithDevModeEnabled = e.target.checked}
-                  size="small"
                 >
-                  Install with Development Mode enabled
+                  <span style="display: flex; align-items: center; gap: 0.5em;">
+                    Development Mode
+                    <sl-tooltip content="Install with Development Mode enabled.  Refer to the pup's documentation for more information.">
+                      <sl-icon name="info-circle"></sl-icon>
+                    </sl-tooltip>
+                  </span>
                 </sl-checkbox>
               </div>
             ` : nothing}
-          </div>
-        </section>
+            </div>
+          </section>
+        ` : nothing}
 
         <section>
           <div class="section-title">
             <h3>About</h3>
             <reveal-row">
               ${long
-                ? html`<p style="margin-top: -12px;>${long}</p>`
+                ? html`<span style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-700);">${long}</span>`
                 : html`
                   <span style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">
                     Such empty, no description.

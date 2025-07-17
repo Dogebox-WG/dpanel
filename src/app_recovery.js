@@ -72,8 +72,8 @@ class AppModeApp extends LitElement {
     setupState: { type: Object },
     isFirstTimeSetup: { type: Boolean },
     isForbidden: { type: Boolean },
-    installationMode: { type: String },
-    isInstalled: { type: Boolean },
+    installationState: { type: String },
+    installationBootMedia: { type: String },
     renderReady: { type: Boolean },
   };
 
@@ -85,8 +85,8 @@ class AppModeApp extends LitElement {
     this.setupState = null;
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
-    this.installationMode = "";
-    this.isInstalled = false;
+    this.installationState = "notInstalled";
+    this.installationBootMedia = "ro";
     this.hasLoaded = false;
     this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
@@ -146,8 +146,10 @@ class AppModeApp extends LitElement {
       return;
     }
 
-    this.isInstalled = response.recoveryFacts.isInstalled ?? false;
-    this.installationMode = response.recoveryFacts.installationMode ?? "";
+    this.installationBootMedia =
+      response.recoveryFacts.installationBootMedia ?? "ro";
+    this.installationState =
+      response.recoveryFacts.installationState ?? "notInstalled";
     this.hasLoaded = true;
   }
 
@@ -388,10 +390,9 @@ class AppModeApp extends LitElement {
                   ? html`
                       <action-select-install-location
                         style="z-index: 999"
-                        mode=${this.installationMode}
-                        ?isInstalled=${this.isInstalled}
+                        installationState=${this.installationState}
+                        installationBootMedia=${this.installationBootMedia}
                         ?renderReady=${this.hasLoaded}
-                        ?open=${["mustInstall"].includes(this.installationMode)}
                       ></action-select-install-location>
                     `
                   : nothing}

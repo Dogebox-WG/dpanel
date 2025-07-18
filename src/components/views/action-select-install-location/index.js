@@ -25,6 +25,7 @@ export class LocationPickerView extends LitElement {
       installationBootMedia: { type: String },
       installationState: { type: String },
       renderReady: { type: Boolean },
+      mainDialogOpen: { type: Boolean },
       _ready: { type: Boolean },
       _inflight_disks: { type: Boolean },
       _page: { type: String },
@@ -34,6 +35,7 @@ export class LocationPickerView extends LitElement {
       _inflight_install: { type: Boolean },
       _install_outcome: { type: String },
       _logs: { type: Array, state: true },
+      _fetchDisks: { type: Boolean },
     };
   }
 
@@ -54,17 +56,22 @@ export class LocationPickerView extends LitElement {
     this._header = "Such Install";
     this._logs = [];
     this._unsubscribe = null;
+    this._fetchDisks = false;
   }
 
-  firstUpdated() {
-    const fetchDisks =
+  willUpdate() {
+    this._fetchDisks =
       this.installationBootMedia === "ro" ||
       this.installationState === "notInstalled";
-    this.mainDialogOpen = this.renderReady && fetchDisks;
-    if (fetchDisks) {
+    this.mainDialogOpen = this.renderReady && this._fetchDisks;
+
+    if (this._fetchDisks) {
       this._inflight_disks = true;
       this.fetchDisks();
     }
+  }
+
+  firstUpdated() {
     // Set initial logs
     const initialLogs = mainChannel.getRecoveryLogs();
     if (initialLogs && initialLogs.length > 0) {

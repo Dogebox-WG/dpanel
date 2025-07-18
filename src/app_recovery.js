@@ -112,6 +112,9 @@ class AppModeApp extends LitElement {
 
     // Instantiate a web socket connection and add main app as an observer
     this.mainChannel.addObserver(this);
+
+    this.fetchSetupState();
+    this.fetchRecoveryState();
   }
 
   async fetchSetupState() {
@@ -197,9 +200,6 @@ class AppModeApp extends LitElement {
   }
 
   firstUpdated() {
-    this.fetchSetupState();
-    this.fetchRecoveryState();
-
     // Prevent dialog closures on overlay click
     this.dialogMgmt = this.shadowRoot.querySelector("#MgmtDialog");
     this.dialogMgmt.addEventListener("sl-request-close", (event) => {

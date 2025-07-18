@@ -25,7 +25,7 @@ export class LocationPickerView extends LitElement {
       installationBootMedia: { type: String },
       installationState: { type: String },
       renderReady: { type: Boolean },
-      mainDialogOpen: { type: Boolean },
+      // mainDialogOpen: { type: Boolean },
       _ready: { type: Boolean },
       _inflight_disks: { type: Boolean },
       _page: { type: String },
@@ -35,7 +35,7 @@ export class LocationPickerView extends LitElement {
       _inflight_install: { type: Boolean },
       _install_outcome: { type: String },
       _logs: { type: Array, state: true },
-      _fetchDisks: { type: Boolean },
+      // _fetchDisks: { type: Boolean },
     };
   }
 
@@ -57,6 +57,7 @@ export class LocationPickerView extends LitElement {
     this._logs = [];
     this._unsubscribe = null;
     this._fetchDisks = false;
+    this._disks_fetched = false;
   }
 
   willUpdate() {
@@ -65,7 +66,7 @@ export class LocationPickerView extends LitElement {
       this.installationState === "notInstalled";
     this.mainDialogOpen = this.renderReady && this._fetchDisks;
 
-    if (this._fetchDisks) {
+    if (this._fetchDisks && !this._inflight_disks && !this._disks_fetched) {
       this._inflight_disks = true;
       this.fetchDisks();
     }
@@ -86,6 +87,7 @@ export class LocationPickerView extends LitElement {
     );
     this._bootMediaDisk = this._allDisks.find((d) => d.bootMedia);
     this._inflight_disks = false;
+    this._disks_fetched = true;
   }
 
   connectedCallback() {

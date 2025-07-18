@@ -189,7 +189,7 @@ class SettingsPage extends LitElement {
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>
               Add or remove Wifi networks
             </action-row>
-            <action-row prefix="key" label="Remote Access" href="/settings/remote-access" @click=${notYet}>
+            <action-row prefix="key" label="Remote Access" href="/settings/remote-access">
               Manage SSH settings and keys
             </action-row>
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>

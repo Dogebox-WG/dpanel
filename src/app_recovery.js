@@ -72,6 +72,7 @@ class AppModeApp extends LitElement {
     setupState: { type: Object },
     isFirstTimeSetup: { type: Boolean },
     isForbidden: { type: Boolean },
+    hasLoaded: { type: Boolean },
     installationState: { type: String },
     installationBootMedia: { type: String },
     renderReady: { type: Boolean },

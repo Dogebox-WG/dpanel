@@ -25,6 +25,7 @@ export class LocationPickerView extends LitElement {
       installationBootMedia: { type: String },
       installationState: { type: String },
       renderReady: { type: Boolean },
+      mainDialogOpen: { type: Boolean },
       _ready: { type: Boolean },
       _inflight_disks: { type: Boolean },
       _page: { type: String },

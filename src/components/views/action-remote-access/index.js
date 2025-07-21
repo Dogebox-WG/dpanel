@@ -45,6 +45,14 @@ export class RemoteAccessSettings extends LitElement {
       line-height: 1.4;
     }
 
+    .helper-text {
+      font-size: 0.8rem;
+      color: #555555;
+      font-family: 'Comic Neue';
+      margin-bottom: 0.5em;
+      text-align: center;
+    }
+
     .actions {
       display: flex;
       flex-direction: row;
@@ -213,6 +221,10 @@ export class RemoteAccessSettings extends LitElement {
     const keys = this._ssh_public_keys 
     return html`
       <h1>Remote Access</h1>
+
+      <div class="helper-text">
+        <pre>ssh shibe@${window.location.hostname}</pre>
+      </div>
 
       <div class="form-control">
         <sl-switch @sl-change=${this.handleSSHToggle} ?checked=${this._ssh_state.enabled} help-text="Allows your Dogebox to be accessed via SSH.">Enable SSH Service</sl-switch>

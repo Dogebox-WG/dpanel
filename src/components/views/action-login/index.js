@@ -156,9 +156,10 @@ class LoginView extends LitElement {
     try {
       // Fetch bootstrap data to check if this is first login
       const bootstrap = await getBootstrapV2();
-      if (bootstrap?.flags && !bootstrap.flags.isFirstTimeWelcomeComplete) {
-        showWelcomeModal();
-      }
+      // Disabled while feature is broken
+      // if (bootstrap?.flags && !bootstrap.flags.isFirstTimeWelcomeComplete) {
+      //   showWelcomeModal();
+      // }
     } catch (err) {
       console.warn('Failed to fetch bootstrap data:', err);
     }

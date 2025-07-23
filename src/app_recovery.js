@@ -135,6 +135,7 @@ class AppModeApp extends LitElement {
       return;
     }
 
+    this.devMode = response.devMode;
     this.setupState = response.setupFacts;
     this.loading = false;
   }
@@ -387,7 +388,7 @@ class AppModeApp extends LitElement {
                     () => html`<h1>Error</h1>`,
                   )}
                 </div>
-                ${this.isFirstTimeSetup
+                ${this.isFirstTimeSetup && !this.devMode
                   ? html`
                       <action-select-install-location
                         style="z-index: 999"

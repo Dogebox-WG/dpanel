@@ -148,11 +148,10 @@ class DPanelApp extends LitElement {
         this.pkgController.setData(res);
       }
 
-      // Disabled while feature is broken
-      // // Check if we should show the welcome modal
-      // if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
-      //   showWelcomeModal();
-      // }
+      // Check if we should show the welcome modal
+      if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
+        showWelcomeModal();
+      }
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

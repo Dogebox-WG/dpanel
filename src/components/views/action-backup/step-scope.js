@@ -7,6 +7,7 @@ import {
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
 import { store } from "/state/store.js";
+import { pkgController } from "/controllers/package/index.js";
 
 class CreateBackup extends LitElement {
   static styles = css`
@@ -104,12 +105,73 @@ class CreateBackup extends LitElement {
 
   constructor() {
     super();
-    this._pups = MOCK_PUP_LIST;
+    this._pups = [];
     this._systemSize = 1300000
     this._totalSize = this._systemSize;
+    this.pkgController = pkgController;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.pkgController.addObserver(this);
+  }
+
+  disconnectedCallback() {
+    this.pkgController.removeObserver(this);
+    super.disconnectedCallback();
   }
 
   firstUpdated() {
+    this.loadInstalledPups();
+    this.hydrateFromBackupContext();
+  }
+
+  loadInstalledPups() {
+    // load installed pups from pkgController
+    const installedPups = this.pkgController.pups.filter(p => p.state);
+    console.log("installed pups: ", installedPups);
+    console.log("all pups: ", this.pkgController.pups);
+
+    // Check if the data has actually changed
+    const newPupNames = installedPups.map(pup => pup.state.manifest.meta.name).sort();
+    const currentPupNames = this._pups.map(pup => pup.name).sort();
+    
+    if (JSON.stringify(newPupNames) === JSON.stringify(currentPupNames)) {
+      console.log("Pup data hasn't changed, skipping update");
+      return;
+    }
+
+    // Transform installed pups to the format expected by this component
+    this._pups = installedPups.map(pup => {
+      const pupName = pup.state.manifest.meta.name;
+      
+      // Find matching mock data for sizes
+      const mockPup = MOCK_PUP_LIST.find(mock => mock.name === pupName);
+      
+      return {
+        name: pupName,
+        part: {
+          application: { 
+            bytes: mockPup?.part.application.bytes || "0",
+            selected: false
+          },
+          storage: { 
+            bytes: mockPup?.part.storage.bytes || "0",
+            selected: false
+          },
+          cache: { 
+            bytes: mockPup?.part.cache.bytes || "0",
+            selected: false
+          }
+        }
+      };
+    });
+
+    // Trigger re-render to show the pups
+    this.requestUpdate();
+  }
+
+  hydrateFromBackupContext() {
     // hydrate from backup context
     const { pups } = store.getContext("backup")
     
@@ -134,6 +196,11 @@ class CreateBackup extends LitElement {
         }
       });
     });
+  }
+
+  updatePups() {
+    // This method is called by pkgController when data is updated
+    this.loadInstalledPups();
   }
 
   handleSelectAllClick() {

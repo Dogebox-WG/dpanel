@@ -114,6 +114,8 @@ class SelectTarget extends LitElement {
     _selected_disk_adequate_size: { type: Boolean },
     _inflight_disk_fetch: { type: Boolean },
     _inflight_generate_backup: { type: Boolean },
+    _show_encryption_modal: { type: Boolean },
+    _backup_password: { type: String },
   }
 
   constructor() {
@@ -124,6 +126,8 @@ class SelectTarget extends LitElement {
       { name: "/diskA", size: "20000000000", sizePretty: "20 GB", suitability: { backup: { usable: true }}},
       { name: "/diskB", size: "300000000000", sizePretty: "300 GB", suitability: { backup: { usable: true }}}
     ]
+    this._show_encryption_modal = false;
+    this._backup_password = "";
   }
 
   firstUpdated() {
@@ -200,7 +204,25 @@ class SelectTarget extends LitElement {
     console.log('HERE');
     if (!this.canProceed()) return
 
+    this._show_encryption_modal = true;
+  }
+
+  handlePasswordInput(e) {
+    this._backup_password = e.target.value;
+  }
+
+  handleEncryptBackup() {
+    this._show_encryption_modal = false;
     this._inflight_generate_backup = true;
+    // TODO: Implement actual backup generation with encryption
+    console.log('Generating encrypted backup with password:', this._backup_password);
+  }
+
+  handleProceedWithoutEncryption() {
+    this._show_encryption_modal = false;
+    this._inflight_generate_backup = true;
+    // TODO: Implement actual backup generation without encryption
+    console.log('Generating backup without encryption');
   }
 
   canProceed() {
@@ -314,6 +336,31 @@ class SelectTarget extends LitElement {
         <div slot="footer">
           <sl-button variant="text" ?loading=${this._inflight_disk_fetch} @click=${this.handleDiskRefreshClick}>Refresh list</sl-button>
           <sl-button variant="primary" ?disabled=${!this._selected_disk || !this._selected_disk_adequate_size} @click=${() => this._show_disk_pick_list = false}>Done</sl-button>
+        </div>
+      </sl-dialog>
+
+      <sl-dialog ?open=${this._show_encryption_modal} label="Do you want to encrypt this backup?" @sl-request-close=${() => this._show_encryption_modal = false}>
+        <p style="margin-bottom: 0.5em; line-height: 1.5;">
+          Set a password for this backup file
+        </p>
+        
+        <div class="form-control">
+          <sl-input
+            type="password"
+            placeholder="Enter password for encryption"
+            value=${this._backup_password}
+            @sl-input=${this.handlePasswordInput}
+            required
+          ></sl-input>
+        </div>
+
+        <div slot="footer">
+          <sl-button variant="text" @click=${this.handleProceedWithoutEncryption}>
+            Proceed without encryption
+          </sl-button>
+          <sl-button variant="primary" ?disabled=${!this._backup_password} @click=${this.handleEncryptBackup}>
+            Yes, Encrypt
+          </sl-button>
         </div>
       </sl-dialog>
 

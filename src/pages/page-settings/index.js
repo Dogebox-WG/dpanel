@@ -195,6 +195,7 @@ class SettingsPage extends LitElement {
             </action-row>
             <action-row prefix="hdd" label="Backup" href="/settings/backup">
               Create a backup
+              </action-row>
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>

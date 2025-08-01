@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { getNetworks } from "/api/network/get-networks.js";
 import { putNetwork } from "/api/network/set-network.js";
 import { postSetupBootstrap } from "/api/system/post-bootstrap.js";
@@ -41,6 +41,7 @@ class SelectNetwork extends LitElement {
   static get properties() {
     return {
       showSuccessAlert: { type: Boolean },
+      showRecoveryOptions: { type: Boolean },
       reflectorToken: { type: String },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
@@ -58,6 +59,7 @@ class SelectNetwork extends LitElement {
     this._setNetworkFields = {};
     this._setNetworkValues = {};
     this._networks = [];
+    this.showRecoveryOptions = true;
 
     // Set initial fields
     this.updateSetNetworkFields();
@@ -78,12 +80,7 @@ class SelectNetwork extends LitElement {
   }
 
   updateSetNetworkFields() {
-    this._setNetworkFields = {
-      sections: [
-        {
-          name: "select-network",
-          submitLabel: "Much Connect",
-          fields: [
+    const fields = [
             {
               name: "network",
               label: "Select Network",
@@ -142,14 +139,26 @@ class SelectNetwork extends LitElement {
                 return false;
               },
             },
-            {
-              name: "ssh-key",
-              label: "SSH Key (Optional)",
-              type: "text",
-              required: false,
-              placeholder: "Pasting an SSH key here will also enable SSH",
-            },
           ],
+    ];
+
+    // Only add SSH key field if showRecoveryOptions is true
+    if (this.showRecoveryOptions) {
+      fields.push({
+        name: "ssh-key",
+        label: "SSH Key (Optional)",
+        type: "text",
+        required: false,
+        placeholder: "Pasting an SSH key here will also enable SSH"
+      });
+    }
+
+    this._setNetworkFields = {
+      sections: [
+        {
+          name: "select-network",
+          submitLabel: "Much Connect",
+          fields: fields,
         },
       ],
     };
@@ -384,13 +393,14 @@ class SelectNetwork extends LitElement {
             </dynamic-form>
             `: nothing }
 
-          <div style="margin: 2em 8px">
-            <sl-alert variant="warning" open>
-              <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-              After you hit connect it may take up to 10 minutes while your
-              Dogebox is configured!
-            </sl-alert>
-          </div>
+            ${this.showRecoveryOptions ? html`
+              <div style="margin: 2em 8px">
+                <sl-alert variant="warning" open>
+                  <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+                  After you hit connect it may take up to 10 minutes while your Dogebox is configured!
+                </sl-alert>
+              </div>
+            ` : nothing}
         </div>
       </div>
     `;

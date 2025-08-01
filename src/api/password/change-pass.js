@@ -8,9 +8,18 @@ import {
 const client = new ApiClient(store.networkContext.apiBaseUrl)
 
 export async function postChangePass(body) {
-  const res = await client.post(`/auth/change-pass`, body, { mock: postResponse });
+  const requestBody = {
+    new_password: body.new_password,
+    current_password: body.password,
+    seedphrase: body.seedphrase
+  };
+
+  const res = await client.post(`/change-password`, requestBody, { mock: postResponse });
   if (res && res.token) {
     store.updateState({ networkContext: { token: res.token }})
+  }
+  if (res.error === true) {
+    return { error: "CHECK-CREDS", status: res.status }
   }
   return res
 }

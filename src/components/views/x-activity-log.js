@@ -153,6 +153,9 @@ class ActivityLog extends LitElement {
         overflow-y: scroll;
         overflow-x: hidden;
         box-sizing: border-box;
+        text-align: left;
+        width: 100%;
+        max-width: 100%;
       }
 
       div#LogFooter {
@@ -185,6 +188,8 @@ class ActivityLog extends LitElement {
         font-weight: bold;
         margin: 0px 0;
         padding: 0px;
+        text-align: left;
+        max-width: 100%;
       }
     `;
   }

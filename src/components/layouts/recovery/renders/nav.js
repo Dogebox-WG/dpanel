@@ -195,7 +195,13 @@ export function renderNav(isFirstTimeSetup) {
 }
 
 function checkPartialComplete(active, step, stepNumber) {
-  if (step.name === "pass" && active === stepNumber + 2) {
-    return true;
+  if (step.name === "pass") {
+    if (active === stepNumber + 1) {
+      return true;
+    }
+    if (active > stepNumber + 1) {
+      return false;
+    }
   }
+  return false;
 }

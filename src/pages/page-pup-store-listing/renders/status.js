@@ -11,20 +11,10 @@ export function renderStatus() {
   const isBroken = installationId === 'broken';
   const isLoadingStatus = ["installing"].includes(installationId);
 
-  const normalisedLabel = () => {
-    if (isBroken) {
-      return "Broken"
-    } else if (!isInstalled) {
-      return "Not installed"
-    } else {
-      return "Installed"
-    }
-  }
-
   const installationLabelClass = classMap({
-    "installed": isInstalled,
-    "not_installed": !isInstalled,
-    "broken": isBroken,
+    "installed": installationLabel === 'Ready',
+    "not_installed": installationLabel === 'Not Installed',
+    "broken": installationLabel === 'Broken',
   })
 
   return html`
@@ -32,7 +22,7 @@ export function renderStatus() {
       ${pkg.def.logoBase64 ? html`<img style="width: 82px; height: 82px;" src="${pkg.def.logoBase64}" />` : nothing}
       <div style="width: 100%;">
         <div class="section-title">
-          <h3 class="installation-label ${installationLabelClass}">${normalisedLabel()}</h3>
+          <h3 class="installation-label ${installationLabelClass}">${installationLabel}</h3>
         </div>
         <div>
           <span class="status-label">${pkg.def.versions[pkg.def.latestVersion].meta.name}</span>

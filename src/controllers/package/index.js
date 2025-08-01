@@ -40,6 +40,9 @@ class PkgController {
       if (pupId === observer.pupId) {
         observer.requestUpdate(options);
       }
+      if (typeof observer.updatePups === "function") {
+        observer.updatePups();
+      }
     }
   }
 
@@ -478,7 +481,8 @@ class PkgController {
         location: sourceData.location || "",
         name: sourceData.name || "",
         pupCount: Object.keys(sourceData.pups || {}).length,
-        installedCount
+        installedCount,
+        error: sourceData.error || null
       };
     });
   }

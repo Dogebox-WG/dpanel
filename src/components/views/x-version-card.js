@@ -4,7 +4,8 @@ import "/components/common/action-row/action-row.js";
 class VersionCard extends LitElement {
   static properties = {
     name: { type: String },
-    version: { type: String },
+    currentVersion: { type: String },
+    newVersion: { type: String },
     short: { type: String },
     long: { type: String },
     link: { type: String },
@@ -47,11 +48,11 @@ class VersionCard extends LitElement {
     .fold { padding-left: 48px; }
   `
   render() {
-    const { name, version, short, long, link, link_label } = this;
+    const { name, currentVersion, newVersion, short, long, link, link_label } = this;
     return html`
       <action-row prefix="box" expandable>
         <span class="label" slot="label">
-          ${name} ${version}
+          ${name} (${currentVersion} -> ${newVersion})
         </span>
         <sl-tooltip content=${short} hoist>
           <span class="short">${short}</span>

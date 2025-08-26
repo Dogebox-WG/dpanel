@@ -168,6 +168,23 @@ class WelcomeModal extends LitElement {
         event.preventDefault();
       }
     });
+
+    // Preload images to fix Safari first-load issue
+    this.preloadImages();
+  }
+
+  preloadImages() {
+    const imageUrls = [
+      '/static/img/pup-collection-core.png',
+      '/static/img/pup-collection-essentials.png',
+      '/static/img/pup-collection-custom.png',
+      '/static/img/celebrate.png'
+    ];
+
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.src = url;
+    });
   }
 
   async handleNext() {

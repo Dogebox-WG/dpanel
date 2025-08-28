@@ -97,14 +97,11 @@ class WelcomeModal extends LitElement {
       color: var(--sl-color-neutral-600);
       line-height: 1.4;
     }
-    .core-image {
-      background-image: url('/static/img/pup-collection-core.png');
-    }
-    .essentials-image {
-      background-image: url('/static/img/pup-collection-essentials.png');
-    }
-    .custom-image {
-      background-image: url('/static/img/pup-collection-custom.png');
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: var(--sl-border-radius-small);
     }
     .footer {
       display: flex;
@@ -232,7 +229,9 @@ class WelcomeModal extends LitElement {
                  @click=${() => this.handleOptionSelect('essentials')}>
               <div class="recommended-label">Recommended</div>
               <div class="card-header">
-                <div class="card-image essentials-image"></div>
+                <div class="card-image">
+                  <img src="/static/img/pup-collection-essentials.png" alt="Essentials Collection">
+                </div>
                 <div class="card-content">
                   <div class="card-title">Essentials</div>
                   <div class="card-subtitle">Gets you up and running with Dogecoin Core, Dogenet, DogeMap, Identity</div>
@@ -244,7 +243,9 @@ class WelcomeModal extends LitElement {
             <div class="card ${this.selectedOption === 'core' ? 'selected' : ''}" 
                  @click=${() => this.handleOptionSelect('core')}>
               <div class="card-header">
-                <div class="card-image core-image"></div>
+                <div class="card-image">
+                  <img src="/static/img/pup-collection-core.png" alt="Core Only Collection">
+                </div>
                 <div class="card-content">
                   <div class="card-title">Core Only</div>
                   <div class="card-subtitle">Nothing but Dogecoin Core</div>
@@ -255,7 +256,9 @@ class WelcomeModal extends LitElement {
             <div class="card ${this.selectedOption === 'custom' ? 'selected' : ''}"
                  @click=${() => this.handleOptionSelect('custom')}>
               <div class="card-header">
-                <div class="card-image custom-image"></div>
+                <div class="card-image">
+                  <img src="/static/img/pup-collection-custom.png" alt="Custom Collection">
+                </div>
                 <div class="card-content">
                   <div class="card-title">Custom</div>
                   <div class="card-subtitle">Choose your own adventure.  No preinstalled pups</div>

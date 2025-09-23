@@ -27,15 +27,6 @@ class IframeView extends LitElement {
     }
   `;
 
-  // Whenever pupContext source is available, set ready to true.
-  updated(changedProperties) {
-    super.updated(changedProperties);
-    if (changedProperties.has('pupContext')) {
-      this.ready = !!this.context.store.pupContext.manifest.gui.source;
-      this.requestUpdate();
-    }
-  }
-
   constructor() {
     super();
 
@@ -43,7 +34,7 @@ class IframeView extends LitElement {
     this.context = new StoreSubscriber(this, store)
 
     // Ready state is dependent on the pupContext having an iframe source.
-    this.ready = !!this.context.store.pupContext.manifest.gui.source
+    this.ready = !!this.context?.store?.guiContext?.ready;
 
     this.iframeElement = null;
     this.debouncedHandleResize = debounce(this.handleResize, 300);
@@ -59,7 +50,7 @@ class IframeView extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.updateComplete.then(() => {
-      if (!this.ready) return
+      if (!this.context?.store?.guiContext?.ready) return
       
       this.iframeElement = this.shadowRoot.querySelector('iframe');
     
@@ -114,8 +105,8 @@ class IframeView extends LitElement {
   }
 
   render() {
-    const { pupContext } = this.context.store
-    if (!this.ready) {
+    const { guiContext } = this.context.store;
+    if (!guiContext.ready) {
       return html`
         <div id="IframeContainer">
           <div id="LoaderContainer">
@@ -125,11 +116,15 @@ class IframeView extends LitElement {
       `
     }
 
-    if (this.ready) {
+    if (guiContext.ready) {
+      const iframeURL = `${window.location.protocol}//${window.location.hostname}:${guiContext.port}`
       return html`
-
         <div id="IframeContainer">
-          <iframe src="${pupContext.manifest.gui.source}" frameBorder="0"></iframe>
+          <iframe
+            src="${iframeURL}"
+            frameBorder="0"
+            sandbox="allow-scripts"
+            ></iframe>
         </div>
       `;
     }

@@ -1,6 +1,7 @@
 import {
   isAuthed,
   loadPup,
+  setActiveGui,
   asPage,
   withDialog,
   performLogout,
@@ -42,6 +43,16 @@ export const routes = [
     component: "x-page-settings",
     pageTitle: "Settings",
     before: [isAuthed, asPage, withDialog],
+  },
+  {
+    path: "/pups/:pupid/ui/:guiname",
+    component: "x-page-pup-iframe",
+    dynamicTitle: true,
+    before: [isAuthed, asPage],
+    pageAction: "back",
+    animate: true,
+    before: [loadPup, asPage],
+    after: [setActiveGui],
   },
   {
     path: "/pups",

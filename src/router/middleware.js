@@ -61,8 +61,46 @@ export async function loadPup(context, commands) {
     store.updateState({
       pupContext: { ...pup, ready: true, result: 200 },
     });
+
+    // Attach pup to route context in case subsequent route middleware
+    // wish to refer to it.
+    context.pup = pup
+
   } catch (error) {
     console.warn("[500] loadPup middleware: failure.", error);
+    store.updateState({
+      pupContext: { ready: true, result: 500 },
+    });
+  }
+}
+
+export async function setActiveGui(context, commands) {
+  const pupId = context.params.pupid;
+  const guiName = decodeURIComponent(context.params.guiname);
+
+  try {
+    // Attempt to get the pup from memory
+    let pup = pkgController.getPupMaster({ pupId, lookupType: 'byStatePupId' }).pup;
+
+    // Find the pup gui details
+    const guis = pup.state.webUIs || [];
+    const gui = guis.find((g) => g.name === guiName)
+
+    if (!gui) {
+      throw new Error(`Cannot find gui by name: ${guiName}`)
+    }
+
+    store.updateState({
+      guiContext: {
+        ready: true,
+        result: 200,
+        id: guiName,
+        ...gui
+      },
+    });
+
+  } catch (err) {
+    console.log('woof', err);
     store.updateState({
       pupContext: { ready: true, result: 500 },
     });
@@ -84,7 +122,7 @@ export function performLogout(context, commands) {
 
 export function asPage(context, commands) {
   if (context.route.dynamicTitle) {
-    context.route.pageTitle = decodeURIComponent(context.params.pupname);
+    context.route.pageTitle = decodeURIComponent(context.params.pupname || context.params.guiname);
     context.route.pageAction = "back";
   }
 

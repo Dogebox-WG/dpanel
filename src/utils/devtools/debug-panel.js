@@ -151,25 +151,31 @@ class DebugPanel extends LitElement {
     
     // Import and use jobs API
     const { createJob } = await import('/api/jobs/jobs.js');
-    const { jobSimulator } = await import('/utils/job-simulator.js');
     
     const response = await createJob(randomJob);
     
     if (response.success) {
-      // Start simulation
-      jobSimulator.startSimulation(response.job.id, {
-        logMessages: [
-          'Fetching dependencies...',
-          'Compiling packages...',
-          'Running configuration...',
-          'Verifying installation...',
-          'Applying changes...',
-          'Cleaning up...'
-        ]
-      });
-      
+      // DON'T manually start simulation - let the job monitor handle it
+      // This ensures critical job logic is respected
       console.log('Mock job created:', response.job);
     }
+  }
+
+  async clearAllJobs() {
+    const { jobSimulator } = await import('/utils/job-simulator.js');
+    const { store } = await import('/state/store.js');
+    
+    // Stop all running simulations
+    jobSimulator.stopAllSimulations();
+    
+    // Clear all jobs from the store
+    store.updateState({
+      jobsContext: {
+        jobs: []
+      }
+    });
+    
+    console.log('All jobs cleared');
   }
 
   render() {
@@ -207,6 +213,7 @@ class DebugPanel extends LitElement {
                     <sl-divider></sl-divider>
                     <sl-menu-label>Jobs</sl-menu-label>
                     <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
+                    <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

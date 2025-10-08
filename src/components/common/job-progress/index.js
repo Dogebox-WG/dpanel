@@ -1,4 +1,5 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { timeAgo } from '/utils/time-format.js';
 
 class JobProgress extends LitElement {
   static properties = {
@@ -39,14 +40,20 @@ class JobProgress extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.5em;
-      min-width: 200px;
-      white-space: nowrap;
+      width: 250px;
+      min-width: 250px;
+      flex-shrink: 0;
     }
     
     .task-name {
       font-size: 0.95rem;
       font-weight: 500;
       color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
     }
     
     .job-icon {
@@ -96,7 +103,8 @@ class JobProgress extends LitElement {
       font-size: 1rem;
       font-weight: 600;
       color: #fff;
-      min-width: 50px;
+      width: 55px;
+      min-width: 55px;
       text-align: right;
       flex-shrink: 0;
     }
@@ -179,6 +187,39 @@ class JobProgress extends LitElement {
       text-transform: uppercase;
       margin-left: 0.5em;
     }
+    
+    .timing-info {
+      display: flex;
+      gap: 1.5em;
+      margin-left: 2em;
+      font-size: 0.8rem;
+      color: #888;
+      flex-shrink: 0;
+      width: 250px;
+      min-width: 250px;
+    }
+    
+    .timing-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15em;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .timing-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #666;
+      font-weight: 600;
+    }
+    
+    .timing-value {
+      color: #aaa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   `;
   
   constructor() {
@@ -204,7 +245,7 @@ class JobProgress extends LitElement {
   render() {
     if (!this.job) return html``;
     
-    const { displayName, status, progress, summaryMessage, errorMessage, logs, sensitive } = this.job;
+    const { displayName, status, progress, summaryMessage, errorMessage, logs, sensitive, started, finished } = this.job;
     
     return html`
       <div class="job-card ${sensitive ? 'sensitive' : ''}" @click=${this.toggleExpanded}>
@@ -222,6 +263,21 @@ class JobProgress extends LitElement {
           </div>
           
           <div class="job-percentage">${progress}%</div>
+          
+          <div class="timing-info">
+            ${started ? html`
+              <div class="timing-item">
+                <div class="timing-label">Started</div>
+                <div class="timing-value">${timeAgo(started)}</div>
+              </div>
+            ` : ''}
+            ${finished ? html`
+              <div class="timing-item">
+                <div class="timing-label">Finished</div>
+                <div class="timing-value">${timeAgo(finished)}</div>
+              </div>
+            ` : ''}
+          </div>
         </div>
         
         ${this.expanded ? html`

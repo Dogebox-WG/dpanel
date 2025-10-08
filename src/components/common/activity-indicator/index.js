@@ -54,9 +54,31 @@ class ActivityIndicator extends LitElement {
       background: #ff6b6b;
     }
     
+    .badge.critical {
+      background: #ff9800;
+      animation: pulse-badge 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
     .text {
       flex: 1;
       font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+    }
+    
+    .text.critical {
+      color: #ff9800;
+      font-weight: 600;
+    }
+    
+    .critical-icon {
+      flex-shrink: 0;
     }
   `;
   
@@ -74,26 +96,60 @@ class ActivityIndicator extends LitElement {
     // Count both queued and in-progress as "active"
     const activeCount = jobs.filter(j => j.status === 'queued' || j.status === 'in_progress').length;
     const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
+    const pendingCount = jobs.filter(j => j.status === 'queued').length;
     const unreadCount = jobs.filter(j => !j.read && ['completed', 'failed'].includes(j.status)).length;
+    
+    // Check if there's a critical job actively running (not just queued)
+    const hasCriticalJob = jobs.some(j => 
+      j.sensitive && j.status === 'in_progress'
+    );
     
     // Determine display text
     let displayText = 'Activity';
+    let showCriticalIcon = false;
     if (activeCount > 0) {
       displayText = `(${activeCount}) Active task${activeCount !== 1 ? 's' : ''}`;
+      if (hasCriticalJob) {
+        displayText = 'Critical task running';
+        showCriticalIcon = true;
+      }
     } else if (unreadCount > 0) {
       displayText = 'Tasks completed';
     }
     
+    // Create tooltip content showing job counts (critical first, then active, then pending)
+    const tooltipLines = [];
+    if (hasCriticalJob) {
+      tooltipLines.push(html`⚠️ Critical Task in Progress`);
+    }
+    if (inProgressCount > 0) {
+      tooltipLines.push(html`${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}`);
+    }
+    if (pendingCount > 0) {
+      tooltipLines.push(html`${pendingCount} Pending ${pendingCount === 1 ? 'Job' : 'Jobs'}`);
+    }
+    const tooltipContent = tooltipLines.length > 0 
+      ? html`${tooltipLines.map((line, i) => html`${i > 0 ? html`<br>` : ''}${line}`)}`
+      : html`No active jobs`;
+    
     return html`
-      <div class="indicator" @click=${this.handleClick}>
-        <sl-icon name="gear" class="icon ${inProgressCount > 0 ? 'spinning' : ''}"></sl-icon>
-        <span class="text">${displayText}</span>
-        ${unreadCount > 0 ? html`
-          <span class="badge has-unread">${unreadCount}</span>
-        ` : (activeCount > 0 ? html`
-          <span class="badge">${activeCount}</span>
-        ` : '')}
-      </div>
+      <sl-tooltip placement="top">
+        <div slot="content">${tooltipContent}</div>
+        <div class="indicator" @click=${this.handleClick}>
+          <sl-icon name="gear" class="icon ${activeCount > 0 ? 'spinning' : ''}"></sl-icon>
+          <span class="text ${hasCriticalJob ? 'critical' : ''}">
+            ${showCriticalIcon ? html`<span class="critical-icon">⚠️</span>` : ''}
+            <span>${displayText}</span>
+          </span>
+          ${unreadCount > 0 && !hasCriticalJob ? html`
+            <span class="badge has-unread">${unreadCount}</span>
+          ` : (hasCriticalJob ? html`
+            <span class="badge critical">!</span>
+          ` : (activeCount > 0 ? html`
+            <span class="badge">${activeCount}</span>
+          ` : ''))}
+        </div>
+      </sl-tooltip>
     `;
   }
 }

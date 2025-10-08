@@ -103,10 +103,9 @@ class Store {
         if (savedState) {
           this.networkContext = savedState.networkContext;
           
-          // Load jobs context
-          if (savedState.jobsContext) {
+          // Only load jobs from localStorage when using mocks
+          if (savedState.jobsContext && this.networkContext.useMocks) {
             this.jobsContext = savedState.jobsContext;
-            // Jobs will be automatically resumed by the job monitor
           }
         }
       } catch (error) {

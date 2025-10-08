@@ -93,11 +93,10 @@ class ActivityIndicator extends LitElement {
   
   render() {
     const { jobs } = this.context.store.jobsContext;
-    // Count both queued and in-progress as "active"
     const activeCount = jobs.filter(j => j.status === 'queued' || j.status === 'in_progress').length;
     const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
     const pendingCount = jobs.filter(j => j.status === 'queued').length;
-    const unreadCount = jobs.filter(j => !j.read && ['completed', 'failed'].includes(j.status)).length;
+    const unreadCount = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status)).length;
     
     // Check if there's a critical job actively running (not just queued)
     const hasCriticalJob = jobs.some(j => 
@@ -105,16 +104,11 @@ class ActivityIndicator extends LitElement {
     );
     
     // Determine display text
-    let displayText = 'Activity';
+    let displayText = 'System Activity';
     let showCriticalIcon = false;
-    if (activeCount > 0) {
-      displayText = `(${activeCount}) Active task${activeCount !== 1 ? 's' : ''}`;
-      if (hasCriticalJob) {
-        displayText = 'Critical task running';
-        showCriticalIcon = true;
-      }
-    } else if (unreadCount > 0) {
-      displayText = 'Tasks completed';
+    if (hasCriticalJob) {
+      displayText = 'Critical task running';
+      showCriticalIcon = true;
     }
     
     // Create tooltip content showing job counts (critical first, then active, then pending)

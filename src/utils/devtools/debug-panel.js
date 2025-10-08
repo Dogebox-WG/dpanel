@@ -162,20 +162,47 @@ class DebugPanel extends LitElement {
   }
 
   async clearAllJobs() {
-    const { jobSimulator } = await import('/utils/job-simulator.js');
     const { store } = await import('/state/store.js');
     
-    // Stop all running simulations
-    jobSimulator.stopAllSimulations();
-    
-    // Clear all jobs from the store
-    store.updateState({
-      jobsContext: {
-        jobs: []
+    if (store.networkContext.useMocks) {
+      const { jobSimulator } = await import('/utils/job-simulator.js');
+      jobSimulator.stopAllSimulations();
+      store.updateState({
+        jobsContext: {
+          jobs: []
+        }
+      });
+    } else {
+      const { clearAllJobs } = await import('/api/jobs/jobs.js');
+      try {
+        await clearAllJobs();
+        location.reload();
+      } catch (err) {
+        console.error('Failed to clear jobs:', err);
       }
-    });
+    }
+  }
+
+  async clearCompletedJobs() {
+    const { store } = await import('/state/store.js');
+    const { clearCompletedJobs } = await import('/api/jobs/jobs.js');
     
-    console.log('All jobs cleared');
+    try {
+      await clearCompletedJobs(0);
+      
+      if (store.networkContext.useMocks) {
+        const remainingJobs = store.jobsContext.jobs.filter(
+          j => !['completed', 'failed', 'cancelled'].includes(j.status)
+        );
+        store.updateState({
+          jobsContext: { jobs: remainingJobs }
+        });
+      } else {
+        location.reload();
+      }
+    } catch (err) {
+      console.error('Failed to clear completed jobs:', err);
+    }
   }
 
   render() {
@@ -214,6 +241,7 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Jobs</sl-menu-label>
                     <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
                     <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
+                    <sl-menu-item @click=${this.clearCompletedJobs}>Clear Completed Jobs</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

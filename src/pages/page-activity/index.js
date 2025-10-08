@@ -1,13 +1,17 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
+import { markAllJobsAsRead, clearCompletedJobs } from '/api/jobs/jobs.js';
 import '/components/common/job-progress/index.js';
 
 class ActivityPage extends LitElement {
   static properties = {
     showActiveLimit: { type: Number },
     showPendingLimit: { type: Number },
-    showCompletedLimit: { type: Number }
+    showCompletedLimit: { type: Number },
+    searchQuery: { type: String },
+    statusFilter: { type: String },
+    dateFilter: { type: String }
   };
   
   static styles = css`
@@ -21,10 +25,47 @@ class ActivityPage extends LitElement {
       margin: 0 auto;
     }
     
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5em;
+    }
+    
     h1 {
       font-family: 'Comic Neue', sans-serif;
       font-size: 2rem;
-      margin-bottom: 0.5em;
+      margin: 0;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 0.5em;
+    }
+    
+    .filters {
+      display: flex;
+      gap: 1em;
+      margin-bottom: 2em;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    
+    .filter-label {
+      font-size: 0.9rem;
+      color: #999;
+      font-weight: 600;
+    }
+    
+    .search-box {
+      flex: 1;
+      min-width: 250px;
     }
     
     .section {
@@ -82,38 +123,54 @@ class ActivityPage extends LitElement {
     this.showActiveLimit = 10;
     this.showPendingLimit = 10;
     this.showCompletedLimit = 10;
-    this.hasMarkedAsRead = false;
+    this.searchQuery = '';
+    this.statusFilter = 'all';
+    this.dateFilter = 'all';
   }
   
   connectedCallback() {
     super.connectedCallback();
-    // Mark all jobs as read when viewing this page (only once)
-    if (!this.hasMarkedAsRead) {
-      this.markAllAsRead();
-      this.hasMarkedAsRead = true;
+    // Wait for jobs to load, then mark as read
+    this.waitForJobsAndMarkAsRead();
+  }
+  
+  async waitForJobsAndMarkAsRead() {
+    // Poll until jobs are loaded (max 3 seconds)
+    for (let i = 0; i < 30; i++) {
+      const { jobs } = store.jobsContext;
+      if (jobs.length > 0) {
+        await this.markAllAsRead();
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
   
-  markAllAsRead() {
+  async markAllAsRead() {
     const { jobs } = store.jobsContext;
     
-    // Check if there's anything to update
-    const hasUnreadJobs = jobs.some(j => !j.read && ['completed', 'failed'].includes(j.status));
-    if (!hasUnreadJobs) {
-      return; // Nothing to mark as read
+    const unreadJobs = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status));
+    
+    if (unreadJobs.length === 0) {
+      return;
     }
     
-    const updatedJobs = jobs.map(job => {
-      // Only update completed/failed jobs that are unread
-      if (!job.read && ['completed', 'failed'].includes(job.status)) {
-        return { ...job, read: true };
-      }
-      return job;
-    });
-    
-    store.updateState({
-      jobsContext: { jobs: updatedJobs }
-    });
+    try {
+      await markAllJobsAsRead();
+      
+      const updatedJobs = jobs.map(job => {
+        if (!job.read && ['completed', 'failed', 'cancelled'].includes(job.status)) {
+          return { ...job, read: true };
+        }
+        return job;
+      });
+      
+      store.updateState({
+        jobsContext: { jobs: updatedJobs }
+      });
+    } catch (err) {
+      console.error('Failed to mark jobs as read:', err);
+    }
   }
   
   showMoreActive() {
@@ -126,6 +183,88 @@ class ActivityPage extends LitElement {
   
   showMoreCompleted() {
     this.showCompletedLimit += 10;
+  }
+  
+  async handleClearCompleted() {
+    const { jobs } = store.jobsContext;
+    const completedCount = jobs.filter(j => ['completed', 'failed', 'cancelled'].includes(j.status)).length;
+    
+    if (completedCount === 0) {
+      alert('No completed jobs to clear.');
+      return;
+    }
+    
+    const confirmed = confirm(`Clear ${completedCount} completed/failed jobs? This action cannot be undone.`);
+    if (!confirmed) return;
+    
+    try {
+      // Clear jobs older than 0 days (all completed jobs)
+      await clearCompletedJobs(0);
+      
+      // Update local state
+      const remainingJobs = jobs.filter(j => !['completed', 'failed', 'cancelled'].includes(j.status));
+      store.updateState({
+        jobsContext: { jobs: remainingJobs }
+      });
+    } catch (err) {
+      console.error('Failed to clear completed jobs:', err);
+      alert('Failed to clear completed jobs. Please try again.');
+    }
+  }
+  
+  handleSearchInput(e) {
+    this.searchQuery = e.target.value.toLowerCase();
+  }
+  
+  handleStatusFilter(e) {
+    this.statusFilter = e.target.value;
+  }
+  
+  handleDateFilter(e) {
+    this.dateFilter = e.target.value;
+  }
+  
+  filterJobs(jobs) {
+    let filtered = jobs;
+    
+    // Apply search filter
+    if (this.searchQuery) {
+      filtered = filtered.filter(job =>
+        job.displayName.toLowerCase().includes(this.searchQuery) ||
+        job.summaryMessage.toLowerCase().includes(this.searchQuery) ||
+        (job.errorMessage && job.errorMessage.toLowerCase().includes(this.searchQuery))
+      );
+    }
+    
+    // Apply status filter
+    if (this.statusFilter !== 'all') {
+      filtered = filtered.filter(job => job.status === this.statusFilter);
+    }
+    
+    // Apply date filter
+    if (this.dateFilter !== 'all') {
+      const now = new Date();
+      const cutoffDate = new Date();
+      
+      switch (this.dateFilter) {
+        case 'today':
+          cutoffDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          cutoffDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          cutoffDate.setMonth(now.getMonth() - 1);
+          break;
+      }
+      
+      filtered = filtered.filter(job => {
+        const jobDate = new Date(job.started);
+        return jobDate >= cutoffDate;
+      });
+    }
+    
+    return filtered;
   }
   
   renderSection(title, jobs, limit, showMoreHandler) {
@@ -160,15 +299,62 @@ class ActivityPage extends LitElement {
   render() {
     const { jobs } = this.context.store.jobsContext;
     
-    const activeJobs = jobs.filter(j => j.status === 'in_progress');
-    const pendingJobs = jobs.filter(j => j.status === 'queued');
-    const completedJobs = jobs
-      .filter(j => ['completed', 'failed'].includes(j.status))
-      .sort((a, b) => new Date(b.finished) - new Date(a.finished));
+    // Apply filters
+    const filteredJobs = this.filterJobs(jobs);
+    
+    const activeJobs = filteredJobs.filter(j => j.status === 'in_progress');
+    const pendingJobs = filteredJobs.filter(j => j.status === 'queued');
+    const completedJobs = filteredJobs
+      .filter(j => ['completed', 'failed', 'cancelled'].includes(j.status))
+      .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started));
     
     return html`
       <div class="padded">
-        <h1>System Activity</h1>
+        
+        <div class="filters">
+          <div class="filter-item search-box">
+            <sl-input 
+              placeholder="Search jobs..." 
+              size="small"
+              @input=${this.handleSearchInput}
+              clearable
+            >
+              <sl-icon name="search" slot="prefix"></sl-icon>
+            </sl-input>
+          </div>
+          
+          <div class="filter-item">
+            <span class="filter-label">Status:</span>
+            <sl-select 
+              size="small" 
+              value="${this.statusFilter}" 
+              @sl-change=${this.handleStatusFilter}
+              style="min-width: 150px;"
+            >
+              <sl-option value="all">All</sl-option>
+              <sl-option value="in_progress">In Progress</sl-option>
+              <sl-option value="queued">Queued</sl-option>
+              <sl-option value="completed">Completed</sl-option>
+              <sl-option value="failed">Failed</sl-option>
+              <sl-option value="cancelled">Cancelled</sl-option>
+            </sl-select>
+          </div>
+          
+          <div class="filter-item">
+            <span class="filter-label">Date:</span>
+            <sl-select 
+              size="small" 
+              value="${this.dateFilter}" 
+              @sl-change=${this.handleDateFilter}
+              style="min-width: 120px;"
+            >
+              <sl-option value="all">All Time</sl-option>
+              <sl-option value="today">Today</sl-option>
+              <sl-option value="week">Past Week</sl-option>
+              <sl-option value="month">Past Month</sl-option>
+            </sl-select>
+          </div>
+        </div>
         
         ${this.renderSection(
           'Active Jobs',

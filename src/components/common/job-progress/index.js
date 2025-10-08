@@ -1,5 +1,7 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { timeAgo } from '/utils/time-format.js';
+import { cancelJob } from '/api/jobs/jobs.js';
+import { store } from '/state/store.js';
 
 class JobProgress extends LitElement {
   static properties = {
@@ -97,6 +99,23 @@ class JobProgress extends LitElement {
       height: 100%;
       transition: width 500ms ease;
       border-radius: 4px;
+    }
+    
+    .progress-bar.indeterminate {
+      width: 30% !important;
+      animation: indeterminate-slide 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes indeterminate-slide {
+      0% {
+        transform: translateX(-100%);
+      }
+      50% {
+        transform: translateX(350%);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
     }
     
     .job-percentage {
@@ -220,6 +239,43 @@ class JobProgress extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    
+    .job-actions {
+      display: flex;
+      gap: 0.5em;
+      margin-top: 0.75em;
+      padding-top: 0.75em;
+      border-top: 1px solid #333;
+    }
+    
+    .action-btn {
+      padding: 0.5em 1em;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #2a2a2a;
+      color: #ccc;
+      transition: all 200ms ease;
+    }
+    
+    .action-btn:hover {
+      background: #333;
+      border-color: #555;
+      color: #fff;
+    }
+    
+    .action-btn.danger:hover {
+      background: #ff6b6b;
+      border-color: #ff6b6b;
+      color: #fff;
+    }
+    
+    .action-btn.primary:hover {
+      background: #4360ff;
+      border-color: #4360ff;
+      color: #fff;
+    }
   `;
   
   constructor() {
@@ -232,12 +288,38 @@ class JobProgress extends LitElement {
     this.expanded = !this.expanded;
   }
   
+  async handleCancel(e) {
+    e.stopPropagation();
+    
+    try {
+      await cancelJob(this.job.id);
+      
+      // Update local state
+      const jobs = store.jobsContext.jobs.map(job =>
+        job.id === this.job.id ? { ...job, status: 'cancelled', summaryMessage: 'Job cancelled by user' } : job
+      );
+      store.updateState({ jobsContext: { jobs } });
+    } catch (err) {
+      console.error('Failed to cancel job:', err);
+      alert('Failed to cancel job. Please try again.');
+    }
+  }
+  
+  handleRetry(e) {
+    e.stopPropagation();
+    
+    // TODO: Implement retry logic
+    // For now, show a message
+    alert('Retry functionality coming soon!');
+  }
+  
   getStatusIcon(status) {
     const icons = {
       in_progress: 'arrow-repeat',
       completed: 'check-circle-fill',
       failed: 'exclamation-triangle-fill',
-      queued: 'clock'
+      queued: 'clock',
+      cancelled: 'x-circle'
     };
     return icons[status] || 'question-circle';
   }
@@ -246,6 +328,9 @@ class JobProgress extends LitElement {
     if (!this.job) return html``;
     
     const { displayName, status, progress, summaryMessage, errorMessage, logs, sensitive, started, finished } = this.job;
+    
+    // Show indeterminate progress for active jobs at 0%
+    const isIndeterminate = (status === 'in_progress' || status === 'queued') && progress === 0;
     
     return html`
       <div class="job-card ${sensitive ? 'sensitive' : ''}" @click=${this.toggleExpanded}>
@@ -259,10 +344,11 @@ class JobProgress extends LitElement {
           </div>
           
           <div class="progress-bar-container">
-            <div class="progress-bar ${status}" style="width: ${progress}%"></div>
+            <div class="progress-bar ${status} ${isIndeterminate ? 'indeterminate' : ''}" 
+                 style="${isIndeterminate ? '' : `width: ${progress}%`}"></div>
           </div>
           
-          <div class="job-percentage">${progress}%</div>
+          <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           
           <div class="timing-info">
             ${started ? html`
@@ -297,7 +383,31 @@ class JobProgress extends LitElement {
                 ${logs.map(log => html`<div class="log-entry">${log}</div>`)}
               </div>
             ` : ''}
+            
+            ${this.renderActions()}
           </div>
+        ` : ''}
+      </div>
+    `;
+  }
+  
+  renderActions() {
+    const { status } = this.job;
+    
+    return html`
+      <div class="job-actions">
+        ${status === 'in_progress' || status === 'queued' ? html`
+          <button class="action-btn danger" @click=${this.handleCancel}>
+            <sl-icon name="x-circle" style="margin-right: 0.3em;"></sl-icon>
+            Cancel
+          </button>
+        ` : ''}
+        
+        ${status === 'failed' ? html`
+          <button class="action-btn primary" @click=${this.handleRetry}>
+            <sl-icon name="arrow-clockwise" style="margin-right: 0.3em;"></sl-icon>
+            Retry
+          </button>
         ` : ''}
       </div>
     `;

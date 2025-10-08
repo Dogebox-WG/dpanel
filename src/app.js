@@ -48,6 +48,7 @@ import { isUnauthedRoute, hasFlushParam } from "/utils/url-utils.js";
 
 // Apis
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
+import { getAllJobs } from "/api/jobs/jobs.js";
 
 // Do this once to set the location of shoelace assets (icons etc..)
 setBasePath("/vendor/@shoelace/cdn@2.14.0/");
@@ -103,15 +104,19 @@ class DPanelApp extends LitElement {
     // Menu animating event handler
     this.addEventListener("menu-toggle-request", this._handleMenuToggleRequest);
 
-    // Start job monitoring
-    jobMonitor.start();
+    // Start job monitor only when using mocks (real backend handles progress via WebSocket)
+    if (store.networkContext.useMocks) {
+      jobMonitor.start();
+    }
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._debouncedHandleResize);
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
-    jobMonitor.stop();
+    if (store.networkContext.useMocks) {
+      jobMonitor.stop();
+    }
     super.disconnectedCallback();
   }
 
@@ -158,6 +163,27 @@ class DPanelApp extends LitElement {
       // Check if we should show the welcome modal
       if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
         showWelcomeModal();
+      }
+
+      // Load jobs from backend
+      try {
+        const jobsRes = await getAllJobs();
+        
+        if (jobsRes?.success && Array.isArray(jobsRes?.jobs)) {
+          store.updateState({
+            jobsContext: {
+              jobs: jobsRes.jobs
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load jobs:', err.message);
+        
+        store.updateState({
+          jobsContext: {
+            jobs: []
+          }
+        });
       }
       
     } catch (err) {

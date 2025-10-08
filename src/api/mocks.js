@@ -52,8 +52,15 @@ import {
 
 import {
   getAllJobsMock,
-  createJobMock,
-  updateJobMock,
+  getJobMock,
+  getActiveJobsMock,
+  getRecentJobsMock,
+  getJobStatsMock,
+  getCriticalJobStatusMock,
+  cancelJobMock,
+  markJobAsReadMock,
+  markAllJobsAsReadMock,
+  clearCompletedJobsMock,
 } from "./jobs/jobs.mocks.js";
 
 export const mocks = [
@@ -93,6 +100,13 @@ export const mocks = [
   updateSSHStateResponse,
   getSSHStateResponse,
   getAllJobsMock,
-  createJobMock,
-  updateJobMock,
+  getJobMock,
+  getActiveJobsMock,
+  getRecentJobsMock,
+  getJobStatsMock,
+  getCriticalJobStatusMock,
+  cancelJobMock,
+  markJobAsReadMock,
+  markAllJobsAsReadMock,
+  clearCompletedJobsMock,
 ];

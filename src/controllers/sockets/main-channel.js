@@ -143,6 +143,41 @@ class SocketChannel {
           console.log("--RECOVERY", data.update);
           this.recoveryLogs = [...this.recoveryLogs, data.update];
           break;
+
+        case "job_created":
+          if (data.update) {
+            const existingJob = store.jobsContext.jobs.find(j => j.id === data.update.id);
+            if (!existingJob) {
+              store.updateState({
+                jobsContext: {
+                  jobs: [...store.jobsContext.jobs, data.update]
+                }
+              });
+            }
+          }
+          break;
+
+        case "job_progress":
+          if (data.update) {
+            const jobs = store.jobsContext.jobs.map(job =>
+              job.id === data.update.id ? data.update : job
+            );
+            store.updateState({
+              jobsContext: { jobs }
+            });
+          }
+          break;
+
+        case "job_completed":
+          if (data.update) {
+            const jobs = store.jobsContext.jobs.map(job =>
+              job.id === data.update.id ? data.update : job
+            );
+            store.updateState({
+              jobsContext: { jobs }
+            });
+          }
+          break;
       }
       this.notify();
     };

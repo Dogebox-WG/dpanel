@@ -1,9 +1,22 @@
 import { store } from '../state/store.js';
-import { updateJob } from '../api/jobs/jobs.js';
 
 class JobSimulator {
   constructor() {
     this.activeSimulations = new Map();
+  }
+  
+  // Helper to update a job in the store
+  updateJobInStore(jobId, updates) {
+    const jobs = store.jobsContext.jobs.map(job => {
+      if (job.id === jobId) {
+        return { ...job, ...updates };
+      }
+      return job;
+    });
+    
+    store.updateState({
+      jobsContext: { jobs }
+    });
   }
   
   startSimulation(jobId, options = {}) {
@@ -27,7 +40,7 @@ class JobSimulator {
       ]
     } = options;
     
-    const simulate = async () => {
+    const simulate = () => {
       const job = store.jobsContext.jobs.find(j => j.id === jobId);
       
       // Stop if job not found
@@ -38,7 +51,7 @@ class JobSimulator {
       
       // If job is queued, transition it to in_progress
       if (job.status === 'queued') {
-        await updateJob(jobId, {
+        this.updateJobInStore(jobId, {
           status: 'in_progress',
           summaryMessage: 'Starting...',
           logs: [`[${new Date().toISOString().split('T')[1].split('.')[0]}] Job started`]
@@ -91,7 +104,7 @@ class JobSimulator {
         this.stopSimulation(jobId);
       }
       
-      await updateJob(jobId, updates);
+      this.updateJobInStore(jobId, updates);
       
       // Schedule next update
       if (newProgress < 100) {

@@ -57,15 +57,9 @@ class ActivityPage extends LitElement {
     }
     
     .empty-state {
-      text-align: center;
-      padding: 3em 1em;
+      padding: 0.5em 1em;
       color: #666;
-    }
-    
-    .empty-state sl-icon {
-      font-size: 3rem;
-      margin-bottom: 0.5em;
-      opacity: 0.5;
+      font-size: 0.9rem;
     }
     
     .show-more-btn {
@@ -137,19 +131,17 @@ class ActivityPage extends LitElement {
   renderSection(title, jobs, limit, showMoreHandler) {
     const displayJobs = jobs.slice(0, limit);
     const hasMore = jobs.length > limit;
+    const isEmpty = jobs.length === 0;
     
     return html`
       <div class="section">
         <div class="section-header">
           <h2 class="section-title">${title}</h2>
-          <span class="section-count">${jobs.length}</span>
+          ${!isEmpty ? html`<span class="section-count">${jobs.length}</span>` : ''}
         </div>
         
-        ${jobs.length === 0 ? html`
-          <div class="empty-state">
-            <sl-icon name="inbox"></sl-icon>
-            <p>No ${title.toLowerCase()} found</p>
-          </div>
+        ${isEmpty ? html`
+          <div class="empty-state">No ${title.toLowerCase()}</div>
         ` : html`
           ${displayJobs.map(job => html`
             <job-progress .job=${job}></job-progress>
@@ -179,21 +171,21 @@ class ActivityPage extends LitElement {
         <h1>System Activity</h1>
         
         ${this.renderSection(
-          `Active Jobs (${activeJobs.length})`,
+          'Active Jobs',
           activeJobs,
           this.showActiveLimit,
           () => this.showMoreActive()
         )}
         
         ${this.renderSection(
-          `Pending Jobs (${pendingJobs.length})`,
+          'Pending Jobs',
           pendingJobs,
           this.showPendingLimit,
           () => this.showMorePending()
         )}
         
         ${this.renderSection(
-          `Recently Completed`,
+          'Recently Completed Jobs',
           completedJobs,
           this.showCompletedLimit,
           () => this.showMoreCompleted()

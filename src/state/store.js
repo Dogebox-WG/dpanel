@@ -56,6 +56,12 @@ class Store {
       useFoundationPupBinaryCache: false,
       useFoundationOSBinaryCache: false,
     };
+    this.jobsContext = {
+      jobs: [],
+      lastJobId: 0,
+      currentPage: 1,
+      pageSize: 20,
+    };
 
     // Hydrate state from localStorage unless flush parameter is present.
     if (!isUnauthedRoute() && !hasFlushParam()) {
@@ -96,7 +102,12 @@ class Store {
         const savedState = JSON.parse(localStorage.getItem("storeState"));
         if (savedState) {
           this.networkContext = savedState.networkContext;
-          // Load other slices as needed
+          
+          // Load jobs context
+          if (savedState.jobsContext) {
+            this.jobsContext = savedState.jobsContext;
+            // Jobs will be automatically resumed by the job monitor
+          }
         }
       } catch (error) {
         console.warn(
@@ -111,6 +122,7 @@ class Store {
       try {
         const stateToPersist = {
           networkContext: this.networkContext,
+          jobsContext: this.jobsContext,
           // Include other slices of state as needed
         };
         localStorage.setItem("storeState", JSON.stringify(stateToPersist));
@@ -179,6 +191,12 @@ class Store {
       this.setupContext = {
         ...this.setupContext,
         ...partialState.setupContext,
+      };
+    }
+    if (partialState.jobsContext) {
+      this.jobsContext = {
+        ...this.jobsContext,
+        ...partialState.jobsContext,
       };
     }
     // Other slices..

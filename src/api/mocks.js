@@ -50,6 +50,12 @@ import {
   getSSHStateResponse,
 } from "./sshkeys/sshkeys.mocks.js";
 
+import {
+  getAllJobsMock,
+  createJobMock,
+  updateJobMock,
+} from "./jobs/jobs.mocks.js";
+
 export const mocks = [
   storeListingMock,
   bootstrapV2Mocks,
@@ -86,4 +92,7 @@ export const mocks = [
   addSSHPublicKeyResponse,
   updateSSHStateResponse,
   getSSHStateResponse,
+  getAllJobsMock,
+  createJobMock,
+  updateJobMock,
 ];

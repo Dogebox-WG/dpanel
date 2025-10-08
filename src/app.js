@@ -58,6 +58,9 @@ import { mainChannel } from "/controllers/sockets/main-channel.js";
 // Pkg controller
 import { pkgController } from "/controllers/package/index.js"
 
+// Job monitor
+import { jobMonitor } from "/controllers/jobs/job-monitor.js";
+
 class DPanelApp extends LitElement {
   static properties = {
     ready: { type: Boolean },
@@ -99,12 +102,16 @@ class DPanelApp extends LitElement {
 
     // Menu animating event handler
     this.addEventListener("menu-toggle-request", this._handleMenuToggleRequest);
+
+    // Start job monitoring
+    jobMonitor.start();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._debouncedHandleResize);
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
+    jobMonitor.stop();
     super.disconnectedCallback();
   }
 

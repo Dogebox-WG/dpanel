@@ -137,6 +137,41 @@ class DebugPanel extends LitElement {
     hookManager.set('bump-version', newState);
   }
 
+  async createMockJob() {
+    const jobTypes = [
+      { displayName: 'NixOS Rebuild', summaryMessage: 'Rebuilding system configuration', sensitive: true },
+      { displayName: 'Applying SSH', summaryMessage: 'Configuring SSH access', sensitive: false },
+      { displayName: 'Pup Install', summaryMessage: 'Installing pup package', sensitive: false },
+      { displayName: 'System Update', summaryMessage: 'Updating system packages', sensitive: true },
+      { displayName: 'Import Blockchain', summaryMessage: 'Importing blockchain data', sensitive: false },
+      { displayName: 'Backup Creation', summaryMessage: 'Creating system backup', sensitive: false }
+    ];
+    
+    const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
+    
+    // Import and use jobs API
+    const { createJob } = await import('/api/jobs/jobs.js');
+    const { jobSimulator } = await import('/utils/job-simulator.js');
+    
+    const response = await createJob(randomJob);
+    
+    if (response.success) {
+      // Start simulation
+      jobSimulator.startSimulation(response.job.id, {
+        logMessages: [
+          'Fetching dependencies...',
+          'Compiling packages...',
+          'Running configuration...',
+          'Verifying installation...',
+          'Applying changes...',
+          'Cleaning up...'
+        ]
+      });
+      
+      console.log('Mock job created:', response.job);
+    }
+  }
+
   render() {
     const classes = {
       "debugger-container": true,
@@ -169,6 +204,9 @@ class DebugPanel extends LitElement {
                   <sl-menu slot="submenu">
                     <sl-menu-label>Response Hooks</sl-menu-label>
                     <sl-menu-item type="checkbox" ?checked=${this._hook_bump_version} @click=${this.handleBumpVersionToggle}>Bump version</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Jobs</sl-menu-label>
+                    <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

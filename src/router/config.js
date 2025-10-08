@@ -32,6 +32,12 @@ export const routes = [
     before: [isAuthed, asPage],
   },
   {
+    path: "/activity",
+    component: "x-page-activity",
+    pageTitle: "System Activity",
+    before: [isAuthed, asPage],
+  },
+  {
     path: "/settings",
     component: "x-page-settings",
     pageTitle: "Settings",

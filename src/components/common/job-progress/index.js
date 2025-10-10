@@ -329,8 +329,8 @@ class JobProgress extends LitElement {
     
     const { displayName, status, progress, summaryMessage, errorMessage, logs, sensitive, started, finished } = this.job;
     
-    // Show indeterminate progress for active jobs at 0%
-    const isIndeterminate = (status === 'in_progress' || status === 'queued') && progress === 0;
+    // Show indeterminate progress for active jobs at 0% only (not queued jobs)
+    const isIndeterminate = status === 'in_progress' && progress === 0;
     
     return html`
       <div class="job-card ${sensitive ? 'sensitive' : ''}" @click=${this.toggleExpanded}>

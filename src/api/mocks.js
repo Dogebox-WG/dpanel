@@ -51,6 +51,7 @@ import {
 } from "./sshkeys/sshkeys.mocks.js";
 
 import {
+  createJobMock,
   getAllJobsMock,
   getJobMock,
   getActiveJobsMock,
@@ -99,6 +100,7 @@ export const mocks = [
   addSSHPublicKeyResponse,
   updateSSHStateResponse,
   getSSHStateResponse,
+  createJobMock,
   getAllJobsMock,
   getJobMock,
   getActiveJobsMock,

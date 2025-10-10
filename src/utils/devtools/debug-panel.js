@@ -149,15 +149,17 @@ class DebugPanel extends LitElement {
     
     const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
     
-    // Import and use jobs API
-    const { createJob } = await import('/api/jobs/jobs.js');
-    
-    const response = await createJob(randomJob);
-    
-    if (response.success) {
-      // DON'T manually start simulation - let the job monitor handle it
-      // This ensures critical job logic is respected
-      console.log('Mock job created:', response.job);
+    try {
+      // Import and use jobs API - this will respect mock settings
+      const { createJob } = await import('/api/jobs/jobs.js');
+      const response = await createJob(randomJob);
+      
+      if (response.success) {
+        console.log('Mock job created:', response.job);
+      }
+    } catch (err) {
+      console.error('Failed to create mock job:', err);
+      console.warn('Make sure "Network Mocks" is enabled and the POST /jobs mock is checked in debug settings');
     }
   }
 

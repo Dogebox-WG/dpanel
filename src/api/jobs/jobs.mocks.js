@@ -1,6 +1,46 @@
 import { store } from '../../state/store.js';
 import { jobSimulator } from '../../utils/job-simulator.js';
 
+// POST /jobs - Create a new job (for testing/development)
+export const createJobMock = {
+  name: '/jobs',
+  method: 'post',
+  group: 'jobs',
+  res: (path, config) => {
+    const body = typeof config.body === 'string' ? JSON.parse(config.body) : config.body;
+    const { displayName = 'Test Job', summaryMessage = 'Job created', sensitive = false } = body;
+    
+    // Generate a unique job ID
+    const jobId = `job-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const job = {
+      id: jobId,
+      started: new Date().toISOString(),
+      finished: null,
+      displayName,
+      sensitive,
+      progress: 0,
+      status: 'queued',
+      summaryMessage,
+      errorMessage: null,
+      logs: [`[${new Date().toLocaleTimeString()}] Job created`],
+      read: false
+    };
+    
+    // Add to store - the job monitor will handle starting it based on critical job logic
+    store.updateState({
+      jobsContext: {
+        jobs: [...store.jobsContext.jobs, job]
+      }
+    });
+    
+    // DON'T start the simulation here - let the job monitor handle it
+    // This ensures critical job logic is respected and multiple critical jobs don't run at once
+    
+    return { success: true, job };
+  }
+};
+
 // GET /jobs - Get all jobs
 export const getAllJobsMock = {
   name: '/jobs',

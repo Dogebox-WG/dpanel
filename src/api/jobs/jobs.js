@@ -1,6 +1,7 @@
 import ApiClient from '/api/client.js';
 import { store } from '/state/store.js';
 import {
+  createJobMock,
   getAllJobsMock,
   getJobMock,
   getActiveJobsMock,
@@ -14,6 +15,11 @@ import {
 } from './jobs.mocks.js';
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
+
+// Create a new job (for testing/development)
+export async function createJob(jobData) {
+  return client.post('/jobs', jobData, { mock: createJobMock });
+}
 
 // Get all jobs
 export async function getAllJobs() {

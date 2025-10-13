@@ -7,6 +7,7 @@ class LogViewer extends LitElement {
   static get properties() {
     return {
       autostart: { type: Boolean },
+      autoscroll: { type: Boolean }, // Override saved preference
       logs: { type: Array },
       isConnected: { type: Boolean },
       follow: { type: Boolean },
@@ -22,14 +23,19 @@ class LogViewer extends LitElement {
     this.jobId = "";
     this.isConnected = false;
     this.wsClient = null;
+    this.autostart = true;
+    this.autoscroll = undefined; // Will be set in connectedCallback
     // Load saved auto-scroll preference, default to true
     const savedFollow = localStorage.getItem('log-viewer-autoscroll');
     this.follow = savedFollow !== null ? savedFollow === 'true' : true;
-    this.autostart = true;
   }
 
   connectedCallback() {
     super.connectedCallback();
+    // If autoscroll property was explicitly set, use it to override saved preference
+    if (this.autoscroll !== undefined) {
+      this.follow = this.autoscroll;
+    }
     this.setupSocketConnection()
   }
 

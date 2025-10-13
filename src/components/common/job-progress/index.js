@@ -285,6 +285,7 @@ class JobProgress extends LitElement {
             <x-log-viewer 
               .jobId=${this.job.id}
               autostart
+              ?autoscroll=${status === 'in_progress' || status === 'queued'}
             ></x-log-viewer>
           </div>
         ` : ''}

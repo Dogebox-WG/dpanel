@@ -57,7 +57,7 @@ class Store {
       useFoundationOSBinaryCache: false,
     };
     this.jobsContext = {
-      activities: [],
+      jobs: [],
       loading: false,
       error: null,
     };
@@ -102,7 +102,7 @@ class Store {
         if (savedState) {
           this.networkContext = savedState.networkContext;
           
-          // jobsContext not persisted - activities come from backend via WebSocket
+          // jobsContext not persisted - jobs come from backend via WebSocket
         }
       } catch (error) {
         console.warn(
@@ -117,7 +117,7 @@ class Store {
       try {
         const stateToPersist = {
           networkContext: this.networkContext,
-          // jobsContext excluded - activities come from backend
+          // jobsContext excluded - jobs come from backend
           // Include other slices of state as needed
         };
         localStorage.setItem("storeState", JSON.stringify(stateToPersist));

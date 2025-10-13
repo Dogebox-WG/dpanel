@@ -1,6 +1,6 @@
 import ApiClient from '/api/client.js';
 import { store } from '/state/store.js';
-import { mockActivityApi } from './jobs.mocks.js';
+import { mockJobApi } from './jobs.mocks.js';
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
@@ -9,42 +9,42 @@ function useMock(mockFn, realFn) {
   return store.networkContext.useMocks ? mockFn : realFn;
 }
 
-// GET all activities (jobs)
-export async function getAllActivities() {
+// GET all jobs
+export async function getAllJobs() {
   return useMock(
-    () => mockActivityApi.getAllActivities(),
+    () => mockJobApi.getAllJobs(),
     () => client.get('/jobs')
   )();
 }
 
-// GET specific activity (job)
-export async function getActivity(activityId) {
+// GET specific job
+export async function getJob(jobId) {
   return useMock(
-    () => mockActivityApi.getActivity(activityId),
-    () => client.get(`/jobs/${activityId}`)
+    () => mockJobApi.getJob(jobId),
+    () => client.get(`/jobs/${jobId}`)
   )();
 }
 
-// Mark activity as read
-export async function markActivityAsRead(activityId) {
+// Mark job as read
+export async function markJobAsRead(jobId) {
   return useMock(
-    () => mockActivityApi.markActivityAsRead(activityId),
-    () => client.post(`/jobs/${activityId}/read`, {})
+    () => mockJobApi.markJobAsRead(jobId),
+    () => client.post(`/jobs/${jobId}/read`, {})
   )();
 }
 
-// Mark all activities as read
-export async function markAllActivitiesAsRead() {
+// Mark all jobs as read
+export async function markAllJobsAsRead() {
   return useMock(
-    () => mockActivityApi.markAllActivitiesAsRead(),
+    () => mockJobApi.markAllJobsAsRead(),
     () => client.post('/jobs/read-all', {})
   )();
 }
 
-// Clear completed activities
-export async function clearCompletedActivities(olderThanDays = 0) {
+// Clear completed jobs
+export async function clearCompletedJobs(olderThanDays = 0) {
   return useMock(
-    () => mockActivityApi.clearCompletedActivities(olderThanDays),
+    () => mockJobApi.clearCompletedJobs(olderThanDays),
     () => client.post('/jobs/clear-completed', { olderThanDays })
   )();
 }
@@ -56,7 +56,3 @@ export async function cancelJob(jobId) {
     () => client.post(`/jobs/${jobId}/cancel`, {})
   )();
 }
-
-// Deprecated - keeping for backward compatibility during migration
-export const markAllJobsAsRead = markAllActivitiesAsRead;
-export const clearCompletedJobs = clearCompletedActivities;

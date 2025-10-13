@@ -58,8 +58,8 @@ import { mainChannel } from "/controllers/sockets/main-channel.js";
 // Pkg controller
 import { pkgController } from "/controllers/package/index.js"
 
-// Activity WebSocket
-import { activityWebSocket } from "/controllers/sockets/activity-channel.js";
+// Job WebSocket
+import { jobWebSocket } from "/controllers/sockets/job-channel.js";
 
 class DPanelApp extends LitElement {
   static properties = {
@@ -103,15 +103,15 @@ class DPanelApp extends LitElement {
     // Menu animating event handler
     this.addEventListener("menu-toggle-request", this._handleMenuToggleRequest);
 
-    // Connect to activity WebSocket (works in both mock and real mode)
-    activityWebSocket.connect();
+    // Connect to job WebSocket (works in both mock and real mode)
+    jobWebSocket.connect();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._debouncedHandleResize);
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
-    activityWebSocket.disconnect();
+    jobWebSocket.disconnect();
     super.disconnectedCallback();
   }
 

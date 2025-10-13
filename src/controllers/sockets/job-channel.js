@@ -1,12 +1,12 @@
 import { store } from '/state/store.js';
-import { createMockActivityWebSocket } from '/api/jobs/jobs.mocks.js';
+import { createMockJobWebSocket } from '/api/jobs/jobs.mocks.js';
 
 /**
- * Activity WebSocket Channel
- * Handles real-time activity updates via WebSocket
+ * Job WebSocket Channel
+ * Handles real-time job updates via WebSocket
  * Supports both mock and real backend modes
  */
-class ActivityWebSocketService {
+class JobWebSocketService {
   constructor() {
     this.ws = null;
     this.reconnectAttempts = 0;
@@ -20,21 +20,21 @@ class ActivityWebSocketService {
     this.isMockMode = useMocks;
 
     if (this.isMockMode) {
-      this.ws = createMockActivityWebSocket();
+      this.ws = createMockJobWebSocket();
       this.setupMockHandlers();
     } else {
       // Real mode: Try to connect, but fail gracefully if not available
       const token = store.networkContext.token;
-      const wsUrl = `${wsApiBaseUrl}/ws/activities${token ? `?token=${token}` : ''}`;
+      const wsUrl = `${wsApiBaseUrl}/ws/jobs${token ? `?token=${token}` : ''}`;
       
       try {
         this.ws = new WebSocket(wsUrl);
         this.setupRealHandlers();
       } catch (error) {
-        console.warn('[Activity WS] Backend activity system not available yet');
-        // Set empty activities state
+        console.warn('[Job WS] Backend job system not available yet');
+        // Set empty jobs state
         store.updateState({
-          jobsContext: { activities: [], loading: false }
+          jobsContext: { jobs: [], loading: false }
         });
       }
     }
@@ -77,14 +77,14 @@ class ActivityWebSocketService {
         this.attemptReconnect();
       } else {
         store.updateState({
-          jobsContext: { activities: [], loading: false }
+          jobsContext: { jobs: [], loading: false }
         });
       }
     };
 
     this.ws.onerror = () => {
       if (!this.backendAvailable) {
-        // Backend activity system not available yet - gracefully degrade
+        // Backend job system not available yet - gracefully degrade
       }
     };
   }
@@ -99,19 +99,19 @@ class ActivityWebSocketService {
       case 'bootstrap':
         // Initial connection sends bootstrap with all jobs
         if (data && Array.isArray(data.jobs)) {
-          this.handleInitialActivities(data.jobs);
+          this.handleInitialJobs(data.jobs);
         }
         break;
-      case 'activity:created':
-        this.handleActivityCreated(data);
+      case 'job:created':
+        this.handleJobCreated(data);
         break;
-      case 'activity:updated':
-        this.handleActivityUpdated(data);
+      case 'job:updated':
+        this.handleJobUpdated(data);
         break;
-      case 'activity:completed':
-      case 'activity:failed':
-      case 'activity:cancelled':
-        this.handleActivityFinished(data);
+      case 'job:completed':
+      case 'job:failed':
+      case 'job:cancelled':
+        this.handleJobFinished(data);
         break;
       default:
         // Ignore other message types (pup updates, stats, etc.)
@@ -119,37 +119,37 @@ class ActivityWebSocketService {
     }
   }
 
-  handleInitialActivities(activities) {
+  handleInitialJobs(jobs) {
     store.updateState({
       jobsContext: { 
-        activities: Array.isArray(activities) ? activities : [],
+        jobs: Array.isArray(jobs) ? jobs : [],
         loading: false 
       }
     });
   }
 
-  handleActivityCreated(activity) {
-    const activities = [...store.jobsContext.activities, activity];
+  handleJobCreated(job) {
+    const jobs = [...store.jobsContext.jobs, job];
     store.updateState({
-      jobsContext: { activities }
+      jobsContext: { jobs }
     });
   }
 
-  handleActivityUpdated(activity) {
-    const activities = store.jobsContext.activities.map(a =>
-      a.id === activity.id ? { ...a, ...activity } : a
+  handleJobUpdated(job) {
+    const jobs = store.jobsContext.jobs.map(j =>
+      j.id === job.id ? { ...j, ...job } : j
     );
     store.updateState({
-      jobsContext: { activities }
+      jobsContext: { jobs }
     });
   }
 
-  handleActivityFinished(activity) {
-    const activities = store.jobsContext.activities.map(a =>
-      a.id === activity.id ? { ...a, ...activity } : a
+  handleJobFinished(job) {
+    const jobs = store.jobsContext.jobs.map(j =>
+      j.id === job.id ? { ...j, ...job } : j
     );
     store.updateState({
-      jobsContext: { activities }
+      jobsContext: { jobs }
     });
   }
 
@@ -180,20 +180,20 @@ class ActivityWebSocketService {
     }
   }
 
-  // Helper for dev tools - create mock activity
-  createMockActivity(displayName) {
+  // Helper for dev tools - create mock job
+  createMockJob(displayName) {
     if (this.isMockMode && this.ws) {
-      this.ws.simulateActivityCreated(displayName);
+      this.ws.simulateJobCreated(displayName);
     } else {
-      console.warn('[Activity WS] Can only create mock activities in mock mode');
+      console.warn('[Job WS] Can only create mock jobs in mock mode');
     }
   }
 }
 
-export const activityWebSocket = new ActivityWebSocketService();
+export const jobWebSocket = new JobWebSocketService();
 
 // Expose to window for dev tools
 if (typeof window !== 'undefined') {
-  window.__activityWS = activityWebSocket;
+  window.__jobWS = jobWebSocket;
 }
 

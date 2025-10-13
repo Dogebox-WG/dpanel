@@ -146,11 +146,11 @@ class SocketChannel {
 
         case "job_created":
           if (data.update) {
-            const existingJob = store.jobsContext.activities.find(j => j.id === data.update.id);
+            const existingJob = store.jobsContext.jobs.find(j => j.id === data.update.id);
             if (!existingJob) {
               store.updateState({
                 jobsContext: {
-                  activities: [...store.jobsContext.activities, data.update]
+                  activities: [...store.jobsContext.jobs, data.update]
                 }
               });
             }
@@ -159,7 +159,7 @@ class SocketChannel {
 
         case "job_progress":
           if (data.update) {
-            const activities = store.jobsContext.activities.map(job =>
+            const activities = store.jobsContext.jobs.map(job =>
               job.id === data.update.id ? data.update : job
             );
             store.updateState({
@@ -170,7 +170,7 @@ class SocketChannel {
 
         case "job_completed":
           if (data.update) {
-            const activities = store.jobsContext.activities.map(job =>
+            const activities = store.jobsContext.jobs.map(job =>
               job.id === data.update.id ? data.update : job
             );
             store.updateState({

@@ -137,8 +137,8 @@ class DebugPanel extends LitElement {
     hookManager.set('bump-version', newState);
   }
 
-  createMockActivity() {
-    const activityTypes = [
+  createMockJob() {
+    const jobTypes = [
       { displayName: 'NixOS Rebuild' },
       { displayName: 'System Upgrade' },
       { displayName: 'Install Core Pup' },
@@ -148,46 +148,46 @@ class DebugPanel extends LitElement {
       { displayName: 'Backup System' }
     ];
     
-    const randomActivity = activityTypes[Math.floor(Math.random() * activityTypes.length)];
+    const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
     
-    if (window.__activityWS) {
-      window.__activityWS.createMockActivity(randomActivity.displayName);
+    if (window.__jobWS) {
+      window.__jobWS.createMockJob(randomJob.displayName);
     } else {
-      alert('Activity WebSocket not initialized. Make sure "Network Mocks" is enabled.');
+      alert('Job WebSocket not initialized. Make sure "Network Mocks" is enabled.');
     }
   }
 
-  async clearAllActivities() {
+  async clearAllJobs() {
     const { store } = await import('/state/store.js');
     
-    const confirmed = confirm('Clear all activities? This cannot be undone.');
+    const confirmed = confirm('Clear all jobs? This cannot be undone.');
     if (!confirmed) return;
     
     store.updateState({
       jobsContext: {
-        activities: []
+        jobs: []
       }
     });
-    console.log('All activities cleared');
+    console.log('All jobs cleared');
   }
 
-  async clearCompletedActivities() {
+  async clearCompletedJobs() {
     const { store } = await import('/state/store.js');
-    const { clearCompletedActivities } = await import('/api/jobs/jobs.js');
+    const { clearCompletedJobs } = await import('/api/jobs/jobs.js');
     
     try {
-      await clearCompletedActivities(0);
+      await clearCompletedJobs(0);
       
-      const remainingActivities = store.jobsContext.activities.filter(
+      const remainingJobs = store.jobsContext.jobs.filter(
         a => !['completed', 'failed', 'cancelled'].includes(a.status)
       );
       store.updateState({
-        jobsContext: { activities: remainingActivities }
+        jobsContext: { jobs: remainingJobs }
       });
       
-      console.log('Completed activities cleared');
+      console.log('Completed jobs cleared');
     } catch (err) {
-      console.error('Failed to clear completed activities:', err);
+      console.error('Failed to clear completed jobs:', err);
     }
   }
 
@@ -224,10 +224,10 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Response Hooks</sl-menu-label>
                     <sl-menu-item type="checkbox" ?checked=${this._hook_bump_version} @click=${this.handleBumpVersionToggle}>Bump version</sl-menu-item>
                     <sl-divider></sl-divider>
-                    <sl-menu-label>Activities (Mock Only)</sl-menu-label>
-                    <sl-menu-item @click=${this.createMockActivity}>Create Mock Activity</sl-menu-item>
-                    <sl-menu-item @click=${this.clearAllActivities}>Clear All Activities</sl-menu-item>
-                    <sl-menu-item @click=${this.clearCompletedActivities}>Clear Completed Activities</sl-menu-item>
+                    <sl-menu-label>Jobs (Mock Only)</sl-menu-label>
+                    <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
+                    <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
+                    <sl-menu-item @click=${this.clearCompletedJobs}>Clear Completed Jobs</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

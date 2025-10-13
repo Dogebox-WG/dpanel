@@ -2,7 +2,7 @@ import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
 
-class ActivityIndicator extends LitElement {
+class JobIndicator extends LitElement {
   static styles = css`
     :host {
       display: block;
@@ -92,11 +92,11 @@ class ActivityIndicator extends LitElement {
   }
   
   render() {
-    const { activities } = this.context.store.jobsContext;
-    const activeCount = activities.filter(a => a.status === 'queued' || a.status === 'in_progress').length;
-    const inProgressCount = activities.filter(a => a.status === 'in_progress').length;
-    const pendingCount = activities.filter(a => a.status === 'queued').length;
-    const unreadCount = activities.filter(a => !a.read && ['completed', 'failed', 'cancelled'].includes(a.status)).length;
+    const { jobs } = this.context.store.jobsContext;
+    const activeCount = jobs.filter(j => j.status === 'queued' || j.status === 'in_progress').length;
+    const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
+    const pendingCount = jobs.filter(j => j.status === 'queued').length;
+    const unreadCount = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status)).length;
     
     
     // Determine display text
@@ -133,5 +133,5 @@ class ActivityIndicator extends LitElement {
   }
 }
 
-customElements.define('activity-indicator', ActivityIndicator);
+customElements.define('job-indicator', JobIndicator);
 

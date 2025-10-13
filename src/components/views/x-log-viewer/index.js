@@ -35,7 +35,6 @@ class LogViewer extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    console.log('Disconnecting log-viewer socket connection');
     // Clean up WebSocket connection
     this.wsClient.disconnect();
   }

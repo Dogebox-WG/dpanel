@@ -4,7 +4,7 @@ import { store } from '/state/store.js';
 import { markAllJobsAsRead, clearCompletedJobs } from '/api/jobs/jobs.js';
 import '/components/common/job-progress/index.js';
 
-class ActivityPage extends LitElement {
+class JobActivityPage extends LitElement {
   static properties = {
     showActiveLimit: { type: Number },
     showPendingLimit: { type: Number },
@@ -135,10 +135,10 @@ class ActivityPage extends LitElement {
   }
   
   async waitForJobsAndMarkAsRead() {
-    // Poll until activities are loaded (max 3 seconds)
+    // Poll until jobs are loaded (max 3 seconds)
     for (let i = 0; i < 30; i++) {
-      const { activities } = store.jobsContext;
-      if (activities && activities.length > 0) {
+      const { jobs } = store.jobsContext;
+      if (jobs && jobs.length > 0) {
         await this.markAllAsRead();
         return;
       }
@@ -147,29 +147,30 @@ class ActivityPage extends LitElement {
   }
   
   async markAllAsRead() {
-    const { activities } = store.jobsContext;
+    const { jobs } = store.jobsContext;
     
-    const unreadActivities = activities.filter(a => !a.read && ['completed', 'failed', 'cancelled'].includes(a.status));
+    const unreadJobs = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status));
     
-    if (unreadActivities.length === 0) {
+    if (unreadJobs.length === 0) {
       return;
     }
     
     try {
       await markAllJobsAsRead();
       
-      const updatedActivities = activities.map(activity => {
-        if (!activity.read && ['completed', 'failed', 'cancelled'].includes(activity.status)) {
-          return { ...activity, read: true };
+      const { jobs } = store.jobsContext;
+      const updatedJobs = jobs.map(job => {
+        if (!job.read && ['completed', 'failed', 'cancelled'].includes(job.status)) {
+          return { ...job, read: true };
         }
-        return activity;
+        return job;
       });
       
       store.updateState({
-        jobsContext: { activities: updatedActivities }
+        jobsContext: { jobs: updatedJobs }
       });
     } catch (err) {
-      console.error('Failed to mark activities as read:', err);
+      console.error('Failed to mark jobs as read:', err);
     }
   }
   
@@ -186,29 +187,29 @@ class ActivityPage extends LitElement {
   }
   
   async handleClearCompleted() {
-    const { activities } = store.jobsContext;
-    const completedCount = activities.filter(a => ['completed', 'failed', 'cancelled'].includes(a.status)).length;
+    const { jobs } = store.jobsContext;
+    const completedCount = jobs.filter(j => ['completed', 'failed', 'cancelled'].includes(j.status)).length;
     
     if (completedCount === 0) {
-      alert('No completed activities to clear.');
+      alert('No completed jobs to clear.');
       return;
     }
     
-    const confirmed = confirm(`Clear ${completedCount} completed/failed activities? This action cannot be undone.`);
+    const confirmed = confirm(`Clear ${completedCount} completed/failed jobs? This action cannot be undone.`);
     if (!confirmed) return;
     
     try {
-      // Clear activities older than 0 days (all completed activities)
+      // Clear jobs older than 0 days (all completed jobs)
       await clearCompletedJobs(0);
       
       // Update local state
-      const remainingActivities = activities.filter(a => !['completed', 'failed', 'cancelled'].includes(a.status));
+      const remainingJobs = jobs.filter(j => !['completed', 'failed', 'cancelled'].includes(j.status));
       store.updateState({
-        jobsContext: { activities: remainingActivities }
+        jobsContext: { jobs: remainingJobs }
       });
     } catch (err) {
-      console.error('Failed to clear completed activities:', err);
-      alert('Failed to clear completed activities. Please try again.');
+      console.error('Failed to clear completed jobs:', err);
+      alert('Failed to clear completed jobs. Please try again.');
     }
   }
   
@@ -224,21 +225,21 @@ class ActivityPage extends LitElement {
     this.dateFilter = e.target.value;
   }
   
-  filterJobs(activities) {
-    let filtered = activities;
+  filterJobs(jobs) {
+    let filtered = jobs;
     
     // Apply search filter
     if (this.searchQuery) {
-      filtered = filtered.filter(activity =>
-        activity.displayName.toLowerCase().includes(this.searchQuery) ||
-        activity.summaryMessage.toLowerCase().includes(this.searchQuery) ||
-        (activity.errorMessage && activity.errorMessage.toLowerCase().includes(this.searchQuery))
+      filtered = filtered.filter(job =>
+        job.displayName.toLowerCase().includes(this.searchQuery) ||
+        job.summaryMessage.toLowerCase().includes(this.searchQuery) ||
+        (job.errorMessage && job.errorMessage.toLowerCase().includes(this.searchQuery))
       );
     }
     
     // Apply status filter
     if (this.statusFilter !== 'all') {
-      filtered = filtered.filter(activity => activity.status === this.statusFilter);
+      filtered = filtered.filter(job => job.status === this.statusFilter);
     }
     
     // Apply date filter
@@ -258,37 +259,37 @@ class ActivityPage extends LitElement {
           break;
       }
       
-      filtered = filtered.filter(activity => {
-        const activityDate = new Date(activity.started);
-        return activityDate >= cutoffDate;
+      filtered = filtered.filter(job => {
+        const jobDate = new Date(job.started);
+        return jobDate >= cutoffDate;
       });
     }
     
     return filtered;
   }
   
-  renderSection(title, activities, limit, showMoreHandler) {
-    const displayActivities = activities.slice(0, limit);
-    const hasMore = activities.length > limit;
-    const isEmpty = activities.length === 0;
+  renderSection(title, jobs, limit, showMoreHandler) {
+    const displayJobs = jobs.slice(0, limit);
+    const hasMore = jobs.length > limit;
+    const isEmpty = jobs.length === 0;
     
     return html`
       <div class="section">
         <div class="section-header">
           <h2 class="section-title">${title}</h2>
-          ${!isEmpty ? html`<span class="section-count">${activities.length}</span>` : ''}
+          ${!isEmpty ? html`<span class="section-count">${jobs.length}</span>` : ''}
         </div>
         
         ${isEmpty ? html`
           <div class="empty-state">No ${title.toLowerCase()}</div>
         ` : html`
-          ${displayActivities.map(activity => html`
-            <job-progress .job=${activity}></job-progress>
+          ${displayJobs.map(job => html`
+            <job-progress .job=${job}></job-progress>
           `)}
           
           ${hasMore ? html`
             <sl-button class="show-more-btn" variant="text" @click=${showMoreHandler}>
-              + ${activities.length - limit} More
+              + ${jobs.length - limit} More
             </sl-button>
           ` : ''}
         `}
@@ -297,15 +298,15 @@ class ActivityPage extends LitElement {
   }
   
   render() {
-    const { activities } = this.context.store.jobsContext;
+    const { jobs } = this.context.store.jobsContext;
     
     // Apply filters
-    const filteredActivities = this.filterJobs(activities);
+    const filteredJobs = this.filterJobs(jobs);
     
-    const activeActivities = filteredActivities.filter(a => a.status === 'in_progress');
-    const pendingActivities = filteredActivities.filter(a => a.status === 'queued');
-    const completedActivities = filteredActivities
-      .filter(a => ['completed', 'failed', 'cancelled'].includes(a.status))
+    const activeJobs = filteredJobs.filter(j => j.status === 'in_progress');
+    const pendingJobs = filteredJobs.filter(j => j.status === 'queued');
+    const completedJobs = filteredJobs
+      .filter(j => ['completed', 'failed', 'cancelled'].includes(j.status))
       .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started));
     
     return html`
@@ -358,21 +359,21 @@ class ActivityPage extends LitElement {
         
         ${this.renderSection(
           'Active Jobs',
-          activeActivities,
+          activeJobs,
           this.showActiveLimit,
           () => this.showMoreActive()
         )}
         
         ${this.renderSection(
           'Pending Jobs',
-          pendingActivities,
+          pendingJobs,
           this.showPendingLimit,
           () => this.showMorePending()
         )}
         
         ${this.renderSection(
           'Recently Completed Jobs',
-          completedActivities,
+          completedJobs,
           this.showCompletedLimit,
           () => this.showMoreCompleted()
         )}
@@ -381,5 +382,5 @@ class ActivityPage extends LitElement {
   }
 }
 
-customElements.define('x-page-activity', ActivityPage);
+customElements.define('x-page-activity', JobActivityPage);
 

@@ -1,6 +1,6 @@
 import { html, classMap } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
-import "/components/common/activity-indicator/index.js";
+import "/components/common/job-indicator/index.js";
 
 export function renderNav(CURPATH) {
   const gutterNavClasses = classMap({
@@ -45,7 +45,7 @@ export function renderNav(CURPATH) {
           </div>
 
           <div class="nav-footer">
-            <activity-indicator></activity-indicator>
+            <job-indicator></job-indicator>
           </div>
         </div>
       </div>

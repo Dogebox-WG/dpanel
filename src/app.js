@@ -48,7 +48,6 @@ import { isUnauthedRoute, hasFlushParam } from "/utils/url-utils.js";
 
 // Apis
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
-import { getAllJobs } from "/api/jobs/jobs.js";
 
 // Do this once to set the location of shoelace assets (icons etc..)
 setBasePath("/vendor/@shoelace/cdn@2.14.0/");
@@ -59,8 +58,8 @@ import { mainChannel } from "/controllers/sockets/main-channel.js";
 // Pkg controller
 import { pkgController } from "/controllers/package/index.js"
 
-// Job monitor
-import { jobMonitor } from "/controllers/jobs/job-monitor.js";
+// Activity WebSocket
+import { activityWebSocket } from "/controllers/sockets/activity-channel.js";
 
 class DPanelApp extends LitElement {
   static properties = {
@@ -104,19 +103,15 @@ class DPanelApp extends LitElement {
     // Menu animating event handler
     this.addEventListener("menu-toggle-request", this._handleMenuToggleRequest);
 
-    // Start job monitor only when using mocks (real backend handles progress via WebSocket)
-    if (store.networkContext.useMocks) {
-      jobMonitor.start();
-    }
+    // Connect to activity WebSocket (works in both mock and real mode)
+    activityWebSocket.connect();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._debouncedHandleResize);
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
-    if (store.networkContext.useMocks) {
-      jobMonitor.stop();
-    }
+    activityWebSocket.disconnect();
     super.disconnectedCallback();
   }
 
@@ -165,26 +160,7 @@ class DPanelApp extends LitElement {
         showWelcomeModal();
       }
 
-      // Load jobs from backend
-      try {
-        const jobsRes = await getAllJobs();
-        
-        if (jobsRes?.success && Array.isArray(jobsRes?.jobs)) {
-          store.updateState({
-            jobsContext: {
-              jobs: jobsRes.jobs
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load jobs:', err.message);
-        
-        store.updateState({
-          jobsContext: {
-            jobs: []
-          }
-        });
-      }
+      // Activities loaded via WebSocket (no HTTP fetch needed)
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

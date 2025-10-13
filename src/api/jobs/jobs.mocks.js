@@ -1,249 +1,281 @@
-import { store } from '../../state/store.js';
-import { jobSimulator } from '../../utils/job-simulator.js';
+import { store } from '/state/store.js';
 
-// POST /jobs - Create a new job (for testing/development)
-export const createJobMock = {
-  name: '/jobs',
-  method: 'post',
-  group: 'jobs',
-  res: (path, config) => {
-    const body = typeof config.body === 'string' ? JSON.parse(config.body) : config.body;
-    const { displayName = 'Test Job', summaryMessage = 'Job created', sensitive = false } = body;
+/**
+ * Lightweight mock for activity system
+ * Mimics backend WebSocket/HTTP behavior for frontend development
+ * NO complex job lifecycle management - just data flow testing
+ */
+
+let mockActivityId = 1;
+let mockActivities = [
+  {
+    id: mockActivityId++,
+    started: new Date(Date.now() - 300000).toISOString(),
+    finished: new Date(Date.now() - 60000).toISOString(),
+    displayName: 'System Upgrade',
+    progress: 100,
+    status: 'completed',
+    summaryMessage: 'Upgrade completed successfully',
+    errorMessage: null,
+    read: false
+  },
+  {
+    id: mockActivityId++,
+    started: new Date(Date.now() - 120000).toISOString(),
+    finished: new Date(Date.now() - 30000).toISOString(),
+    displayName: 'Install Core Pup',
+    progress: 45,
+    status: 'failed',
+    summaryMessage: 'Installation failed',
+    errorMessage: 'Insufficient disk space',
+    read: false
+  }
+];
+
+// Mock WebSocket for Activities
+class MockActivityWebSocket {
+  constructor() {
+    this.listeners = new Map();
+    this.connected = false;
+  }
+
+  connect(url) {
+    this.connected = true;
     
-    // Generate a unique job ID
-    const jobId = `job-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const job = {
-      id: jobId,
+    // Simulate connection delay
+    setTimeout(() => {
+      this.trigger('open');
+      // Send initial activities
+      this.send({
+        type: 'initial',
+        data: mockActivities
+      });
+    }, 100);
+
+    return this;
+  }
+
+  on(event, handler) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(handler);
+  }
+
+  trigger(event, data) {
+    const handlers = this.listeners.get(event) || [];
+    handlers.forEach(handler => handler(data));
+  }
+
+  send(message) {
+    // Simulate receiving a message
+    this.trigger('message', { data: JSON.stringify(message) });
+  }
+
+  close() {
+    this.connected = false;
+    this.trigger('close');
+  }
+
+  // Helper: Simulate creating a new activity
+  simulateActivityCreated(displayName = 'Mock Activity') {
+    const activity = {
+      id: mockActivityId++,
       started: new Date().toISOString(),
       finished: null,
       displayName,
-      sensitive,
       progress: 0,
       status: 'queued',
-      summaryMessage,
+      summaryMessage: 'Queued',
       errorMessage: null,
-      logs: [`[${new Date().toLocaleTimeString()}] Job created`],
-      read: false
+      read: false,
     };
     
-    // Add to store - the job monitor will handle starting it based on critical job logic
-    store.updateState({
-      jobsContext: {
-        jobs: [...store.jobsContext.jobs, job]
-      }
+    mockActivities.push(activity);
+    
+    this.send({
+      type: 'activity:created',
+      data: activity
     });
-    
-    // DON'T start the simulation here - let the job monitor handle it
-    // This ensures critical job logic is respected and multiple critical jobs don't run at once
-    
-    return { success: true, job };
-  }
-};
 
-// GET /jobs - Get all jobs
-export const getAllJobsMock = {
-  name: '/jobs',
-  method: 'get',
-  group: 'jobs',
-  res: () => {
-    const { jobs } = store.jobsContext;
-    return { success: true, jobs };
+    // Simulate progress after 2 seconds
+    setTimeout(() => {
+      this.simulateProgress(activity.id);
+    }, 2000);
   }
-};
 
-// GET /jobs/{jobID} - Get single job
-export const getJobMock = {
-  name: '/jobs/:jobID',
-  method: 'get',
-  group: 'jobs',
-  res: (path) => {
-    const jobId = path.split('/').pop();
-    const job = store.jobsContext.jobs.find(j => j.id === jobId);
+  // Helper: Simulate progress updates
+  simulateProgress(activityId) {
+    const activity = mockActivities.find(a => a.id === activityId);
+    if (!activity) return;
     
-    if (!job) {
-      return { success: false, error: 'Job not found' };
+    if (activity.status !== 'in_progress' && activity.status !== 'queued') {
+      return;
     }
-    
-    return { success: true, job };
-  }
-};
 
-// GET /jobs/active - Get active jobs
-export const getActiveJobsMock = {
-  name: '/jobs/active',
-  method: 'get',
-  group: 'jobs',
-  res: () => {
-    const { jobs } = store.jobsContext;
-    const activeJobs = jobs.filter(j => j.status === 'queued' || j.status === 'in_progress');
-    return { success: true, jobs: activeJobs };
-  }
-};
+    // Transition from queued to in_progress
+    if (activity.status === 'queued') {
+      activity.status = 'in_progress';
+      activity.summaryMessage = 'Starting...';
+      this.send({
+        type: 'activity:updated',
+        data: { ...activity }
+      });
+    }
 
-// GET /jobs/recent - Get recent jobs
-export const getRecentJobsMock = {
-  name: '/jobs/recent',
-  method: 'get',
-  group: 'jobs',
-  res: () => {
-    const { jobs } = store.jobsContext;
-    const recentJobs = jobs
-      .filter(j => j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled')
-      .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started))
-      .slice(0, 50);
-    return { success: true, jobs: recentJobs };
-  }
-};
-
-// GET /jobs/stats - Get job statistics
-export const getJobStatsMock = {
-  name: '/jobs/stats',
-  method: 'get',
-  group: 'jobs',
-  res: () => {
-    const { jobs } = store.jobsContext;
-    
-    const stats = {
-      total: jobs.length,
-      queued: jobs.filter(j => j.status === 'queued').length,
-      inProgress: jobs.filter(j => j.status === 'in_progress').length,
-      completed: jobs.filter(j => j.status === 'completed').length,
-      failed: jobs.filter(j => j.status === 'failed').length,
-      cancelled: jobs.filter(j => j.status === 'cancelled').length,
-      unread: jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status)).length
-    };
-    
-    return { success: true, stats };
-  }
-};
-
-// GET /jobs/critical-status - Check for critical job running
-export const getCriticalJobStatusMock = {
-  name: '/jobs/critical-status',
-  method: 'get',
-  group: 'jobs',
-  res: () => {
-    const { jobs } = store.jobsContext;
-    const criticalJob = jobs.find(j => j.sensitive && j.status === 'in_progress');
-    
-    return {
-      success: true,
-      hasCritical: !!criticalJob,
-      criticalJob: criticalJob || null
-    };
-  }
-};
-
-// POST /jobs/{jobID}/cancel - Cancel a job
-export const cancelJobMock = {
-  name: '/jobs/:jobID/cancel',
-  method: 'post',
-  group: 'jobs',
-  res: (path) => {
-    const jobId = path.split('/')[2];
-    
-    // Stop simulation if running
-    jobSimulator.stopSimulation(jobId);
-    
-    const jobs = store.jobsContext.jobs.map(job => {
-      if (job.id === jobId) {
-        const now = new Date().toISOString();
-        return {
-          ...job,
-          status: 'cancelled',
-          finished: now,
-          summaryMessage: 'Job cancelled by user',
-          read: false
-        };
+    // Progress update loop
+    const interval = setInterval(() => {
+      if (!activity || activity.status !== 'in_progress') {
+        clearInterval(interval);
+        return;
       }
-      return job;
-    });
-    
-    store.updateState({
-      jobsContext: { jobs }
-    });
-    
-    return { success: true, message: 'Job cancelled' };
-  }
-};
 
-// POST /jobs/{jobID}/read - Mark job as read
-export const markJobAsReadMock = {
-  name: '/jobs/:jobID/read',
-  method: 'post',
-  group: 'jobs',
-  res: (path) => {
-    const jobId = path.split('/')[2];
-    
-    const jobs = store.jobsContext.jobs.map(job => {
-      if (job.id === jobId) {
-        return { ...job, read: true };
-      }
-      return job;
-    });
-    
-    store.updateState({
-      jobsContext: { jobs }
-    });
-    
-    return { success: true };
-  }
-};
-
-// POST /jobs/read-all - Mark all jobs as read
-export const markAllJobsAsReadMock = {
-  name: '/jobs/read-all',
-  method: 'post',
-  group: 'jobs',
-  res: () => {
-    const { jobs } = store.jobsContext;
-    
-    const updatedJobs = jobs.map(job => {
-      if (!job.read && ['completed', 'failed', 'cancelled'].includes(job.status)) {
-        return { ...job, read: true };
-      }
-      return job;
-    });
-    
-    store.updateState({
-      jobsContext: { jobs: updatedJobs }
-    });
-    
-    return { success: true };
-  }
-};
-
-// POST /jobs/clear-completed - Clear old completed jobs
-export const clearCompletedJobsMock = {
-  name: '/jobs/clear-completed',
-  method: 'post',
-  group: 'jobs',
-  res: (path, config) => {
-    const body = typeof config.body === 'string' ? JSON.parse(config.body) : config.body;
-    const olderThanDays = body?.olderThanDays || 30;
-    
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-    
-    const { jobs } = store.jobsContext;
-    const remainingJobs = jobs.filter(job => {
-      // Keep active jobs
-      if (job.status === 'queued' || job.status === 'in_progress') {
-        return true;
-      }
+      activity.progress += Math.floor(Math.random() * 15) + 5;
       
-      // Keep recent completed jobs
-      const jobDate = new Date(job.finished || job.started);
-      return jobDate > cutoffDate;
+      if (activity.progress >= 100) {
+        activity.progress = 100;
+        activity.status = Math.random() > 0.2 ? 'completed' : 'failed';
+        activity.finished = new Date().toISOString();
+        activity.summaryMessage = activity.status === 'completed' 
+          ? 'Completed successfully' 
+          : 'Failed';
+        
+        if (activity.status === 'failed') {
+          activity.errorMessage = 'Mock error: Process terminated unexpectedly';
+        }
+        
+        this.send({
+          type: `activity:${activity.status}`,
+          data: { ...activity }
+        });
+        
+        clearInterval(interval);
+      } else {
+        activity.summaryMessage = `Processing... ${activity.progress}%`;
+        this.send({
+          type: 'activity:updated',
+          data: { ...activity }
+        });
+      }
+    }, 1500);
+  }
+}
+
+// Mock HTTP API
+export const mockActivityApi = {
+  getAllActivities: () => {
+    return Promise.resolve({
+      success: true,
+      activities: mockActivities
     });
-    
-    const cleared = jobs.length - remainingJobs.length;
-    
-    store.updateState({
-      jobsContext: { jobs: remainingJobs }
+  },
+
+  getActivity: (id) => {
+    const activity = mockActivities.find(a => a.id === id);
+    return Promise.resolve({
+      success: !!activity,
+      activity: activity || null
     });
-    
-    return { success: true, cleared };
+  },
+
+  markActivityAsRead: (id) => {
+    const activity = mockActivities.find(a => a.id === id);
+    if (activity) {
+      activity.read = true;
+    }
+    return Promise.resolve({ success: true });
+  },
+
+  markAllActivitiesAsRead: () => {
+    mockActivities.forEach(a => {
+      if (['completed', 'failed'].includes(a.status)) {
+        a.read = true;
+      }
+    });
+    return Promise.resolve({ success: true });
+  },
+
+  clearCompletedActivities: (olderThanDays) => {
+    const cutoff = new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000));
+    mockActivities = mockActivities.filter(a => {
+      const isCompleted = ['completed', 'failed'].includes(a.status);
+      if (!isCompleted) return true;
+      
+      const activityDate = new Date(a.finished || a.started);
+      return activityDate >= cutoff;
+    });
+    return Promise.resolve({ success: true });
   }
 };
+
+// Mock WebSocket for Log Streaming
+export class MockLogWebSocket {
+  constructor(jobId) {
+    this.jobId = jobId;
+    this.listeners = new Map();
+    this.logLines = [
+      `[${this.timestamp()}] Starting job ${jobId}`,
+      `[${this.timestamp()}] Fetching dependencies...`,
+      `[${this.timestamp()}] Building packages...`,
+      `[${this.timestamp()}] Configuring system...`,
+      `[${this.timestamp()}] Running tests...`,
+      `[${this.timestamp()}] Finalizing...`,
+    ];
+    this.logIndex = 0;
+  }
+
+  timestamp() {
+    return new Date().toISOString().split('T')[1].split('.')[0];
+  }
+
+  connect() {
+    setTimeout(() => {
+      this.trigger('open');
+      this.streamLogs();
+    }, 100);
+    return this;
+  }
+
+  on(event, handler) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(handler);
+  }
+
+  trigger(event, data) {
+    const handlers = this.listeners.get(event) || [];
+    handlers.forEach(handler => handler(data));
+  }
+
+  streamLogs() {
+    const interval = setInterval(() => {
+      if (this.logIndex < this.logLines.length) {
+        this.trigger('message', {
+          data: JSON.stringify({
+            message: this.logLines[this.logIndex++]
+          })
+        });
+      } else {
+        clearInterval(interval);
+      }
+    }, 800);
+  }
+
+  close() {
+    this.trigger('close');
+  }
+}
+
+// Global mock WebSocket instance
+export let mockActivityWS = null;
+
+export function createMockActivityWebSocket() {
+  mockActivityWS = new MockActivityWebSocket();
+  return mockActivityWS;
+}
+
+// Expose to dev tools for manual testing
+if (typeof window !== 'undefined') {
+  window.__mockActivityWS = mockActivityWS;
+}

@@ -1,78 +1,62 @@
 import ApiClient from '/api/client.js';
 import { store } from '/state/store.js';
-import {
-  createJobMock,
-  getAllJobsMock,
-  getJobMock,
-  getActiveJobsMock,
-  getRecentJobsMock,
-  getJobStatsMock,
-  getCriticalJobStatusMock,
-  cancelJobMock,
-  markJobAsReadMock,
-  markAllJobsAsReadMock,
-  clearCompletedJobsMock
-} from './jobs.mocks.js';
+import { mockActivityApi } from './jobs.mocks.js';
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
-// Create a new job (for testing/development)
-export async function createJob(jobData) {
-  return client.post('/jobs', jobData, { mock: createJobMock });
+// Helper to choose mock or real
+function useMock(mockFn, realFn) {
+  return store.networkContext.useMocks ? mockFn : realFn;
 }
 
-// Get all jobs
-export async function getAllJobs() {
-  return client.get('/jobs', { mock: getAllJobsMock });
+// GET all activities (jobs)
+export async function getAllActivities() {
+  return useMock(
+    () => mockActivityApi.getAllActivities(),
+    () => client.get('/jobs')
+  )();
 }
 
-// Get a single job by ID
-export async function getJob(jobId) {
-  return client.get(`/jobs/${jobId}`, { mock: getJobMock });
+// GET specific activity (job)
+export async function getActivity(activityId) {
+  return useMock(
+    () => mockActivityApi.getActivity(activityId),
+    () => client.get(`/jobs/${activityId}`)
+  )();
 }
 
-// Get active jobs (queued or in progress)
-export async function getActiveJobs() {
-  return client.get('/jobs/active', { mock: getActiveJobsMock });
+// Mark activity as read
+export async function markActivityAsRead(activityId) {
+  return useMock(
+    () => mockActivityApi.markActivityAsRead(activityId),
+    () => client.post(`/jobs/${activityId}/read`, {})
+  )();
 }
 
-// Get recent completed/failed jobs
-export async function getRecentJobs(limit = 50) {
-  return client.get(`/jobs/recent?limit=${limit}`, { mock: getRecentJobsMock });
+// Mark all activities as read
+export async function markAllActivitiesAsRead() {
+  return useMock(
+    () => mockActivityApi.markAllActivitiesAsRead(),
+    () => client.post('/jobs/read-all', {})
+  )();
 }
 
-// Get job statistics
-export async function getJobStats() {
-  return client.get('/jobs/stats', { mock: getJobStatsMock });
+// Clear completed activities
+export async function clearCompletedActivities(olderThanDays = 0) {
+  return useMock(
+    () => mockActivityApi.clearCompletedActivities(olderThanDays),
+    () => client.post('/jobs/clear-completed', { olderThanDays })
+  )();
 }
 
-// Check if a critical job is running
-export async function getCriticalJobStatus() {
-  return client.get('/jobs/critical-status', { mock: getCriticalJobStatusMock });
-}
-
-// Cancel a running job
+// Cancel a job (not used in UI, but available for programmatic use)
 export async function cancelJob(jobId) {
-  return client.post(`/jobs/${jobId}/cancel`, {}, { mock: cancelJobMock });
+  return useMock(
+    () => Promise.resolve({ success: true, message: 'Mock job cancelled' }),
+    () => client.post(`/jobs/${jobId}/cancel`, {})
+  )();
 }
 
-// Mark a job as read
-export async function markJobAsRead(jobId) {
-  return client.post(`/jobs/${jobId}/read`, {}, { mock: markJobAsReadMock });
-}
-
-// Mark all jobs as read
-export async function markAllJobsAsRead() {
-  return client.post('/jobs/read-all', {}, { mock: markAllJobsAsReadMock });
-}
-
-// Clear old completed jobs
-export async function clearCompletedJobs(olderThanDays = 30) {
-  return client.post('/jobs/clear-completed', { olderThanDays }, { mock: clearCompletedJobsMock });
-}
-
-// Clear ALL jobs (development only)
-export async function clearAllJobs() {
-  return client.post('/jobs/clear-all', {});
-}
-
+// Deprecated - keeping for backward compatibility during migration
+export const markAllJobsAsRead = markAllActivitiesAsRead;
+export const clearCompletedJobs = clearCompletedActivities;

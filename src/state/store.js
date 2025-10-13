@@ -57,10 +57,9 @@ class Store {
       useFoundationOSBinaryCache: false,
     };
     this.jobsContext = {
-      jobs: [],
-      lastJobId: 0,
-      currentPage: 1,
-      pageSize: 20,
+      activities: [],
+      loading: false,
+      error: null,
     };
 
     // Hydrate state from localStorage unless flush parameter is present.
@@ -103,10 +102,7 @@ class Store {
         if (savedState) {
           this.networkContext = savedState.networkContext;
           
-          // Only load jobs from localStorage when using mocks
-          if (savedState.jobsContext && this.networkContext.useMocks) {
-            this.jobsContext = savedState.jobsContext;
-          }
+          // jobsContext not persisted - activities come from backend via WebSocket
         }
       } catch (error) {
         console.warn(
@@ -121,7 +117,7 @@ class Store {
       try {
         const stateToPersist = {
           networkContext: this.networkContext,
-          jobsContext: this.jobsContext,
+          // jobsContext excluded - activities come from backend
           // Include other slices of state as needed
         };
         localStorage.setItem("storeState", JSON.stringify(stateToPersist));

@@ -11,6 +11,7 @@ class LogViewer extends LitElement {
       isConnected: { type: Boolean },
       follow: { type: Boolean },
       pupId: { type: String },
+      jobId: { type: String },
     };
   }
 
@@ -18,9 +19,12 @@ class LogViewer extends LitElement {
     super();
     this.logs = [];
     this.pupId = "";
+    this.jobId = "";
     this.isConnected = false;
     this.wsClient = null;
-    this.follow = true;
+    // Load saved auto-scroll preference, default to true
+    const savedFollow = localStorage.getItem('log-viewer-autoscroll');
+    this.follow = savedFollow !== null ? savedFollow === 'true' : true;
     this.autostart = true;
   }
 
@@ -52,8 +56,15 @@ class LogViewer extends LitElement {
     });
   }
 
+  handleCheckboxClick(e) {
+    e.stopPropagation(); // Prevent event from bubbling up to parent
+  }
+
   handleFollowChange(e) {
+    e.stopPropagation(); // Prevent event from bubbling up to parent
     this.follow = e.target.checked;
+    // Save preference to localStorage
+    localStorage.setItem('log-viewer-autoscroll', this.follow.toString());
     if (this.follow) {
       const logContainer = this.shadowRoot.querySelector('#LogContainer');
       logContainer.scrollTop = logContainer.scrollHeight;
@@ -73,12 +84,18 @@ class LogViewer extends LitElement {
       return;
     }
 
-    if (!this.pupId) {
+    // Must have either pupId or jobId
+    if (!this.pupId && !this.jobId) {
       return;
     }
 
+    // Determine which endpoint to use
+    const logType = this.jobId ? 'job' : 'pup';
+    const logId = this.jobId || this.pupId;
+    const wsUrl = `${store.networkContext.wsApiBaseUrl}/ws/log/${logType}/${logId}`;
+
     this.wsClient = new WebSocketClient(
-      `${store.networkContext.wsApiBaseUrl}/ws/log/${this.pupId}`,
+      wsUrl,
       store.networkContext,
       mockedLogRunner
     );
@@ -90,7 +107,12 @@ class LogViewer extends LitElement {
     };
 
     this.wsClient.onMessage = async (event) => {
-      this.logs = [...this.logs, event.data];
+      // Handle different message formats
+      let logMessage = event.data;
+      if (typeof event.data === 'object') {
+        logMessage = event.data.message || event.data.data || JSON.stringify(event.data);
+      }
+      this.logs = [...this.logs, logMessage];
       await this.requestUpdate();
       if (this.follow) {
         const logContainer = this.shadowRoot.querySelector('#LogContainer');
@@ -99,6 +121,7 @@ class LogViewer extends LitElement {
     };
 
     this.wsClient.onError = (event) => {
+      console.error(`[Log Viewer] WebSocket error for ${logType} ${logId}:`, event);
       this.isConnected = false;
       this.requestUpdate();
     };
@@ -113,7 +136,8 @@ class LogViewer extends LitElement {
     }
   }
 
-  handleDownloadClick() {
+  handleDownloadClick(e) {
+    e.stopPropagation(); // Prevent event from bubbling up to parent
     const contentDiv = this.shadowRoot.querySelector("#LogContainer");
     
     let textToDownload = '';
@@ -142,18 +166,16 @@ class LogViewer extends LitElement {
   render() {
     return html`
       <div>
-        <div id="LogHUD">
-          <div class="status">
-            ${this.isConnected
-              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
-            }
-          </div>
-        </div>
         <div id="LogContainer">
-          <ul>
-            ${this.logs.map(log => html`<li>${log}</li>`)}
-          </ul>
+          ${this.logs.length > 0 ? html`
+            <ul>
+              ${this.logs.map(log => html`<li>${log}</li>`)}
+            </ul>
+          ` : html`
+            <div class="no-logs-message">
+              ${this.isConnected ? 'Waiting for logs...' : 'Logs not available'}
+            </div>
+          `}
         </div>
         <div id="LogFooter">
           <div class="options">
@@ -161,6 +183,7 @@ class LogViewer extends LitElement {
               size="medium"
               ?checked=${this.follow}
               @sl-change=${this.handleFollowChange}
+              @click=${this.handleCheckboxClick}
             >Auto scroll</sl-checkbox>
           </div>
           <sl-button 
@@ -184,41 +207,20 @@ class LogViewer extends LitElement {
         display: block;
         position: relative;
       }
-      div#LogHUD {
-        position: absolute;
-        right: 16px;
-        top: 8px;
-
-        display: flex;
-        flex-direction: column;
-        align-items: end;
-      }
-      div#LogHUD .status {
-        opacity: 0.3;
-        cursor: pointer;
-      }
-      div#LogHUD div {
-        opacity: 0.2;
-        transition: opacity 250ms ease-out;
-      }
-      div#LogHUD div:hover {
-        opacity: 1;
-      }
       div#LogContainer {
         background: #0b0b0b;
         padding: 0.5em;
-        height: calc(100vh - (var(--log-footer-height) + var(--page-header-height)));
+        height: var(--log-viewer-height, 150px);
         overflow-y: scroll;
         overflow-x: hidden;
         box-sizing: border-box;
       }
 
       div#LogFooter {
-        display: block;
-        height: var(--log-footer-height);
+        display: flex;
+        height: var(--log-footer-height, 40px);
         background: rgb(24, 24, 24);
         width: 100%;
-        display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
@@ -237,6 +239,15 @@ class LogViewer extends LitElement {
         font-weight: bold;
         margin: 0px 0;
         padding: 0px;
+      }
+      .no-logs-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #666;
+        font-style: italic;
+        font-size: 0.85rem;
       }
     `;
   }

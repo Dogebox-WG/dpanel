@@ -1,7 +1,7 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { timeAgo } from '/utils/time-format.js';
-import { cancelJob } from '/api/jobs/jobs.js';
 import { store } from '/state/store.js';
+import '/components/views/x-log-viewer/index.js';
 
 class JobProgress extends LitElement {
   static properties = {
@@ -28,9 +28,6 @@ class JobProgress extends LitElement {
       background: #2a2a2a;
     }
     
-    .job-card.sensitive {
-      border-left: 4px solid #ff9800;
-    }
     
     .job-row {
       display: flex;
@@ -169,43 +166,14 @@ class JobProgress extends LitElement {
       margin-bottom: 0.75em;
     }
     
-    .logs-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 0.5em;
-      color: #999;
+    x-log-viewer {
+      margin-top: 0.75em;
+      --log-viewer-height: 150px;
+      --log-footer-height: 40px;
+      --margin-top: 0;
+      --margin-bottom: 0;
     }
     
-    .logs {
-      background: #1a1a1a;
-      border: 1px solid #333;
-      border-radius: 4px;
-      padding: 0.75em;
-      max-height: 200px;
-      overflow-y: auto;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.75rem;
-      line-height: 1.4;
-      color: #ccc;
-    }
-    
-    .log-entry {
-      margin-bottom: 0.25em;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    
-    .sensitive-badge {
-      display: inline-block;
-      background: #ff9800;
-      color: #000;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 0.65rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-left: 0.5em;
-    }
     
     .timing-info {
       display: flex;
@@ -240,42 +208,6 @@ class JobProgress extends LitElement {
       text-overflow: ellipsis;
     }
     
-    .job-actions {
-      display: flex;
-      gap: 0.5em;
-      margin-top: 0.75em;
-      padding-top: 0.75em;
-      border-top: 1px solid #333;
-    }
-    
-    .action-btn {
-      padding: 0.5em 1em;
-      font-size: 0.85rem;
-      cursor: pointer;
-      border-radius: 4px;
-      border: 1px solid #444;
-      background: #2a2a2a;
-      color: #ccc;
-      transition: all 200ms ease;
-    }
-    
-    .action-btn:hover {
-      background: #333;
-      border-color: #555;
-      color: #fff;
-    }
-    
-    .action-btn.danger:hover {
-      background: #ff6b6b;
-      border-color: #ff6b6b;
-      color: #fff;
-    }
-    
-    .action-btn.primary:hover {
-      background: #4360ff;
-      border-color: #4360ff;
-      color: #fff;
-    }
   `;
   
   constructor() {
@@ -288,30 +220,6 @@ class JobProgress extends LitElement {
     this.expanded = !this.expanded;
   }
   
-  async handleCancel(e) {
-    e.stopPropagation();
-    
-    try {
-      await cancelJob(this.job.id);
-      
-      // Update local state
-      const jobs = store.jobsContext.jobs.map(job =>
-        job.id === this.job.id ? { ...job, status: 'cancelled', summaryMessage: 'Job cancelled by user' } : job
-      );
-      store.updateState({ jobsContext: { jobs } });
-    } catch (err) {
-      console.error('Failed to cancel job:', err);
-      alert('Failed to cancel job. Please try again.');
-    }
-  }
-  
-  handleRetry(e) {
-    e.stopPropagation();
-    
-    // TODO: Implement retry logic
-    // For now, show a message
-    alert('Retry functionality coming soon!');
-  }
   
   getStatusIcon(status) {
     const icons = {
@@ -327,19 +235,18 @@ class JobProgress extends LitElement {
   render() {
     if (!this.job) return html``;
     
-    const { displayName, status, progress, summaryMessage, errorMessage, logs, sensitive, started, finished } = this.job;
+    const { displayName, status, progress, summaryMessage, errorMessage, started, finished } = this.job;
     
     // Show indeterminate progress for active jobs at 0% only (not queued jobs)
     const isIndeterminate = status === 'in_progress' && progress === 0;
     
     return html`
-      <div class="job-card ${sensitive ? 'sensitive' : ''}" @click=${this.toggleExpanded}>
+      <div class="job-card" @click=${this.toggleExpanded}>
         <div class="job-row">
           <div class="task-label">
             <sl-icon name="${this.getStatusIcon(status)}" class="job-icon ${status}"></sl-icon>
             <span class="task-name">
               ${displayName}
-              ${sensitive ? html`<span class="sensitive-badge">Critical</span>` : ''}
             </span>
           </div>
           
@@ -368,8 +275,6 @@ class JobProgress extends LitElement {
         
         ${this.expanded ? html`
           <div class="details-container">
-            <div class="job-summary">${summaryMessage}</div>
-            
             ${errorMessage ? html`
               <div class="error-message">
                 <sl-icon name="exclamation-triangle-fill"></sl-icon>
@@ -377,37 +282,11 @@ class JobProgress extends LitElement {
               </div>
             ` : ''}
             
-            ${logs.length > 0 ? html`
-              <div class="logs-title">Logs</div>
-              <div class="logs">
-                ${logs.map(log => html`<div class="log-entry">${log}</div>`)}
-              </div>
-            ` : ''}
-            
-            ${this.renderActions()}
+            <x-log-viewer 
+              .jobId=${this.job.id}
+              autostart
+            ></x-log-viewer>
           </div>
-        ` : ''}
-      </div>
-    `;
-  }
-  
-  renderActions() {
-    const { status } = this.job;
-    
-    return html`
-      <div class="job-actions">
-        ${status === 'in_progress' || status === 'queued' ? html`
-          <button class="action-btn danger" @click=${this.handleCancel}>
-            <sl-icon name="x-circle" style="margin-right: 0.3em;"></sl-icon>
-            Cancel
-          </button>
-        ` : ''}
-        
-        ${status === 'failed' ? html`
-          <button class="action-btn primary" @click=${this.handleRetry}>
-            <sl-icon name="arrow-clockwise" style="margin-right: 0.3em;"></sl-icon>
-            Retry
-          </button>
         ` : ''}
       </div>
     `;

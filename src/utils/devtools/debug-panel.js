@@ -137,73 +137,57 @@ class DebugPanel extends LitElement {
     hookManager.set('bump-version', newState);
   }
 
-  async createMockJob() {
-    const jobTypes = [
-      { displayName: 'NixOS Rebuild', summaryMessage: 'Rebuilding system configuration', sensitive: true },
-      { displayName: 'Applying SSH', summaryMessage: 'Configuring SSH access', sensitive: false },
-      { displayName: 'Pup Install', summaryMessage: 'Installing pup package', sensitive: false },
-      { displayName: 'System Update', summaryMessage: 'Updating system packages', sensitive: true },
-      { displayName: 'Import Blockchain', summaryMessage: 'Importing blockchain data', sensitive: false },
-      { displayName: 'Backup Creation', summaryMessage: 'Creating system backup', sensitive: false }
+  createMockActivity() {
+    const activityTypes = [
+      { displayName: 'NixOS Rebuild' },
+      { displayName: 'System Upgrade' },
+      { displayName: 'Install Core Pup' },
+      { displayName: 'Uninstall Pup' },
+      { displayName: 'Enable SSH' },
+      { displayName: 'Disable SSH' },
+      { displayName: 'Backup System' }
     ];
     
-    const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
+    const randomActivity = activityTypes[Math.floor(Math.random() * activityTypes.length)];
     
-    try {
-      // Import and use jobs API - this will respect mock settings
-      const { createJob } = await import('/api/jobs/jobs.js');
-      const response = await createJob(randomJob);
-      
-      if (response.success) {
-        console.log('Mock job created:', response.job);
-      }
-    } catch (err) {
-      console.error('Failed to create mock job:', err);
-      console.warn('Make sure "Network Mocks" is enabled and the POST /jobs mock is checked in debug settings');
-    }
-  }
-
-  async clearAllJobs() {
-    const { store } = await import('/state/store.js');
-    
-    if (store.networkContext.useMocks) {
-      const { jobSimulator } = await import('/utils/job-simulator.js');
-      jobSimulator.stopAllSimulations();
-      store.updateState({
-        jobsContext: {
-          jobs: []
-        }
-      });
+    if (window.__activityWS) {
+      window.__activityWS.createMockActivity(randomActivity.displayName);
     } else {
-      const { clearAllJobs } = await import('/api/jobs/jobs.js');
-      try {
-        await clearAllJobs();
-        location.reload();
-      } catch (err) {
-        console.error('Failed to clear jobs:', err);
-      }
+      alert('Activity WebSocket not initialized. Make sure "Network Mocks" is enabled.');
     }
   }
 
-  async clearCompletedJobs() {
+  async clearAllActivities() {
     const { store } = await import('/state/store.js');
-    const { clearCompletedJobs } = await import('/api/jobs/jobs.js');
+    
+    const confirmed = confirm('Clear all activities? This cannot be undone.');
+    if (!confirmed) return;
+    
+    store.updateState({
+      jobsContext: {
+        activities: []
+      }
+    });
+    console.log('All activities cleared');
+  }
+
+  async clearCompletedActivities() {
+    const { store } = await import('/state/store.js');
+    const { clearCompletedActivities } = await import('/api/jobs/jobs.js');
     
     try {
-      await clearCompletedJobs(0);
+      await clearCompletedActivities(0);
       
-      if (store.networkContext.useMocks) {
-        const remainingJobs = store.jobsContext.jobs.filter(
-          j => !['completed', 'failed', 'cancelled'].includes(j.status)
-        );
-        store.updateState({
-          jobsContext: { jobs: remainingJobs }
-        });
-      } else {
-        location.reload();
-      }
+      const remainingActivities = store.jobsContext.activities.filter(
+        a => !['completed', 'failed', 'cancelled'].includes(a.status)
+      );
+      store.updateState({
+        jobsContext: { activities: remainingActivities }
+      });
+      
+      console.log('Completed activities cleared');
     } catch (err) {
-      console.error('Failed to clear completed jobs:', err);
+      console.error('Failed to clear completed activities:', err);
     }
   }
 
@@ -240,10 +224,10 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Response Hooks</sl-menu-label>
                     <sl-menu-item type="checkbox" ?checked=${this._hook_bump_version} @click=${this.handleBumpVersionToggle}>Bump version</sl-menu-item>
                     <sl-divider></sl-divider>
-                    <sl-menu-label>Jobs</sl-menu-label>
-                    <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
-                    <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
-                    <sl-menu-item @click=${this.clearCompletedJobs}>Clear Completed Jobs</sl-menu-item>
+                    <sl-menu-label>Activities (Mock Only)</sl-menu-label>
+                    <sl-menu-item @click=${this.createMockActivity}>Create Mock Activity</sl-menu-item>
+                    <sl-menu-item @click=${this.clearAllActivities}>Clear All Activities</sl-menu-item>
+                    <sl-menu-item @click=${this.clearCompletedActivities}>Clear Completed Activities</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

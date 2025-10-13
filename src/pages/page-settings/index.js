@@ -76,7 +76,6 @@ class SettingsPage extends LitElement {
     super.connectedCallback();
     // Subscribe to pkgController for system activity updates
     this.pkgController.addObserver(this);
-    console.log('Settings page subscribed to pkgController for system activity updates');
   }
 
   disconnectedCallback() {
@@ -149,13 +148,10 @@ class SettingsPage extends LitElement {
     if (this.pkgController && options.type === 'system-activity') {
       // Filter for blockchain import logs and update the system logs
       const allSystemLogs = this.pkgController.activityIndex['system'] || [];
-      console.log('System activity received:', allSystemLogs);
       
       this.systemLogs = allSystemLogs.filter(log => 
         log.step === "import-blockchain-data"
       );
-      
-      console.log('Filtered blockchain logs:', this.systemLogs);
     }
     super.requestUpdate();
   }
@@ -165,14 +161,6 @@ class SettingsPage extends LitElement {
     const dialog = store.getContext('dialog')
     const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain"].includes(dialog.name);
     
-    // Debug logging
-    console.log('Settings page render:', {
-      showImportLogs: this.showImportLogs,
-      showImportLogsModal: this.showImportLogsModal,
-      systemLogsLength: this.systemLogs.length,
-      systemLogs: this.systemLogs,
-      shouldShowLogs: this.showImportLogs || this.systemLogs.length > 0
-    });
     return html`
       <div class="padded">
         <section>

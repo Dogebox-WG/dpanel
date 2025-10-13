@@ -92,30 +92,18 @@ class ActivityIndicator extends LitElement {
   }
   
   render() {
-    const { jobs } = this.context.store.jobsContext;
-    const activeCount = jobs.filter(j => j.status === 'queued' || j.status === 'in_progress').length;
-    const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
-    const pendingCount = jobs.filter(j => j.status === 'queued').length;
-    const unreadCount = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status)).length;
+    const { activities } = this.context.store.jobsContext;
+    const activeCount = activities.filter(a => a.status === 'queued' || a.status === 'in_progress').length;
+    const inProgressCount = activities.filter(a => a.status === 'in_progress').length;
+    const pendingCount = activities.filter(a => a.status === 'queued').length;
+    const unreadCount = activities.filter(a => !a.read && ['completed', 'failed', 'cancelled'].includes(a.status)).length;
     
-    // Check if there's a critical job actively running (not just queued)
-    const hasCriticalJob = jobs.some(j => 
-      j.sensitive && j.status === 'in_progress'
-    );
     
     // Determine display text
     let displayText = 'System Activity';
-    let showCriticalIcon = false;
-    if (hasCriticalJob) {
-      displayText = 'Critical task running';
-      showCriticalIcon = true;
-    }
     
-    // Create tooltip content showing job counts (critical first, then active, then pending)
+    // Create tooltip content showing job counts
     const tooltipLines = [];
-    if (hasCriticalJob) {
-      tooltipLines.push(html`⚠️ Critical Task in Progress`);
-    }
     if (inProgressCount > 0) {
       tooltipLines.push(html`${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}`);
     }
@@ -131,17 +119,14 @@ class ActivityIndicator extends LitElement {
         <div slot="content">${tooltipContent}</div>
         <div class="indicator" @click=${this.handleClick}>
           <sl-icon name="gear" class="icon ${activeCount > 0 ? 'spinning' : ''}"></sl-icon>
-          <span class="text ${hasCriticalJob ? 'critical' : ''}">
-            ${showCriticalIcon ? html`<span class="critical-icon">⚠️</span>` : ''}
+          <span class="text">
             <span>${displayText}</span>
           </span>
-          ${unreadCount > 0 && !hasCriticalJob ? html`
+          ${unreadCount > 0 ? html`
             <span class="badge has-unread">${unreadCount}</span>
-          ` : (hasCriticalJob ? html`
-            <span class="badge critical">!</span>
           ` : (activeCount > 0 ? html`
             <span class="badge">${activeCount}</span>
-          ` : ''))}
+          ` : '')}
         </div>
       </sl-tooltip>
     `;

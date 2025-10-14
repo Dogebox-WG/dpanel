@@ -7,7 +7,7 @@ class LogViewer extends LitElement {
   static get properties() {
     return {
       autostart: { type: Boolean },
-      autoscroll: { type: Boolean }, // Override saved preference
+      autoscroll: { type: Boolean },
       logs: { type: Array },
       isConnected: { type: Boolean },
       follow: { type: Boolean },
@@ -171,7 +171,18 @@ class LogViewer extends LitElement {
   render() {
     return html`
       <div>
+        <div id="LogHUD">
+            <div class="status">
+              ${this.isConnected
+                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+              }
+            </div>
+          </div>
         <div id="LogContainer">
+          <ul>
+            ${this.logs.map(log => html`<li>${log}</li>`)}
+          </ul>
           ${this.logs.length > 0 ? html`
             <ul>
               ${this.logs.map(log => html`<li>${log}</li>`)}
@@ -212,20 +223,40 @@ class LogViewer extends LitElement {
         display: block;
         position: relative;
       }
+      div#LogHUD {
+        position: absolute;
+        right: 16px;
+        top: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: end;
+      }
+      div#LogHUD .status {
+        opacity: 0.3;
+        cursor: pointer;
+      }
+      div#LogHUD div {
+        opacity: 0.2;
+        transition: opacity 250ms ease-out;
+      }
+      div#LogHUD div:hover {
+        opacity: 1;
+      }
       div#LogContainer {
         background: #0b0b0b;
         padding: 0.5em;
-        height: var(--log-viewer-height, 150px);
+        height: var(--log-viewer-height, 150px);height: calc(100vh - (var(--log-footer-height) + var(--page-header-height)));
         overflow-y: scroll;
         overflow-x: hidden;
         box-sizing: border-box;
       }
 
       div#LogFooter {
-        display: flex;
-        height: var(--log-footer-height, 40px);
+        display: block;
+        height: var(--log-footer-height);
         background: rgb(24, 24, 24);
         width: 100%;
+        display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;

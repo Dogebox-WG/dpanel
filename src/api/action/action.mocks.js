@@ -1,7 +1,6 @@
 /**
  * Pup Action Mocks
  * 
- * NOTE: In the new architecture, the backend creates activities for pup actions.
  * These mocks just return success responses. The backend will emit WebSocket events
  * for activity creation and progress updates.
  */

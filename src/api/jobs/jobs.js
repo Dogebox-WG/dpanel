@@ -48,11 +48,3 @@ export async function clearCompletedJobs(olderThanDays = 0) {
     () => client.post('/jobs/clear-completed', { olderThanDays })
   )();
 }
-
-// Cancel a job (not used in UI, but available for programmatic use)
-export async function cancelJob(jobId) {
-  return useMock(
-    () => Promise.resolve({ success: true, message: 'Mock job cancelled' }),
-    () => client.post(`/jobs/${jobId}/cancel`, {})
-  )();
-}

@@ -101,8 +101,6 @@ class Store {
         const savedState = JSON.parse(localStorage.getItem("storeState"));
         if (savedState) {
           this.networkContext = savedState.networkContext;
-          
-          // jobsContext not persisted - jobs come from backend via WebSocket
         }
       } catch (error) {
         console.warn(
@@ -117,7 +115,6 @@ class Store {
       try {
         const stateToPersist = {
           networkContext: this.networkContext,
-          // jobsContext excluded - jobs come from backend
           // Include other slices of state as needed
         };
         localStorage.setItem("storeState", JSON.stringify(stateToPersist));

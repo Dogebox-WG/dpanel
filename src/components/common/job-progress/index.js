@@ -33,15 +33,15 @@ class JobProgress extends LitElement {
       display: flex;
       align-items: center;
       gap: 1em;
+      flex-wrap: wrap;
     }
     
     .task-label {
       display: flex;
       align-items: center;
       gap: 0.5em;
-      width: 250px;
-      min-width: 250px;
-      flex-shrink: 0;
+      flex: 0 0 200px;
+      min-width: 200px;
     }
     
     .task-name {
@@ -82,6 +82,14 @@ class JobProgress extends LitElement {
       50% { opacity: 0.5; }
     }
     
+    .progress-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      flex: 1 1 200px;
+      min-width: 200px;
+    }
+    
     .progress-bar-container {
       flex: 1;
       height: 24px;
@@ -119,10 +127,9 @@ class JobProgress extends LitElement {
       font-size: 1rem;
       font-weight: 600;
       color: #fff;
-      width: 55px;
-      min-width: 55px;
+      flex: 0 0 auto;
+      min-width: 50px;
       text-align: right;
-      flex-shrink: 0;
     }
     
     .progress-bar.in_progress {
@@ -178,12 +185,10 @@ class JobProgress extends LitElement {
     .timing-info {
       display: flex;
       gap: 1.5em;
-      margin-left: 2em;
       font-size: 0.8rem;
       color: #888;
-      flex-shrink: 0;
-      width: 250px;
-      min-width: 250px;
+      flex: 0 0 200px;
+      min-width: 200px;
     }
     
     .timing-item {
@@ -196,38 +201,19 @@ class JobProgress extends LitElement {
     
     @media (max-width: 768px) {
       .job-row {
-        flex-wrap: wrap;
         gap: 0.75em;
       }
       
       .task-label {
-        width: 100%;
-        min-width: 100%;
-        order: 1;
+        min-width: 120px;
       }
       
-      .progress-bar-container {
-        width: 100%;
-        min-width: 100%;
-        order: 2;
-      }
-      
-      .job-percentage {
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 0.85rem;
-        width: auto;
-        min-width: auto;
+      .progress-group {
+        flex: 1 1 100%;
       }
       
       .timing-info {
-        width: 100%;
-        min-width: 100%;
-        margin-left: 0;
-        margin-top: 0.5em;
-        order: 3;
+        flex: 1 1 100%;
         justify-content: space-between;
         gap: 0.5em;
       }
@@ -235,14 +221,6 @@ class JobProgress extends LitElement {
       .timing-item {
         flex: 1;
         text-align: center;
-      }
-      
-      .timing-label {
-        font-size: 0.65rem;
-      }
-      
-      .timing-value {
-        font-size: 0.75rem;
       }
     }
     
@@ -332,12 +310,14 @@ class JobProgress extends LitElement {
             </span>
           </div>
           
-          <div class="progress-bar-container">
-            <div class="progress-bar ${status} ${isIndeterminate ? 'indeterminate' : ''}" 
-                 style="${isIndeterminate ? '' : `width: ${progress}%`}"></div>
+          <div class="progress-group">
+            <div class="progress-bar-container">
+              <div class="progress-bar ${status} ${isIndeterminate ? 'indeterminate' : ''}" 
+                   style="${isIndeterminate ? '' : `width: ${progress}%`}"></div>
+            </div>
+            
+            <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           </div>
-          
-          <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           
           <div class="timing-info">
             ${started ? html`

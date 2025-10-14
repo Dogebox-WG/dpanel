@@ -51,15 +51,15 @@ class JobActivityPage extends LitElement {
       gap: 1em;
       margin-bottom: 2em;
       flex-wrap: wrap;
-      align-items: flex-start;
+      align-items: center;
     }
     
     .filter-item {
       display: flex;
       align-items: center;
       gap: 0.5em;
-      flex: 1 1 auto;
-      min-width: 150px;
+      flex: 0 0 auto;
+      width: 280px;
     }
     
     .filter-label {
@@ -67,11 +67,8 @@ class JobActivityPage extends LitElement {
       color: #999;
       font-weight: 600;
       white-space: nowrap;
-    }
-    
-    .search-box {
-      flex: 1 1 100%;
-      min-width: 250px;
+      flex: 0 0 auto;
+      width: 60px;
     }
     
     @media (max-width: 768px) {
@@ -92,22 +89,7 @@ class JobActivityPage extends LitElement {
         width: 100%;
       }
       
-      .filters {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
       .filter-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25em;
-      }
-      
-      .filter-label {
-        font-size: 0.85rem;
-      }
-      
-      .search-box {
         width: 100%;
       }
     }
@@ -333,7 +315,7 @@ class JobActivityPage extends LitElement {
               size="small" 
               value="${this.statusFilter}" 
               @sl-change=${this.handleStatusFilter}
-              style="min-width: 150px; ${this.statusFilter !== 'all' ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
+              style="${this.statusFilter !== 'all' ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
             >
               <sl-option value="all">All</sl-option>
               <sl-option value="in_progress">In Progress</sl-option>
@@ -350,7 +332,7 @@ class JobActivityPage extends LitElement {
               size="small" 
               value="${this.dateFilter}" 
               @sl-change=${this.handleDateFilter}
-              style="min-width: 120px; ${this.dateFilter !== 'all' ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
+              style="${this.dateFilter !== 'all' ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
             >
               <sl-option value="all">All Time</sl-option>
               <sl-option value="today">Today</sl-option>

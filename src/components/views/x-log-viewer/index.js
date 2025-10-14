@@ -7,7 +7,6 @@ class LogViewer extends LitElement {
   static get properties() {
     return {
       autostart: { type: Boolean },
-      autoscroll: { type: Boolean },
       logs: { type: Array },
       isConnected: { type: Boolean },
       follow: { type: Boolean },
@@ -24,18 +23,11 @@ class LogViewer extends LitElement {
     this.isConnected = false;
     this.wsClient = null;
     this.autostart = true;
-    this.autoscroll = undefined; // Will be set in connectedCallback
-    // Load saved auto-scroll preference, default to true
-    const savedFollow = localStorage.getItem('log-viewer-autoscroll');
-    this.follow = savedFollow !== null ? savedFollow === 'true' : true;
+    this.follow = true; // Default to true, user can disable temporarily
   }
 
   connectedCallback() {
     super.connectedCallback();
-    // If autoscroll property was explicitly set, use it to override saved preference
-    if (this.autoscroll !== undefined) {
-      this.follow = this.autoscroll;
-    }
     this.setupSocketConnection()
   }
 
@@ -53,11 +45,20 @@ class LogViewer extends LitElement {
 
   firstUpdated() {
     const logContainer = this.shadowRoot.querySelector('#LogContainer');
+    let wasAtBottom = true;
+    
     logContainer.addEventListener('scroll', () => {
-      // Check if the user has scrolled up from the bottom
-      if (logContainer.scrollTop < logContainer.scrollHeight - logContainer.clientHeight) {
+      const isAtBottom = Math.abs(logContainer.scrollHeight - logContainer.clientHeight - logContainer.scrollTop) < 1;
+      
+      // Only update follow if it needs to change
+      if (isAtBottom && !this.follow) {
+        this.follow = true;
+      } else if (!isAtBottom && wasAtBottom && this.follow) {
+        // Only set to false if user was at bottom and scrolled up
         this.follow = false;
       }
+      
+      wasAtBottom = isAtBottom;
     });
   }
 
@@ -68,8 +69,6 @@ class LogViewer extends LitElement {
   handleFollowChange(e) {
     e.stopPropagation(); // Prevent event from bubbling up to parent
     this.follow = e.target.checked;
-    // Save preference to localStorage
-    localStorage.setItem('log-viewer-autoscroll', this.follow.toString());
     if (this.follow) {
       const logContainer = this.shadowRoot.querySelector('#LogContainer');
       logContainer.scrollTop = logContainer.scrollHeight;
@@ -245,7 +244,7 @@ class LogViewer extends LitElement {
       div#LogContainer {
         background: #0b0b0b;
         padding: 0.5em;
-        height: var(--log-viewer-height, 150px);height: calc(100vh - (var(--log-footer-height) + var(--page-header-height)));
+        height: var(--log-viewer-height, 150px);
         overflow-y: scroll;
         overflow-x: hidden;
         box-sizing: border-box;

@@ -168,8 +168,8 @@ class JobProgress extends LitElement {
     
     x-log-viewer {
       margin-top: 0.75em;
-      --log-viewer-height: 150px;
-      --log-footer-height: 40px;
+      --log-viewer-height: 180px;
+      --log-footer-height: 48px;
       --margin-top: 0;
       --margin-bottom: 0;
     }
@@ -285,7 +285,6 @@ class JobProgress extends LitElement {
             <x-log-viewer 
               .jobId=${this.job.id}
               autostart
-              ?autoscroll=${status === 'in_progress' || status === 'queued'}
             ></x-log-viewer>
           </div>
         ` : ''}

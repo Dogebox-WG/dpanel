@@ -194,6 +194,88 @@ class JobProgress extends LitElement {
       min-width: 0;
     }
     
+    @media (max-width: 768px) {
+      .job-row {
+        flex-wrap: wrap;
+        gap: 0.75em;
+      }
+      
+      .task-label {
+        width: 100%;
+        min-width: 100%;
+        order: 1;
+      }
+      
+      .progress-bar-container {
+        width: 100%;
+        min-width: 100%;
+        order: 2;
+      }
+      
+      .job-percentage {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.85rem;
+        width: auto;
+        min-width: auto;
+      }
+      
+      .timing-info {
+        width: 100%;
+        min-width: 100%;
+        margin-left: 0;
+        margin-top: 0.5em;
+        order: 3;
+        justify-content: space-between;
+        gap: 0.5em;
+      }
+      
+      .timing-item {
+        flex: 1;
+        text-align: center;
+      }
+      
+      .timing-label {
+        font-size: 0.65rem;
+      }
+      
+      .timing-value {
+        font-size: 0.75rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .job-card {
+        padding: 0.5em 0.75em;
+      }
+      
+      .task-label {
+        gap: 0.25em;
+      }
+      
+      .task-name {
+        font-size: 0.9rem;
+      }
+      
+      .job-icon {
+        font-size: 0.9rem;
+      }
+      
+      .progress-bar-container {
+        height: 20px;
+      }
+      
+      .job-percentage {
+        font-size: 0.75rem;
+      }
+      
+      .timing-info {
+        font-size: 0.75rem;
+      }
+    }
+    
     .timing-label {
       font-size: 0.7rem;
       text-transform: uppercase;

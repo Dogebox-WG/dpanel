@@ -30,6 +30,8 @@ class JobActivityPage extends LitElement {
       align-items: center;
       justify-content: space-between;
       margin-bottom: 1.5em;
+      flex-wrap: wrap;
+      gap: 1em;
     }
     
     h1 {
@@ -41,6 +43,7 @@ class JobActivityPage extends LitElement {
     .header-actions {
       display: flex;
       gap: 0.5em;
+      flex-wrap: wrap;
     }
     
     .filters {
@@ -48,24 +51,65 @@ class JobActivityPage extends LitElement {
       gap: 1em;
       margin-bottom: 2em;
       flex-wrap: wrap;
-      align-items: center;
+      align-items: flex-start;
     }
     
     .filter-item {
       display: flex;
       align-items: center;
       gap: 0.5em;
+      flex: 1 1 auto;
+      min-width: 150px;
     }
     
     .filter-label {
       font-size: 0.9rem;
       color: #999;
       font-weight: 600;
+      white-space: nowrap;
     }
     
     .search-box {
-      flex: 1;
+      flex: 1 1 100%;
       min-width: 250px;
+    }
+    
+    @media (max-width: 768px) {
+      .padded {
+        padding: 15px;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .header-actions {
+        width: 100%;
+      }
+      
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filter-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25em;
+      }
+      
+      .filter-label {
+        font-size: 0.85rem;
+      }
+      
+      .search-box {
+        width: 100%;
+      }
     }
     
     .section {
@@ -277,6 +321,7 @@ class JobActivityPage extends LitElement {
               size="small"
               @input=${this.handleSearchInput}
               clearable
+              style="${this.searchQuery ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
             >
               <sl-icon name="search" slot="prefix"></sl-icon>
             </sl-input>
@@ -288,7 +333,7 @@ class JobActivityPage extends LitElement {
               size="small" 
               value="${this.statusFilter}" 
               @sl-change=${this.handleStatusFilter}
-              style="min-width: 150px;"
+              style="min-width: 150px; ${this.statusFilter !== 'all' ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
             >
               <sl-option value="all">All</sl-option>
               <sl-option value="in_progress">In Progress</sl-option>
@@ -305,7 +350,7 @@ class JobActivityPage extends LitElement {
               size="small" 
               value="${this.dateFilter}" 
               @sl-change=${this.handleDateFilter}
-              style="min-width: 120px;"
+              style="min-width: 120px; ${this.dateFilter !== 'all' ? '--sl-input-border-color: #4360ff; --sl-input-background-color: rgba(67, 96, 255, 0.05);' : ''}"
             >
               <sl-option value="all">All Time</sl-option>
               <sl-option value="today">Today</sl-option>

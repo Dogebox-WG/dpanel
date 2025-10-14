@@ -16,8 +16,7 @@ let mockJobs = [
     progress: 100,
     status: 'completed',
     summaryMessage: 'Upgrade completed successfully',
-    errorMessage: null,
-    read: false
+    errorMessage: null
   },
   {
     id: mockJobId++,
@@ -27,8 +26,7 @@ let mockJobs = [
     progress: 45,
     status: 'failed',
     summaryMessage: 'Installation failed',
-    errorMessage: 'Insufficient disk space',
-    read: false
+    errorMessage: 'Insufficient disk space'
   }
 ];
 
@@ -88,7 +86,6 @@ class MockJobWebSocket {
       status: 'queued',
       summaryMessage: 'Queued',
       errorMessage: null,
-      read: false,
     };
     
     mockJobs.push(job);
@@ -178,22 +175,6 @@ export const mockJobApi = {
     });
   },
 
-  markJobAsRead: (id) => {
-    const job = mockJobs.find(j => j.id === id);
-    if (job) {
-      job.read = true;
-    }
-    return Promise.resolve({ success: true });
-  },
-
-  markAllJobsAsRead: () => {
-    mockJobs.forEach(j => {
-      if (['completed', 'failed'].includes(j.status)) {
-        j.read = true;
-      }
-    });
-    return Promise.resolve({ success: true });
-  },
 
   clearCompletedJobs: (olderThanDays) => {
     const cutoff = new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000));

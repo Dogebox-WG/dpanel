@@ -25,21 +25,6 @@ export async function getJob(jobId) {
   )();
 }
 
-// Mark job as read
-export async function markJobAsRead(jobId) {
-  return useMock(
-    () => mockJobApi.markJobAsRead(jobId),
-    () => client.post(`/jobs/${jobId}/read`, {})
-  )();
-}
-
-// Mark all jobs as read
-export async function markAllJobsAsRead() {
-  return useMock(
-    () => mockJobApi.markAllJobsAsRead(),
-    () => client.post('/jobs/read-all', {})
-  )();
-}
 
 // Clear completed jobs
 export async function clearCompletedJobs(olderThanDays = 0) {

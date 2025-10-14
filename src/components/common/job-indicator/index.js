@@ -93,40 +93,19 @@ class JobIndicator extends LitElement {
   
   render() {
     const { jobs } = this.context.store.jobsContext;
-    const activeCount = jobs.filter(j => j.status === 'queued' || j.status === 'in_progress').length;
     const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
-    const pendingCount = jobs.filter(j => j.status === 'queued').length;
-    const unreadCount = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status)).length;
-    
-    
-    // Determine display text
-    let displayText = 'System Activity';
-    
-    // Create tooltip content showing job counts
-    const tooltipLines = [];
-    if (inProgressCount > 0) {
-      tooltipLines.push(html`${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}`);
-    }
-    if (pendingCount > 0) {
-      tooltipLines.push(html`${pendingCount} Pending ${pendingCount === 1 ? 'Job' : 'Jobs'}`);
-    }
-    const tooltipContent = tooltipLines.length > 0 
-      ? html`${tooltipLines.map((line, i) => html`${i > 0 ? html`<br>` : ''}${line}`)}`
-      : html`No active jobs`;
     
     return html`
       <sl-tooltip placement="top">
-        <div slot="content">${tooltipContent}</div>
+        <div slot="content">${inProgressCount > 0 ? `${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}` : 'No active jobs'}</div>
         <div class="indicator" @click=${this.handleClick}>
-          <sl-icon name="gear" class="icon ${activeCount > 0 ? 'spinning' : ''}"></sl-icon>
+          <sl-icon name="gear" class="icon ${inProgressCount > 0 ? 'spinning' : ''}"></sl-icon>
           <span class="text">
-            <span>${displayText}</span>
+            <span>System Activity</span>
           </span>
-          ${unreadCount > 0 ? html`
-            <span class="badge has-unread">${unreadCount}</span>
-          ` : (activeCount > 0 ? html`
-            <span class="badge">${activeCount}</span>
-          ` : '')}
+          ${inProgressCount > 0 ? html`
+            <span class="badge">${inProgressCount}</span>
+          ` : ''}
         </div>
       </sl-tooltip>
     `;

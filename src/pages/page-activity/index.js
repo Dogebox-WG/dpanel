@@ -1,7 +1,7 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
-import { markAllJobsAsRead, clearCompletedJobs } from '/api/jobs/jobs.js';
+import { clearCompletedJobs } from '/api/jobs/jobs.js';
 import '/components/common/job-progress/index.js';
 
 class JobActivityPage extends LitElement {
@@ -130,48 +130,6 @@ class JobActivityPage extends LitElement {
   
   connectedCallback() {
     super.connectedCallback();
-    // Wait for jobs to load, then mark as read
-    this.waitForJobsAndMarkAsRead();
-  }
-  
-  async waitForJobsAndMarkAsRead() {
-    // Poll until jobs are loaded (max 3 seconds)
-    for (let i = 0; i < 30; i++) {
-      const { jobs } = store.jobsContext;
-      if (jobs && jobs.length > 0) {
-        await this.markAllAsRead();
-        return;
-      }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-  }
-  
-  async markAllAsRead() {
-    const { jobs } = store.jobsContext;
-    
-    const unreadJobs = jobs.filter(j => !j.read && ['completed', 'failed', 'cancelled'].includes(j.status));
-    
-    if (unreadJobs.length === 0) {
-      return;
-    }
-    
-    try {
-      await markAllJobsAsRead();
-      
-      const { jobs } = store.jobsContext;
-      const updatedJobs = jobs.map(job => {
-        if (!job.read && ['completed', 'failed', 'cancelled'].includes(job.status)) {
-          return { ...job, read: true };
-        }
-        return job;
-      });
-      
-      store.updateState({
-        jobsContext: { jobs: updatedJobs }
-      });
-    } catch (err) {
-      console.error('Failed to mark jobs as read:', err);
-    }
   }
   
   showMoreActive() {

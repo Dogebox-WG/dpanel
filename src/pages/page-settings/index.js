@@ -180,7 +180,7 @@ class SettingsPage extends LitElement {
             <h3>Menu</h3>
           </div>
           <div class="list-wrap">
-            <action-row prefix="info-circle" label="Version" href="/settings/versions" @click=${notYet}>
+            <action-row prefix="info-circle" label="Version" href="/settings/versions" .trigger=${this.handleMenuClick}>
               View version details
             </action-row>
             <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" @click=${notYet}>
@@ -289,16 +289,17 @@ class SettingsPage extends LitElement {
 customElements.define("x-page-settings", SettingsPage);
 
 function renderVersionsDialog(store, closeFn) {
-  const { dbxVersion } = store.getContext('app')
+  const { dbxVersion, gitCommit, gitDirty } = store.getContext('app')
+  const displayVersion = dbxVersion || 'Unknown'
+  
   return html`
     <div style="text-align: center;">
       <h1>Versions</h1>
 
-      <div style="text-align: left; margin-bottom: 1em;">
-        <action-row prefix="box" expandable label="Dogebox ${dbxVersion}">
-          Bundles Dogeboxd, DKM & dPanel
-          <div slot="hidden"><small style="line-height: 1.1; display: block;">Lorem ad ex nostrud magna nisi ea enim magna exercitation aliquip enim amet ad deserunt sit irure aute proident.</div>
-        </action-row>
+      <div style="text-align: left; margin: 1em 0;">
+        <h2 style="margin: 0 0 0.5em 0;">Dogebox</h2>
+        <p style="margin: 0 0 0.5em 0;"><strong>Version:</strong> ${displayVersion}</p>
+        ${gitCommit ? html`<p style="margin: 0;"><strong>Git commit:</strong> ${gitCommit}${gitDirty ? ' (dirty)' : ''}</p>` : ''}
       </div>
 
       <sl-button variant="text" @click=${closeFn}>Dismiss</sl-button>

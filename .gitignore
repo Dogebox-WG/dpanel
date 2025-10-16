@@ -1,8 +1,12 @@
 # We don't check in node_modules
 */node_modules
+node_modules/
 
 # Nor do we check in package-lock (for this project)
 *package-lock.json
 
 # Misc
 *.DS_Store
+
+# Build artifacts
+dist/

@@ -27,6 +27,29 @@
           '';
         };
 
+        packages.default = pkgs.stdenv.mkDerivation {
+          name = "dpanel";
+          src = ./src;
+
+          installPhase = ''
+            mkdir -p $out
+            
+            # Copy all source files
+            cp -r . $out/
+            
+            # Remove development/test files
+            find $out -name "*.mocks.js" -type f -delete
+            find $out -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+            rm -f $out/api/mocks.js
+          '';
+
+          meta = with pkgs.lib; {
+            description = "Dogebox control panel web interface";
+            homepage = "https://github.com/dogeorg/dpanel";
+            license = licenses.mit;
+          };
+        };
+
         dbxSessionName = "dpanel";
         dbxStartCommand = "npm start";
         dbxCWD = "dev";

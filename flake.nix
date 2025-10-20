@@ -27,20 +27,18 @@
           '';
         };
 
-        packages.default = pkgs.stdenv.mkDerivation {
+        packages.default = pkgs.buildNpmPackage {
           name = "dpanel";
-          src = ./src;
+          src = ./.;
+
+          npmDepsHash = "sha256-HXf64hDIOSiHIDFX1jT7bCMUNqcN12KzQQ9ccY5ostA=";
+
+          buildPhase = ''
+            npm run build
+          '';
 
           installPhase = ''
-            mkdir -p $out
-            
-            # Copy all source files
-            cp -r . $out/
-            
-            # Remove development/test files
-            find $out -name "*.mocks.js" -type f -delete
-            find $out -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
-            rm -f $out/api/mocks.js
+            cp -r dist $out
           '';
 
           meta = with pkgs.lib; {

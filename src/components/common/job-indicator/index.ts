@@ -107,7 +107,7 @@ export class JobIndicator extends LitElement {
   }
   
   render() {
-    const jobsContext = this.context.store.jobsContext as JobsContext;
+    const jobsContext = this.context.store.jobsContext as JobsContext; // TS-TODO : Remove 'as' when we have a better type for jobsContext
     const { jobs } = jobsContext;
     const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
     

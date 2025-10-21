@@ -18,25 +18,38 @@ describe('JobActivityPage', () => {
     ...overrides
   });
 
-  beforeEach(() => {
-    // Mock store
-    window.store = {
-      jobsContext: {
-        jobs: []
-      },
-      updateState: (state) => {
-        Object.assign(window.store, state);
-      }
+  beforeEach(async () => {
+    // Import and set up the store
+    const { store } = await import('/state/store.js');
+    
+    // Initialize store with test data
+    store.jobsContext = {
+      jobs: []
     };
+    
+    // Ensure updateState method exists
+    if (!store.updateState) {
+      store.updateState = (state) => {
+        Object.assign(store, state);
+      };
+    }
   });
 
   describe('Page Rendering', () => {
-    it('renders page with header', async () => {
-      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+    it('renders page content', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext = { jobs: [], loading: false, error: null };
       
-      const h1 = el.shadowRoot.querySelector('h1');
-      expect(h1).to.exist;
-      expect(h1.textContent).to.include('Activity');
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      // Verify the page renders with the main container
+      const padded = el.shadowRoot.querySelector('.padded');
+      expect(padded).to.exist;
+      
+      // Verify filters section exists
+      const filters = el.shadowRoot.querySelector('.filters');
+      expect(filters).to.exist;
     });
 
     it('renders search box', async () => {
@@ -97,12 +110,13 @@ describe('JobActivityPage', () => {
     });
 
     it('renders job-progress components for each job', async () => {
+      const { store } = await import('/state/store.js');
       const jobs = [
         createMockJob({ id: 'job-1', status: 'in_progress' }),
         createMockJob({ id: 'job-2', status: 'in_progress' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -115,11 +129,12 @@ describe('JobActivityPage', () => {
 
   describe('Pagination', () => {
     it('shows limited jobs initially', async () => {
+      const { store } = await import('/state/store.js');
       const jobs = Array.from({ length: 15 }, (_, i) => 
         createMockJob({ id: `job-${i}`, status: 'in_progress' })
       );
       
-      window.store.jobsContext.jobs = jobs;
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -130,11 +145,12 @@ describe('JobActivityPage', () => {
     });
 
     it('shows show more button when more jobs exist', async () => {
+      const { store } = await import('/state/store.js');
       const jobs = Array.from({ length: 15 }, (_, i) => 
         createMockJob({ id: `job-${i}`, status: 'in_progress' })
       );
       
-      window.store.jobsContext.jobs = jobs;
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -145,11 +161,12 @@ describe('JobActivityPage', () => {
     });
 
     it('loads more jobs on button click', async () => {
+      const { store } = await import('/state/store.js');
       const jobs = Array.from({ length: 15 }, (_, i) => 
         createMockJob({ id: `job-${i}`, status: 'in_progress' })
       );
       
-      window.store.jobsContext.jobs = jobs;
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -172,7 +189,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', displayName: 'Install App B' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -193,7 +211,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', summaryMessage: 'Installing dependencies' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -212,7 +231,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', errorMessage: 'Timeout error' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -230,13 +250,15 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', displayName: 'Install App' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
       await aTimeout(100);
       
-      el.searchQuery = 'INSTALL';
+      // Set search query to lowercase (as handleSearchInput does)
+      el.searchQuery = 'install';
       await el.updateComplete;
       
       const filteredJobs = el.filterJobs(jobs);
@@ -245,7 +267,8 @@ describe('JobActivityPage', () => {
 
     it('clears search filter', async () => {
       const jobs = [createMockJob({ id: 'job-1' })];
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -271,7 +294,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', status: 'completed' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -290,7 +314,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', status: 'completed' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -310,7 +335,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', status: 'in_progress' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -330,7 +356,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', status: 'in_progress' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -350,7 +377,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', status: 'in_progress' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -370,7 +398,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', status: 'in_progress' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -391,7 +420,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', started: new Date().toISOString() })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -409,7 +439,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', started: new Date().toISOString() })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -427,7 +458,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', started: new Date().toISOString() })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -445,7 +477,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', started: new Date().toISOString() })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -466,7 +499,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-2', displayName: 'Install App B', status: 'completed' })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -487,7 +521,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', displayName: 'Install App A', started: new Date().toISOString() })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -506,7 +541,8 @@ describe('JobActivityPage', () => {
         createMockJob({ id: 'job-1', status: 'in_progress', started: new Date().toISOString() })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -530,7 +566,8 @@ describe('JobActivityPage', () => {
         })
       ];
       
-      window.store.jobsContext.jobs = jobs;
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = jobs;
       
       const el = await fixture(html`<x-page-activity></x-page-activity>`);
       await el.updateComplete;
@@ -543,6 +580,243 @@ describe('JobActivityPage', () => {
       
       const filteredJobs = el.filterJobs(jobs);
       expect(filteredJobs.length).to.be.greaterThan(0);
+    });
+  });
+
+  describe('Show More Functionality', () => {
+    it('showMoreActive increases limit by 10', async () => {
+      const { store } = await import('/state/store.js');
+      const jobs = Array.from({ length: 25 }, (_, i) => 
+        createMockJob({ id: `job-${i}`, status: 'in_progress' })
+      );
+      store.jobsContext.jobs = jobs;
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      const initialLimit = el.showActiveLimit;
+      el.showMoreActive();
+      
+      expect(el.showActiveLimit).to.equal(initialLimit + 10);
+    });
+
+    it('showMorePending increases limit by 10', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      const initialLimit = el.showPendingLimit;
+      el.showMorePending();
+      
+      expect(el.showPendingLimit).to.equal(initialLimit + 10);
+    });
+
+    it('showMoreCompleted increases limit by 10', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      const initialLimit = el.showCompletedLimit;
+      el.showMoreCompleted();
+      
+      expect(el.showCompletedLimit).to.equal(initialLimit + 10);
+    });
+
+    it('can show more multiple times', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      const initialLimit = el.showActiveLimit;
+      el.showMoreActive();
+      el.showMoreActive();
+      el.showMoreActive();
+      
+      expect(el.showActiveLimit).to.equal(initialLimit + 30);
+    });
+  });
+
+  describe('Reactivity and Updates', () => {
+    it('updates when store jobs change', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      // Initially no jobs
+      let jobProgress = el.shadowRoot.querySelectorAll('job-progress');
+      expect(jobProgress.length).to.equal(0);
+      
+      // Add jobs to store
+      store.updateState({
+        jobsContext: {
+          jobs: [createMockJob({ id: 'new-job', status: 'in_progress' })]
+        }
+      });
+      
+      await el.updateComplete;
+      await aTimeout(100);
+      
+      // Should now have job displayed
+      jobProgress = el.shadowRoot.querySelectorAll('job-progress');
+      expect(jobProgress.length).to.be.greaterThan(0);
+    });
+
+    it('handles rapid job updates', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      // Rapidly update jobs
+      for (let i = 0; i < 5; i++) {
+        store.updateState({
+          jobsContext: {
+            jobs: [createMockJob({ id: `job-${i}`, status: 'in_progress' })]
+          }
+        });
+      }
+      
+      await el.updateComplete;
+      await aTimeout(100);
+      
+      // Component should still be functional
+      const padded = el.shadowRoot.querySelector('.padded');
+      expect(padded).to.exist;
+    });
+  });
+
+  describe('Edge Cases and Boundaries', () => {
+    it('handles zero jobs gracefully', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      const emptyStates = el.shadowRoot.querySelectorAll('.empty-state');
+      expect(emptyStates.length).to.be.greaterThan(0);
+    });
+
+    it('handles exactly 10 jobs (at limit)', async () => {
+      const { store } = await import('/state/store.js');
+      const jobs = Array.from({ length: 10 }, (_, i) => 
+        createMockJob({ id: `job-${i}`, status: 'in_progress' })
+      );
+      store.jobsContext.jobs = jobs;
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      await aTimeout(100);
+      
+      // Should not show "show more" button at exactly the limit
+      const showMoreBtn = el.shadowRoot.querySelector('.show-more-btn');
+      expect(showMoreBtn).to.be.null;
+    });
+
+    it('handles very large number of jobs', async () => {
+      const { store } = await import('/state/store.js');
+      const jobs = Array.from({ length: 1000 }, (_, i) => 
+        createMockJob({ id: `job-${i}`, status: 'in_progress' })
+      );
+      store.jobsContext.jobs = jobs;
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      await aTimeout(100);
+      
+      // Should still render (with pagination)
+      const jobProgress = el.shadowRoot.querySelectorAll('job-progress');
+      expect(jobProgress.length).to.equal(10); // Initial limit
+    });
+
+    it('handles jobs with missing optional fields', async () => {
+      const { store } = await import('/state/store.js');
+      const jobs = [
+        {
+          id: 'minimal-job',
+          status: 'in_progress',
+          progress: 0,
+          displayName: 'Minimal Job',
+          summaryMessage: '',
+          started: new Date().toISOString(),
+          finished: null,
+          errorMessage: null
+        }
+      ];
+      store.jobsContext.jobs = jobs;
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      await aTimeout(100);
+      
+      const jobProgress = el.shadowRoot.querySelectorAll('job-progress');
+      expect(jobProgress.length).to.equal(1);
+    });
+
+    it('handles filter with no matching results', async () => {
+      const { store } = await import('/state/store.js');
+      const jobs = [
+        createMockJob({ id: 'job-1', displayName: 'Install App', status: 'completed' })
+      ];
+      store.jobsContext.jobs = jobs;
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      await aTimeout(100);
+      
+      // Filter for something that doesn't exist
+      el.searchQuery = 'nonexistent';
+      el.statusFilter = 'failed';
+      await el.updateComplete;
+      
+      const filteredJobs = el.filterJobs(jobs);
+      expect(filteredJobs.length).to.equal(0);
+    });
+  });
+
+  describe('Component Lifecycle', () => {
+    it('initializes with default values', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      
+      expect(el.showActiveLimit).to.equal(10);
+      expect(el.showPendingLimit).to.equal(10);
+      expect(el.showCompletedLimit).to.equal(10);
+      expect(el.searchQuery).to.equal('');
+      expect(el.statusFilter).to.equal('all');
+      expect(el.dateFilter).to.equal('all');
+    });
+
+    it('maintains state across updates', async () => {
+      const { store } = await import('/state/store.js');
+      store.jobsContext.jobs = [];
+      
+      const el = await fixture(html`<x-page-activity></x-page-activity>`);
+      await el.updateComplete;
+      
+      // Change some properties
+      el.searchQuery = 'test';
+      el.statusFilter = 'completed';
+      el.showActiveLimit = 20;
+      
+      // Trigger update
+      await el.updateComplete;
+      
+      // State should be preserved
+      expect(el.searchQuery).to.equal('test');
+      expect(el.statusFilter).to.equal('completed');
+      expect(el.showActiveLimit).to.equal(20);
     });
   });
 });

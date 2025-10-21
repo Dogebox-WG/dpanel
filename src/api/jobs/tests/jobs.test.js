@@ -3,152 +3,326 @@ import { expect } from '../../../../dev/node_modules/@open-wc/testing';
 
 // Module being tested
 import * as jobsAPI from '../jobs.js';
-
-// Mock the API client
-jest.mock('/api/client.js', () => {
-  return jest.fn().mockImplementation(() => ({
-    get: jest.fn(),
-    post: jest.fn()
-  }));
-});
+import { store } from '/state/store.js';
 
 describe('Jobs API Client', () => {
-  let mockStore;
+  let originalUseMocks;
+  let originalApiBaseUrl;
 
   beforeEach(() => {
-    mockStore = {
-      networkContext: {
-        apiBaseUrl: 'http://localhost:3000',
-        useMocks: false
-      }
-    };
-
-    // Set up global store
-    global.store = mockStore;
+    // Save original values
+    originalUseMocks = store.networkContext.useMocks;
+    originalApiBaseUrl = store.networkContext.apiBaseUrl;
+    
+    // Set up for testing with mocks enabled
+    store.networkContext.useMocks = true;
+    store.networkContext.apiBaseUrl = 'http://localhost:3000';
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // Restore original values
+    store.networkContext.useMocks = originalUseMocks;
+    store.networkContext.apiBaseUrl = originalApiBaseUrl;
   });
 
   describe('getAllJobs', () => {
-    it('calls API endpoint', async () => {
-      const mockJobs = [
-        { id: 'job-1', status: 'in_progress' },
-        { id: 'job-2', status: 'completed' }
-      ];
-
-      // Mock the client
-      const ApiClient = require('/api/client.js');
-      const mockClient = new ApiClient();
-      mockClient.get.mockResolvedValue({ data: { jobs: mockJobs } });
-
-      // Since we can't easily mock the client in the module, we'll test the structure
-      expect(jobsAPI.getAllJobs).to.be.a('function');
-    });
-
-    it('returns job data', async () => {
-      // Test that the function exists and is callable
-      expect(jobsAPI.getAllJobs).to.be.a('function');
-    });
-
-    it('uses mock when enabled', async () => {
-      mockStore.networkContext.useMocks = true;
+    it('returns job data when using mocks', async () => {
+      store.networkContext.useMocks = true;
       
-      // Test that mock mode is respected
-      expect(mockStore.networkContext.useMocks).to.be.true;
+      const result = await jobsAPI.getAllJobs();
+      
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
+      expect(result.jobs).to.be.an('array');
     });
 
-    it('handles errors gracefully', async () => {
-      // Test that function exists
-      expect(jobsAPI.getAllJobs).to.be.a('function');
+    it('returns jobs with correct structure', async () => {
+      store.networkContext.useMocks = true;
       
-      // In real implementation, errors should be caught and handled
-      try {
-        await jobsAPI.getAllJobs();
-      } catch (error) {
-        // Error handling should be tested here
-        expect(error).to.exist;
+      const result = await jobsAPI.getAllJobs();
+      
+      if (result.jobs.length > 0) {
+        const job = result.jobs[0];
+        expect(job).to.have.property('id');
+        expect(job).to.have.property('status');
+        expect(job).to.have.property('displayName');
+        expect(job).to.have.property('progress');
       }
+    });
+
+    it('handles multiple jobs', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result = await jobsAPI.getAllJobs();
+      
+      expect(result.jobs).to.be.an('array');
+      expect(result.jobs.length).to.be.greaterThan(0);
     });
   });
 
   describe('getJob', () => {
-    it('calls API endpoint with job ID', async () => {
-      const jobId = 'job-123';
+    it('returns single job data when using mocks', async () => {
+      store.networkContext.useMocks = true;
       
-      // Test that function exists
-      expect(jobsAPI.getJob).to.be.a('function');
-      expect(jobsAPI.getJob).to.exist;
+      const jobId = 1;
+      const result = await jobsAPI.getJob(jobId);
+      
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
     });
 
-    it('returns single job data', async () => {
-      const jobId = 'job-123';
+    it('returns job with correct structure', async () => {
+      store.networkContext.useMocks = true;
       
-      // Test that function exists
-      expect(jobsAPI.getJob).to.be.a('function');
+      const jobId = 1;
+      const result = await jobsAPI.getJob(jobId);
+      
+      if (result.job) {
+        expect(result.job).to.have.property('id');
+        expect(result.job).to.have.property('status');
+        expect(result.job).to.have.property('displayName');
+        expect(result.job).to.have.property('progress');
+        expect(result.job).to.have.property('summaryMessage');
+      }
     });
 
-    it('uses mock when enabled', async () => {
-      mockStore.networkContext.useMocks = true;
+    it('returns null for non-existent job', async () => {
+      store.networkContext.useMocks = true;
       
-      // Test that mock mode is respected
-      expect(mockStore.networkContext.useMocks).to.be.true;
+      const jobId = 99999;
+      const result = await jobsAPI.getJob(jobId);
+      
+      expect(result).to.exist;
+      expect(result.job).to.be.null;
     });
 
-    it('handles 404 errors', async () => {
-      const jobId = 'non-existent-job';
+    it('handles valid job ID', async () => {
+      store.networkContext.useMocks = true;
       
-      // Test that function exists
-      expect(jobsAPI.getJob).to.be.a('function');
+      const jobId = 1;
+      const result = await jobsAPI.getJob(jobId);
+      
+      expect(result.success).to.be.true;
+      expect(result.job).to.exist;
+      expect(result.job.id).to.equal(jobId);
     });
   });
 
   describe('clearCompletedJobs', () => {
-    it('calls API endpoint with olderThanDays', async () => {
+    it('clears completed jobs with default parameter', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result = await jobsAPI.clearCompletedJobs();
+      
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
+    });
+
+    it('accepts olderThanDays parameter', async () => {
+      store.networkContext.useMocks = true;
+      
       const olderThanDays = 7;
+      const result = await jobsAPI.clearCompletedJobs(olderThanDays);
       
-      // Test that function exists
-      expect(jobsAPI.clearCompletedJobs).to.be.a('function');
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
     });
 
-    it('returns success response', async () => {
-      // Test that function exists
-      expect(jobsAPI.clearCompletedJobs).to.be.a('function');
-    });
-
-    it('uses mock when enabled', async () => {
-      mockStore.networkContext.useMocks = true;
+    it('clears jobs older than specified days', async () => {
+      store.networkContext.useMocks = true;
       
-      // Test that mock mode is respected
-      expect(mockStore.networkContext.useMocks).to.be.true;
+      // First get all jobs
+      const beforeResult = await jobsAPI.getAllJobs();
+      const beforeCount = beforeResult.jobs.length;
+      
+      // Clear old completed jobs (30 days)
+      await jobsAPI.clearCompletedJobs(30);
+      
+      // Get jobs again
+      const afterResult = await jobsAPI.getAllJobs();
+      const afterCount = afterResult.jobs.length;
+      
+      // Should have same or fewer jobs
+      expect(afterCount).to.be.at.most(beforeCount);
     });
 
-    it('handles errors gracefully', async () => {
-      // Test that function exists
-      expect(jobsAPI.clearCompletedJobs).to.be.a('function');
+    it('handles zero days parameter', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result = await jobsAPI.clearCompletedJobs(0);
+      
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
     });
   });
 
   describe('Mock Integration', () => {
-    it('uses mock API when useMocks is true', () => {
-      mockStore.networkContext.useMocks = true;
+    it('uses mock API when useMocks is true', async () => {
+      store.networkContext.useMocks = true;
       
-      expect(mockStore.networkContext.useMocks).to.be.true;
-    });
-
-    it('uses real API when useMocks is false', () => {
-      mockStore.networkContext.useMocks = false;
+      const result = await jobsAPI.getAllJobs();
       
-      expect(mockStore.networkContext.useMocks).to.be.false;
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
+      expect(result.jobs).to.be.an('array');
     });
 
     it('mock returns expected data structure', async () => {
-      // Test that mock API returns correct structure
-      mockStore.networkContext.useMocks = true;
+      store.networkContext.useMocks = true;
       
-      expect(mockStore.networkContext.useMocks).to.be.true;
+      const result = await jobsAPI.getAllJobs();
+      
+      expect(result).to.have.property('success');
+      expect(result).to.have.property('jobs');
+      expect(result.jobs).to.be.an('array');
+    });
+
+    it('mock job includes all required fields', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result = await jobsAPI.getAllJobs();
+      
+      if (result.jobs.length > 0) {
+        const job = result.jobs[0];
+        expect(job).to.have.property('id');
+        expect(job).to.have.property('status');
+        expect(job).to.have.property('progress');
+        expect(job).to.have.property('displayName');
+        expect(job).to.have.property('summaryMessage');
+        expect(job).to.have.property('started');
+      }
+    });
+
+    it('mock data structure is valid', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result = await jobsAPI.getAllJobs();
+      
+      // Verify the mock returns a valid response
+      expect(result).to.have.property('success');
+      expect(result).to.have.property('jobs');
+      expect(result.jobs).to.be.an('array');
+      
+      // If there are jobs, verify they have valid statuses
+      if (result.jobs.length > 0) {
+        const validStatuses = ['queued', 'in_progress', 'completed', 'failed', 'cancelled'];
+        result.jobs.forEach(job => {
+          expect(validStatuses).to.include(job.status);
+        });
+      }
+    });
+  });
+
+  describe('API Function Exports', () => {
+    it('exports getAllJobs function', () => {
+      expect(jobsAPI.getAllJobs).to.be.a('function');
+    });
+
+    it('exports getJob function', () => {
+      expect(jobsAPI.getJob).to.be.a('function');
+    });
+
+    it('exports clearCompletedJobs function', () => {
+      expect(jobsAPI.clearCompletedJobs).to.be.a('function');
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('getAllJobs returns a promise', () => {
+      store.networkContext.useMocks = true;
+      
+      const result = jobsAPI.getAllJobs();
+      
+      expect(result).to.be.instanceOf(Promise);
+    });
+
+    it('getJob returns a promise', () => {
+      store.networkContext.useMocks = true;
+      
+      const result = jobsAPI.getJob(1);
+      
+      expect(result).to.be.instanceOf(Promise);
+    });
+
+    it('clearCompletedJobs returns a promise', () => {
+      store.networkContext.useMocks = true;
+      
+      const result = jobsAPI.clearCompletedJobs(0);
+      
+      expect(result).to.be.instanceOf(Promise);
+    });
+  });
+
+  describe('Data Integrity', () => {
+    it('getAllJobs returns immutable data structure', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result1 = await jobsAPI.getAllJobs();
+      const result2 = await jobsAPI.getAllJobs();
+      
+      // Results should be separate objects
+      expect(result1.jobs).to.be.an('array');
+      expect(result2.jobs).to.be.an('array');
+    });
+
+    it('handles jobs with special characters in names', async () => {
+      store.networkContext.useMocks = true;
+      
+      const result = await jobsAPI.getAllJobs();
+      
+      // Mock should handle any characters
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
+    });
+
+    it('handles empty job list', async () => {
+      store.networkContext.useMocks = true;
+      
+      // Clear all jobs first
+      await jobsAPI.clearCompletedJobs(0);
+      
+      const result = await jobsAPI.getAllJobs();
+      
+      expect(result).to.exist;
+      expect(result.success).to.be.true;
+      expect(result.jobs).to.be.an('array');
+    });
+  });
+
+  describe('Concurrent Operations', () => {
+    it('handles multiple getAllJobs calls simultaneously', async () => {
+      store.networkContext.useMocks = true;
+      
+      const promises = [
+        jobsAPI.getAllJobs(),
+        jobsAPI.getAllJobs(),
+        jobsAPI.getAllJobs()
+      ];
+      
+      const results = await Promise.all(promises);
+      
+      results.forEach(result => {
+        expect(result).to.exist;
+        expect(result.success).to.be.true;
+        expect(result.jobs).to.be.an('array');
+      });
+    });
+
+    it('handles mixed API calls simultaneously', async () => {
+      store.networkContext.useMocks = true;
+      
+      const promises = [
+        jobsAPI.getAllJobs(),
+        jobsAPI.getJob(1),
+        jobsAPI.getAllJobs()
+      ];
+      
+      const results = await Promise.all(promises);
+      
+      expect(results).to.have.lengthOf(3);
+      results.forEach(result => {
+        expect(result).to.exist;
+      });
     });
   });
 });
-

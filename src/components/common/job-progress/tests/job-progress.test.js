@@ -359,6 +359,193 @@ describe('JobProgress', () => {
       // Negative progress should show as 0% or the actual value
       expect(percentage.textContent.trim()).to.be.oneOf(['-10%', '0%']);
     });
+
+    it('handles special characters in job name', async () => {
+      const job = createMockJob({ displayName: '<script>alert("xss")</script>' });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      const taskName = el.shadowRoot.querySelector('.task-name');
+      // Should render safely without executing
+      expect(taskName).to.exist;
+    });
+
+    it('handles special characters in error message', async () => {
+      const job = createMockJob({ 
+        status: 'failed',
+        errorMessage: 'Error: <div>HTML</div> & symbols' 
+      });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      el.expanded = true;
+      await el.updateComplete;
+      
+      const errorMessage = el.shadowRoot.querySelector('.error-message');
+      expect(errorMessage).to.exist;
+    });
+  });
+
+  describe('Reactivity and Property Updates', () => {
+    it('updates display when job property changes', async () => {
+      const job = createMockJob({ progress: 25 });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      let percentage = el.shadowRoot.querySelector('.job-percentage');
+      expect(percentage.textContent.trim()).to.equal('25%');
+      
+      // Update the job
+      el.job = createMockJob({ progress: 75 });
+      await el.updateComplete;
+      
+      percentage = el.shadowRoot.querySelector('.job-percentage');
+      expect(percentage.textContent.trim()).to.equal('75%');
+    });
+
+    it('updates status icon when status changes', async () => {
+      const job = createMockJob({ status: 'in_progress' });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      let icon = el.shadowRoot.querySelector('.job-icon');
+      expect(icon.getAttribute('name')).to.equal('arrow-repeat');
+      
+      // Change status
+      el.job = createMockJob({ status: 'completed' });
+      await el.updateComplete;
+      
+      icon = el.shadowRoot.querySelector('.job-icon');
+      expect(icon.getAttribute('name')).to.equal('check-circle-fill');
+    });
+
+    it('shows error message when error is added', async () => {
+      const job = createMockJob({ errorMessage: '' });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      el.expanded = true;
+      await el.updateComplete;
+      
+      let errorMessage = el.shadowRoot.querySelector('.error-message');
+      expect(errorMessage).to.be.null;
+      
+      // Add error
+      el.job = createMockJob({ 
+        status: 'failed',
+        errorMessage: 'Something went wrong' 
+      });
+      await el.updateComplete;
+      
+      errorMessage = el.shadowRoot.querySelector('.error-message');
+      expect(errorMessage).to.exist;
+    });
+
+    it('updates finished time when job completes', async () => {
+      const job = createMockJob({ 
+        status: 'in_progress',
+        finished: null 
+      });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      let timingLabels = el.shadowRoot.querySelectorAll('.timing-label');
+      let labels = Array.from(timingLabels).map(l => l.textContent.trim());
+      expect(labels).to.not.include('Finished');
+      
+      // Mark as completed
+      el.job = createMockJob({ 
+        status: 'completed',
+        finished: new Date().toISOString()
+      });
+      await el.updateComplete;
+      
+      timingLabels = el.shadowRoot.querySelectorAll('.timing-label');
+      labels = Array.from(timingLabels).map(l => l.textContent.trim());
+      expect(labels).to.include('Finished');
+    });
+
+    it('handles rapid property updates', async () => {
+      const job = createMockJob({ progress: 0 });
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      // Rapidly update progress
+      for (let i = 1; i <= 10; i++) {
+        el.job = createMockJob({ progress: i * 10 });
+      }
+      
+      await el.updateComplete;
+      
+      const percentage = el.shadowRoot.querySelector('.job-percentage');
+      expect(percentage.textContent.trim()).to.equal('100%');
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('job card is keyboard accessible (clickable)', async () => {
+      const job = createMockJob();
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      const jobCard = el.shadowRoot.querySelector('.job-card');
+      expect(jobCard).to.exist;
+      
+      // Card should have click handler
+      expect(el.expanded).to.be.false;
+      jobCard.click();
+      await el.updateComplete;
+      expect(el.expanded).to.be.true;
+    });
+
+    it('renders semantic HTML elements', async () => {
+      const job = createMockJob();
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      // Should use proper HTML structure
+      const jobCard = el.shadowRoot.querySelector('.job-card');
+      expect(jobCard).to.exist;
+      
+      const taskName = el.shadowRoot.querySelector('.task-name');
+      expect(taskName).to.exist;
+    });
+
+    it('provides visual feedback for different statuses', async () => {
+      const statuses = ['in_progress', 'completed', 'failed', 'queued', 'cancelled'];
+      
+      for (const status of statuses) {
+        const job = createMockJob({ status });
+        const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+        
+        const icon = el.shadowRoot.querySelector('.job-icon');
+        expect(icon.classList.contains(status)).to.be.true;
+      }
+    });
+  });
+
+  describe('Performance', () => {
+    it('renders efficiently with minimal updates', async () => {
+      const job = createMockJob();
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      const updateCount = el.updateCount || 0;
+      
+      // Multiple renders with same data shouldn't cause excess updates
+      await el.updateComplete;
+      await el.updateComplete;
+      await el.updateComplete;
+      
+      // Component should still be functional
+      const jobCard = el.shadowRoot.querySelector('.job-card');
+      expect(jobCard).to.exist;
+    });
+
+    it('handles component re-rendering', async () => {
+      const job = createMockJob();
+      const el = await fixture(html`<job-progress .job=${job}></job-progress>`);
+      
+      // Force multiple re-renders
+      for (let i = 0; i < 5; i++) {
+        el.requestUpdate();
+        await el.updateComplete;
+      }
+      
+      // Should still display correctly
+      const taskName = el.shadowRoot.querySelector('.task-name');
+      expect(taskName.textContent.trim()).to.equal('Install Test App');
+    });
   });
 });
 

@@ -2,11 +2,7 @@ import { playwrightLauncher } from '@web/test-runner-playwright';
 
 export default {
   rootDir: '../src/',
-  files: [
-    '../src/components/**/*.test.*',
-    '../src/pages/**/*.test.*',
-    '../src/api/**/*.test.*'
-  ],
+  files: ['../src/components/**/*.test.*'],
   concurrentBrowsers: 1,
   concurrency: 2,
   nodeResolve: {

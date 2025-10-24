@@ -6,6 +6,8 @@ import {
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
 import "/components/common/tag-set/tag-set.js";
+import { store } from "/state/store.js";
+import { StoreSubscriber } from "/state/subscribe.js";
 import { getInstallationStateProperties } from "../../../utils/installation-states.js";
 
 class PupInstallCard extends LitElement {
@@ -35,6 +37,18 @@ class PupInstallCard extends LitElement {
     this.href = ""
     this.source = {};
     this.installationState = { id: null, label: null };
+    this.context = new StoreSubscriber(this, store);
+  }
+
+  get updateInfo() {
+    if (!this.pupId) return null;
+    const { pupUpdatesContext } = this.context.store;
+    return pupUpdatesContext.updateInfo[this.pupId] || null;
+  }
+
+  get hasUpdate() {
+    const info = this.updateInfo;
+    return info ? info.updateAvailable : false;
   }
 
   get status() {
@@ -76,7 +90,7 @@ class PupInstallCard extends LitElement {
     const { 
       defaultIcon, pupName, version, logoBase64, 
       status, gui, short, href, upstreamVersions,
-      installed, updateAvailable, source,
+      installed, source,
       installationState
     } = this;
 
@@ -86,21 +100,19 @@ class PupInstallCard extends LitElement {
         return nothing;
       }
 
-      // If an update is available, show that
-      if (updateAvailable) {
-        return html`
-          <sl-tag class="card-installation-tag" pill variant="primary">
-            Update Available <sl-icon class="card-installation-tag-icon" name="info-circle-fill"></sl-icon>
-          </sl-tag>
-        `;
-      }
-
       const status = getInstallationStateProperties(installationState?.id);
 
       return html`
-        <sl-tag pill variant=${status.variant}>
-          ${(installationState?.label || 'Unknown').charAt(0).toUpperCase() + (installationState?.label || 'Unknown').slice(1)} <sl-icon class="card-installation-tag-icon" name=${status.icon}></sl-icon>
-        </sl-tag>
+        <div class="installation-badges">
+          ${this.hasUpdate ? html`
+            <sl-tag class="card-installation-tag" pill variant="primary">
+              Update Available <sl-icon class="card-installation-tag-icon" name="info-circle-fill"></sl-icon>
+            </sl-tag>
+          ` : nothing}
+          <sl-tag pill variant=${status.variant}>
+            ${(installationState?.label || 'Unknown').charAt(0).toUpperCase() + (installationState?.label || 'Unknown').slice(1)} <sl-icon class="card-installation-tag-icon" name=${status.icon}></sl-icon>
+          </sl-tag>
+        </div>
       `;
     };
 
@@ -276,6 +288,13 @@ class PupInstallCard extends LitElement {
 
     .tag-set {
       margin-top: 6px;
+    }
+
+    .installation-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
     }
 
     .card-installation-tag-icon {

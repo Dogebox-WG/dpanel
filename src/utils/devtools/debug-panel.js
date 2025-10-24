@@ -9,6 +9,7 @@ import { hookManager } from "/api/hooks.js";
 import { bindToClass } from "/utils/class-bind.js";
 import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
+import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
 
 class DebugPanel extends LitElement {
   static properties = {
@@ -137,6 +138,36 @@ class DebugPanel extends LitElement {
     hookManager.set('bump-version', newState);
   }
 
+  async handleCheckPupUpdates() {
+    try {
+      const result = await checkPupUpdates('all');
+      const alert = Object.assign(document.createElement('sl-alert'), {
+        variant: 'success',
+        duration: 3000,
+        closable: true
+      });
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="check-circle"></sl-icon>
+        Update check initiated! Job ID: ${result.jobId || 'N/A'}
+      `;
+      document.body.appendChild(alert);
+      alert.toast();
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      const alert = Object.assign(document.createElement('sl-alert'), {
+        variant: 'danger',
+        duration: 5000,
+        closable: true
+      });
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+        Failed to check for updates: ${error.message}
+      `;
+      document.body.appendChild(alert);
+      alert.toast();
+    }
+  }
+
   render() {
     const classes = {
       "debugger-container": true,
@@ -173,6 +204,9 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>
                     <sl-menu-item @click=${this.emitSyntheticUpdateAvailable}>Update Available</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Pup Upgrades</sl-menu-label>
+                    <sl-menu-item @click=${this.handleCheckPupUpdates}>Check for Updates</sl-menu-item>
                   </sl-menu>
                 </sl-menu-item>
                 <sl-menu-item @click=${this.showSettingsDialog}>Open Config</sl-menu-item>

@@ -2,6 +2,7 @@ import WebSocketClient from "/api/sockets.js";
 import { store } from "/state/store.js";
 import { pkgController } from "/controllers/package/index.js";
 import { sysController } from "/controllers/system/index.js";
+import { pupUpdates } from "/state/pup-updates.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { performMockCycle, c1, c4, c5, mockInstallEvent } from "/api/mocks/pup-state-cycle.js";
 import { isUnauthedRoute } from "/utils/url-utils.js";
@@ -117,6 +118,12 @@ class SocketChannel {
           // emitted in response to an action
           await asyncTimeout(500); // Why?
           pkgController.resolveAction(data.id, data);
+          
+          // If this was a CheckPupUpdates action that succeeded, refresh cached update info
+          if (!data.error && data.update && (data.update.pupsChecked !== undefined || data.update.updateInfo)) {
+            console.log('CheckPupUpdates completed, refreshing cached update info...');
+            await pupUpdates.refresh();
+          }
           break;
 
         case "prompt": // synthetic (client side only)

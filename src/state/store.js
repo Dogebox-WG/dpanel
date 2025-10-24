@@ -43,6 +43,11 @@ class Store {
       ready: false,
       result: null,
     };
+    this.pupUpdatesContext = {
+      updateInfo: {}, // Map of pupId -> PupUpdateInfo
+      lastChecked: null,
+      totalUpdatesAvailable: 0,
+    };
     this.promptContext = {
       display: false,
       name: "transaction",
@@ -162,6 +167,9 @@ class Store {
     }
     if (partialState.pupContext) {
       this.pupContext = { ...this.pupContext, ...partialState.pupContext };
+    }
+    if (partialState.pupUpdatesContext) {
+      this.pupUpdatesContext = { ...this.pupUpdatesContext, ...partialState.pupUpdatesContext };
     }
     if (partialState.promptContext) {
       this.promptContext = {

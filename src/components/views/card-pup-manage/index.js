@@ -7,6 +7,8 @@
   } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
   import "/components/common/tag-set/tag-set.js";
+  import { store } from "/state/store.js";
+  import { StoreSubscriber } from "/state/subscribe.js";
 
   class PupCard extends LitElement {
     static get properties() {
@@ -27,6 +29,17 @@
 
     constructor() {
       super();
+      this.context = new StoreSubscriber(this, store);
+    }
+
+    get updateInfo() {
+      const { pupUpdatesContext } = this.context.store;
+      return pupUpdatesContext.updateInfo[this.pupId] || null;
+    }
+
+    get hasUpdate() {
+      const info = this.updateInfo;
+      return info ? info.updateAvailable : false;
     }
 
     get status() {
@@ -55,7 +68,13 @@
 
             <div class="details-wrap">
               <div class="inner">
-                <span class="name">${pupName} <small style="color: #777">v${version}</small></span>
+                <span class="name">
+                  ${pupName} 
+                  <small style="color: #777">v${version}</small>
+                  ${this.hasUpdate ? html`
+                    <sl-badge variant="primary" pill pulse>Update Available</sl-badge>
+                  ` : nothing}
+                </span>
                 <x-tag-set .tags=${upstreamVersions} highlight max=1></x-tag-set>
                 <span class=${statusClassMap}>${status}</span>
               </div>

@@ -58,6 +58,9 @@ import { mainChannel } from "/controllers/sockets/main-channel.js";
 // Pkg controller
 import { pkgController } from "/controllers/package/index.js"
 
+// Pup update service
+import { pupUpdates } from "/state/pup-updates.js";
+
 class DPanelApp extends LitElement {
   static properties = {
     ready: { type: Boolean },
@@ -152,6 +155,9 @@ class DPanelApp extends LitElement {
       if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
         showWelcomeModal();
       }
+
+      // Initialize pup update service to check for updates
+      pupUpdates.init();
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

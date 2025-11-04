@@ -33,6 +33,8 @@ export async function stopPup(pupId, body) {
   return client.post(`/pup/${pupId}/disable`, body, { mock: stopMock });
 }
 
+
+
 export function pickAndPerformPupAction(pupId, action, body) {
   switch(action) {
     case 'install':
@@ -52,6 +54,8 @@ export function pickAndPerformPupAction(pupId, action, body) {
       break;
     case 'set-provider':
       return setProvider(pupId, body);
+      break;
+
     default:
       console.warn('unsupported pup action requested', action);
   }

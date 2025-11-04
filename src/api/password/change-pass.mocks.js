@@ -1,5 +1,5 @@
 export const postResponse = {
-  name: "/change-pass",
+  name: "/change-password",
   group: "auth",
   method: "post",
   res: {

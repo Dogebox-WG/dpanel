@@ -1,6 +1,8 @@
 import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postLogin } from "/api/login/login.js";
 import { store } from "/state/store.js";
+import { showWelcomeModal } from "/components/common/welcome-modal.js";
+import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 
 // Components
 import "/components/common/dynamic-form/dynamic-form.js";
@@ -97,8 +99,9 @@ class LoginView extends LitElement {
   }
 
   _attemptLogin = async (data, form, dynamicFormInstance) => {
-    // TODO
-    // data.password = await hash(data.password);
+    // data.password = await hash(data.password); //TODO: Hash password
+    data.password = data.password;
+    
     const loginResponse = await postLogin(data).catch(this.handleFault);
     if (!loginResponse) {
       dynamicFormInstance.retainChanges(); // stops spinner
@@ -149,7 +152,16 @@ class LoginView extends LitElement {
     }
   }
 
-  handleSuccess() {
+  async handleSuccess() {
+    try {
+      // Fetch bootstrap data to check if this is first login
+      const bootstrap = await getBootstrapV2();
+      if (bootstrap?.flags && !bootstrap.flags.isFirstTimeWelcomeComplete) {
+        showWelcomeModal();
+      }
+    } catch (err) {
+      console.warn('Failed to fetch bootstrap data:', err);
+    }
     window.location = "/";
   }
 
@@ -174,18 +186,21 @@ class LoginView extends LitElement {
             style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
           >
           </dynamic-form>
+
+          <sl-button variant="text" @click="${this.handleForgotPass}" style="margin-top: 1em;">
+            I forgot my password
+          </sl-button>
         </div>
-        ${false ? html`<sl-button variant="text" @click="${this.handleForgotPass}">
-          I forgot my password
-        </sl-button>` : nothing}
       </div>
 
       <sl-dialog id="ChangePassDialog">
         <x-action-change-pass
-          resetMethod="credentials"
+          resetMethod="seedphrase"
           showSuccessAlert
           refreshAfterChange
           .fieldDefaults=${{ resetMethod: 0 }}
+          label="Reset Password"
+          description="Reset your password using your recovery phrase or current password"
         ></x-action-change-pass>
       </sl-dialog>
     `;

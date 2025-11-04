@@ -6,24 +6,9 @@ export function openConfig() {
 }
 
 export function renderActions() {
-  // const pupDefinitionContext = this.context.store?.pupDefinitionContext
-
-  // const def = this.pkgController.getPupDefinition(pupDefinitionContext.source.id, pupDefinitionContext.id);
-  // const pkg = this.pkgController.getPup(def.installedId)
-
-  // const installationId = pkg?.computed?.installationId;
-  // const installationLabel = pkg?.computed?.installationLabel;
-  // const statusId = pkg?.computed?.statusId;
-  // const statusLabel = pkg?.computed?.statusLabel;
-
-  const pupContext = this.context.store?.pupContext;
   const pkg = this.getPup();
-
   const installationId = pkg.computed.installationId;
-  const installationLabel = pkg.computed.installationLabel;
-
   const isInstalled = pkg.computed.isInstalled;
-  const isLoadingStatus = ["installing"].includes(installationId);
 
   const styles = css`
     .action-wrap {
@@ -37,21 +22,34 @@ export function renderActions() {
         min-width: 180px;
       }
     }
+
+    .install-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      align-items: flex-start;
+    }
+
+    .install-container sl-button {
+      width: 180px;
+    }
   `;
 
   return html`
     <div class="action-wrap">
       ${!isInstalled && installationId !== "installing"
         ? html`
-            <sl-button
-              variant="warning"
-              size="large"
-              @click=${this.handleInstall}
-              ?disabled=${this.inflight}
-              ?loading=${this.inflight}
-            >
-              Such Install
-            </sl-button>
+            <div class="install-container">
+              <sl-button
+                variant="warning"
+                size="large"
+                @click=${this.handleInstall}
+                ?disabled=${this.inflight}
+                ?loading=${this.inflight}
+              >
+                Such Install
+              </sl-button>
+            </div>
           `
         : nothing}
       ${isInstalled && installationId === "installing"
@@ -95,7 +93,6 @@ export function renderActions() {
 }
 
 export async function handleInstall() {
-  const pupContext = this.context.store.pupContext;
   const pkg = this.getPup();
   this.inflight = true;
   const callbacks = {
@@ -116,6 +113,8 @@ export async function handleInstall() {
     sourceId: pkg.def.source.id,
     pupName: pkg.def.versions[pkg.def.latestVersion].meta.name,
     pupVersion: pkg.def.latestVersion,
+    autoInstallDependencies: Boolean(this.autoInstallDependencies),
+    installWithDevModeEnabled: Boolean(this.installWithDevModeEnabled)
   };
 
   await this.pkgController.requestPupAction("--", "install", callbacks, body);

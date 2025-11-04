@@ -17,6 +17,7 @@ import { postResponse as dkmCreate } from "./keys/create-key.mocks.js";
 import { postResponse as authLogin } from "./login/login.mocks.js";
 import { getResponse as networkList } from "./network/get-networks.mocks.js";
 import { postResponse as networkSet } from "./network/set-network.mocks.js";
+import { postResponse as networkTest } from "./network/test-network.mocks.js";
 import { postResponse as changePass } from "./password/change-pass.mocks.js";
 import { getResponse as checkReflector } from "./reflector/get-ip.mocks.js";
 import { getResponse as apModeFacts } from "./system/get-bootstrap.mocks.js";
@@ -35,7 +36,11 @@ import {
 } from "./system/keymaps.mocks.js";
 
 import { postResponse as setHostname } from "./system/hostname.mocks.js";
-import { getResponse as checkForUpdates, postResponse as commenceUpdate } from "./system/updates.mocks.js";
+import {
+  getResponse as checkForUpdates,
+  postResponse as commenceUpdate,
+} from "./system/updates.mocks.js";
+import { postResponse as importBlockchain } from "./system/import-blockchain-data.mocks.js";
 
 import {
   getSSHPublicKeysResponse,
@@ -61,6 +66,7 @@ export const mocks = [
   authLogin,
   networkList,
   networkSet,
+  networkTest,
   changePass,
   checkReflector,
   apModeFacts,
@@ -74,9 +80,10 @@ export const mocks = [
   setHostname,
   checkForUpdates,
   commenceUpdate,
+  importBlockchain,
   getSSHPublicKeysResponse,
   deleteSSHPublicKeyResponse,
   addSSHPublicKeyResponse,
   updateSSHStateResponse,
-  getSSHStateResponse
+  getSSHStateResponse,
 ];

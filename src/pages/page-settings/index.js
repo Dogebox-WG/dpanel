@@ -163,7 +163,7 @@ class SettingsPage extends LitElement {
   render() {
     const { updateAvailable } = store.getContext('sys')
     const dialog = store.getContext('dialog')
-    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain"].includes(dialog.name);
+    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "date-time"].includes(dialog.name);
     
     // Debug logging
     console.log('Settings page render:', {
@@ -195,6 +195,9 @@ class SettingsPage extends LitElement {
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
+	          <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
+	            Where are we?  What time is it?
+	          </action-row>
           <div class="list-wrap">
         </section>
 
@@ -229,6 +232,7 @@ class SettingsPage extends LitElement {
           ["remote-access", () => html`<x-action-remote-access></x-action-remote-access>`],
           ["versions", () => renderVersionsDialog(store, this.handleDialogClose)],
           ["import-blockchain", () => this.renderImportBlockchainDialog()],
+          ["date-time", () => html`<x-action-date-time></x-action-date-time>`],
         ])}
       </sl-dialog>
 

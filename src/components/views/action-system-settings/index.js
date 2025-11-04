@@ -3,6 +3,7 @@ import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.m
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { getKeymaps, setKeymap } from "/api/system/keymaps.js";
+import { getTimezones, setTimezone } from "/api/system/timezones.js";
 import { getDisks, setStorageDisk } from "/api/disks/disks.js";
 import { setHostname } from "/api/system/hostname.js";
 
@@ -66,6 +67,7 @@ class SystemSettings extends LitElement {
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
       _keymaps: { type: Array },
+      _timezones: { type: Array },
       _disks: { type: Array },
       _changes: { type: Object },
       _show_disk_size_warning: { type: Boolean },
@@ -78,6 +80,7 @@ class SystemSettings extends LitElement {
   constructor() {
     super();
     this._keymaps = [];
+    this._timezones = [];
     this._disks = [];
     this._changes = {
       keymap: 'us',
@@ -106,6 +109,7 @@ class SystemSettings extends LitElement {
     try {
       this._loading = true;
       this._keymaps = await getKeymaps();
+      this._timezones = await getTimezones();
       this._disks = await getDisks();
 
       // Set default disk as the "bootMedia" disk.
@@ -158,6 +162,7 @@ class SystemSettings extends LitElement {
     try {
       await setHostname({ hostname: this._changes['device-name'] });
       await setKeymap({ keymap: this._changes.keymap });
+      await setTimezone({ timezone: this._changes.timezone });
       await setStorageDisk({ storageDevice: this._changes.disk });
       didSucceed = true;
     } catch (err) {
@@ -183,6 +188,11 @@ class SystemSettings extends LitElement {
   }
 
   _handleKeymapInputChange(e) {
+    const field = e.target.getAttribute('data-field');
+    this._changes[field] = e.target.value;
+  }
+
+  _handleTimezoneInputChange(e) {
     const field = e.target.getAttribute('data-field');
     this._changes[field] = e.target.value;
   }
@@ -270,6 +280,26 @@ class SystemSettings extends LitElement {
                 (keymap) =>
                   html`<sl-option value=${keymap.id}
                     >${keymap.label} ${!keymap.label.includes(keymap.id.toUpperCase()) ? `(${keymap.id.toUpperCase()})` : ''}</sl-option
+                  >`,
+              )}
+            </sl-select>
+          </div>
+
+          <div class="form-control">
+            <sl-select
+              name="timezone"
+              required
+              label="Select Timezone" 
+              ?disabled=${this._inflight}
+              data-field="timezone"
+              value=${this._changes.timezone}
+              help-text="Where in the world should your clock be set to"
+              @sl-change=${this._handleTimezoneInputChange}
+            >
+              ${this._timezones.map(
+                (timezone) =>
+                  html`<sl-option value=${timezone.id}
+                    >${timezone.label} ${!timezone.label.includes(timezone.id.toUpperCase()) ? `(${timezone.id.toUpperCase()})` : ''}</sl-option
                   >`,
               )}
             </sl-select>

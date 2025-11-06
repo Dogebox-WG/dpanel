@@ -507,7 +507,7 @@ class PkgController {
       }
     }*/
 
-    const id = data?.update?.PupID || 'system'
+    const id = data?.update?.pupID || 'system'
 
     if (this.activityIndex[id]) {
       // Prior acitivity exists for id, add more.

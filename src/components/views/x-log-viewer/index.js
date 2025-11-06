@@ -11,6 +11,7 @@ class LogViewer extends LitElement {
       isConnected: { type: Boolean },
       follow: { type: Boolean },
       pupId: { type: String },
+      jobId: { type: String },
     };
   }
 
@@ -18,10 +19,11 @@ class LogViewer extends LitElement {
     super();
     this.logs = [];
     this.pupId = "";
+    this.jobId = "";
     this.isConnected = false;
     this.wsClient = null;
-    this.follow = true;
     this.autostart = true;
+    this.follow = true; // Default to true, user can disable temporarily
   }
 
   connectedCallback() {
@@ -31,7 +33,6 @@ class LogViewer extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    console.log('Disconnecting log-viewer socket connection');
     // Clean up WebSocket connection
     this.wsClient.disconnect();
   }
@@ -44,15 +45,29 @@ class LogViewer extends LitElement {
 
   firstUpdated() {
     const logContainer = this.shadowRoot.querySelector('#LogContainer');
+    let wasAtBottom = true;
+    
     logContainer.addEventListener('scroll', () => {
-      // Check if the user has scrolled up from the bottom
-      if (logContainer.scrollTop < logContainer.scrollHeight - logContainer.clientHeight) {
+      const isAtBottom = Math.abs(logContainer.scrollHeight - logContainer.clientHeight - logContainer.scrollTop) < 1;
+      
+      // Only update follow if it needs to change
+      if (isAtBottom && !this.follow) {
+        this.follow = true;
+      } else if (!isAtBottom && wasAtBottom && this.follow) {
+        // Only set to false if user was at bottom and scrolled up
         this.follow = false;
       }
+      
+      wasAtBottom = isAtBottom;
     });
   }
 
+  handleCheckboxClick(e) {
+    e.stopPropagation(); // Prevent event from bubbling up to parent
+  }
+
   handleFollowChange(e) {
+    e.stopPropagation(); // Prevent event from bubbling up to parent
     this.follow = e.target.checked;
     if (this.follow) {
       const logContainer = this.shadowRoot.querySelector('#LogContainer');
@@ -73,12 +88,18 @@ class LogViewer extends LitElement {
       return;
     }
 
-    if (!this.pupId) {
+    // Must have either pupId or jobId
+    if (!this.pupId && !this.jobId) {
       return;
     }
 
+    // Determine which endpoint to use
+    const logType = this.jobId ? 'job' : 'pup';
+    const logId = this.jobId || this.pupId;
+    const wsUrl = `${store.networkContext.wsApiBaseUrl}/ws/log/${logType}/${logId}`;
+
     this.wsClient = new WebSocketClient(
-      `${store.networkContext.wsApiBaseUrl}/ws/log/${this.pupId}`,
+      wsUrl,
       store.networkContext,
       mockedLogRunner
     );
@@ -90,7 +111,12 @@ class LogViewer extends LitElement {
     };
 
     this.wsClient.onMessage = async (event) => {
-      this.logs = [...this.logs, event.data];
+      // Handle different message formats
+      let logMessage = event.data;
+      if (typeof event.data === 'object') {
+        logMessage = event.data.message || event.data.data || JSON.stringify(event.data);
+      }
+      this.logs = [...this.logs, logMessage];
       await this.requestUpdate();
       if (this.follow) {
         const logContainer = this.shadowRoot.querySelector('#LogContainer');
@@ -99,6 +125,7 @@ class LogViewer extends LitElement {
     };
 
     this.wsClient.onError = (event) => {
+      console.error(`[Log Viewer] WebSocket error for ${logType} ${logId}:`, event);
       this.isConnected = false;
       this.requestUpdate();
     };
@@ -113,7 +140,8 @@ class LogViewer extends LitElement {
     }
   }
 
-  handleDownloadClick() {
+  handleDownloadClick(e) {
+    e.stopPropagation(); // Prevent event from bubbling up to parent
     const contentDiv = this.shadowRoot.querySelector("#LogContainer");
     
     let textToDownload = '';
@@ -143,17 +171,26 @@ class LogViewer extends LitElement {
     return html`
       <div>
         <div id="LogHUD">
-          <div class="status">
-            ${this.isConnected
-              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
-            }
+            <div class="status">
+              ${this.isConnected
+                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+              }
+            </div>
           </div>
-        </div>
         <div id="LogContainer">
           <ul>
             ${this.logs.map(log => html`<li>${log}</li>`)}
           </ul>
+          ${this.logs.length > 0 ? html`
+            <ul>
+              ${this.logs.map(log => html`<li>${log}</li>`)}
+            </ul>
+          ` : html`
+            <div class="no-logs-message">
+              ${this.isConnected ? 'Waiting for logs...' : 'Logs not available'}
+            </div>
+          `}
         </div>
         <div id="LogFooter">
           <div class="options">
@@ -161,6 +198,7 @@ class LogViewer extends LitElement {
               size="medium"
               ?checked=${this.follow}
               @sl-change=${this.handleFollowChange}
+              @click=${this.handleCheckboxClick}
             >Auto scroll</sl-checkbox>
           </div>
           <sl-button 
@@ -188,7 +226,6 @@ class LogViewer extends LitElement {
         position: absolute;
         right: 16px;
         top: 8px;
-
         display: flex;
         flex-direction: column;
         align-items: end;
@@ -207,7 +244,7 @@ class LogViewer extends LitElement {
       div#LogContainer {
         background: #0b0b0b;
         padding: 0.5em;
-        height: calc(100vh - (var(--log-footer-height) + var(--page-header-height)));
+        height: var(--log-viewer-height, 150px);
         overflow-y: scroll;
         overflow-x: hidden;
         box-sizing: border-box;
@@ -237,6 +274,15 @@ class LogViewer extends LitElement {
         font-weight: bold;
         margin: 0px 0;
         padding: 0px;
+      }
+      .no-logs-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #666;
+        font-style: italic;
+        font-size: 0.85rem;
       }
     `;
   }

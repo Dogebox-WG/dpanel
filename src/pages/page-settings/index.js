@@ -154,7 +154,7 @@ class SettingsPage extends LitElement {
       this.systemLogs = allSystemLogs.filter(log => 
         log.step === "import-blockchain-data"
       );
-      
+
       console.log('Filtered blockchain logs:', this.systemLogs);
     }
     super.requestUpdate();

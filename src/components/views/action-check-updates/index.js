@@ -70,12 +70,21 @@ export class CheckUpdatesView extends LitElement {
     this._inflight_checking = true;
 
     // Fetch
-    const { updates } = await checkForUpdates();
-    this._updates = updates || [];
+    const updateResponse = await checkForUpdates();
+
+    // Find any packages that have updates
+    const updatablePackages = Object.keys(updateResponse.packages).filter(pkg => {
+      return updateResponse.packages[pkg].latestUpdate !== updateResponse.packages[pkg].currentVersion
+    }).map(pkg => ({
+      ...updateResponse.packages[pkg],
+      latestUpdate: updateResponse.packages[pkg].updates.find((update) => update.version === updateResponse.packages[pkg].latestUpdate)
+    }))
+
+    this._updatablePackages = updatablePackages || [];
     await asyncTimeout(1000);
 
     // Toggle UI according to whether there are updates or not.
-    this._has_updates = !!this._updates.length;
+    this._has_updates = this._updatablePackages.length > 0;
     this._inflight_checking = false;
   }
 
@@ -219,18 +228,19 @@ export class CheckUpdatesView extends LitElement {
         <h1>System Updates</h1>
         
         <div class="updates-list">
-          ${this._updates.length ? this._updates.map((item) => html`
+          ${this._updatablePackages.length ? this._updatablePackages.map((item) => html`
             <x-version-card
               name=${item.name}
-              version=${item.version}
-              short=${item.short}
-              link=${item.link}
+              currentVersion=${item.currentVersion}
+              newVersion=${item.latestUpdate.version}
+              short=${item.latestUpdate.summary}
+              link=${item.latestUpdate.releaseURL}
               link_label="Release notes"
-              long=${item.long}
+              long=${item.latestUpdate.long ?? item.latestUpdate.summary}
             ></x-version-card>
           `): nothing }
 
-          ${!this._updates.length ? html`
+          ${!this._updatablePackages.length ? html`
             <sl-spinner></sl-spinner>`
           : nothing }
         </div>
@@ -269,14 +279,14 @@ export class CheckUpdatesView extends LitElement {
         ${!this._inflight_update && this._update_outcome === "error" ? html`
           <sl-alert open variant="danger" style="text-align: left">
           <small style="display:inline-block; margin-bottom: 4px;">Update failed</small>
-          <sl-progress-bar value=1 style="--indicator-color: var(--sl-color-danger-600)"></sl-progress-bar>
+          <sl-progress-bar value=100 style="--indicator-color: var(--sl-color-danger-600)"></sl-progress-bar>
         </sl-alert>
         `: nothing }
 
         ${!this._inflight_update && this._update_outcome === "timeout" ? html`
           <sl-alert open variant="warning" style="text-align: left">
           <small style="display:inline-block; margin-bottom: 4px;">Update timeout</small>
-          <sl-progress-bar value=80 style="--indicator-color: var(--sl-color-warning-600)"></sl-progress-bar>
+          <sl-progress-bar value=100 style="--indicator-color: var(--sl-color-danger-600)"></sl-progress-bar>
         </sl-alert>
         `: nothing }
 
@@ -331,7 +341,10 @@ export class CheckUpdatesView extends LitElement {
 
     try {
       await asyncTimeout(1000);
-      const res = await commenceUpdate();
+
+      // We only support "dogebox" for now, when we want to support multiple packages,
+      // this, and the UI around all our upgrades will have to be updated slightly.
+      const res = await commenceUpdate("dogebox", this._updatablePackages[0].latestUpdate.version);
 
       // TODO.  Obtain "acitivityId" from response
       // Use this ID to display acitivty logs filtered
@@ -355,7 +368,8 @@ export class CheckUpdatesView extends LitElement {
 
   async pollForUpdateChange() {
     let attempts = 0;
-    const maxAttempts = 12 // 24*5000ms = 120 seconds;
+    const pollEveryMs = 5000
+    const maxAttempts = 120 // 120*0500ms/1000ms/60 = 10 minutes of waiting;
 
     const intervalId = setInterval(async () => {
       try {
@@ -390,7 +404,7 @@ export class CheckUpdatesView extends LitElement {
       } finally {
         attempts++;
       }
-    }, 5000);
+    }, pollEveryMs);
 
     return () => clearInterval(intervalId);
   }

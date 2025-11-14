@@ -1,4 +1,4 @@
-export const getResponse = {
+export const getTimezonesResponse = {
   name: "/system/timezones",
   method: "get",
   group: "setup",
@@ -9,8 +9,15 @@ export const getResponse = {
   ],
 };
 
+export const getTimezoneResponse = {
+  name: "/system/timezone",
+  method: "get",
+  group: "setup",
+  res: "Australia/Melbourne"
+}
+
 export const postResponse = {
-  name: "/system/timezones",
+  name: "/system/timezone",
   method: "post",
   group: "setup",
   res: {

@@ -7,6 +7,7 @@ import {
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import "/components/common/action-row/action-row.js";
 import "/components/views/action-check-updates/index.js";
+import "/components/views/action-date-time/index.js";
 import "/components/views/action-remote-access/index.js";
 import "/components/views/x-log-viewer/index.js";
 import "/components/views/x-activity-log.js";

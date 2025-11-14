@@ -8,6 +8,7 @@ import {
 import "/components/common/action-row/action-row.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
+import { getTimezone, getTimezones, setTimezone } from "/api/system/timezones.js";
 
 export class DateTimeSettings extends LitElement {
   static get properties() {
@@ -90,15 +91,122 @@ export class DateTimeSettings extends LitElement {
       gap: 1em;
     }
 
-  `
+  `;
+
+  static get properties() {
+    return {
+      _loading: { type: Boolean },
+      _inflight: { type: Boolean },
+      _timezones: { type: Array },
+      _timezone: { type: String },
+      _changes: { type: Object },
+    };
+  }
+
   constructor() {
     super();
+    this._timezones = [];
+    this._changes = {};
   }
  
-  render() {
-    return html`
-      <h1>HI I'M A H1</h1>
+  async connectedCallback() {
+    super.connectedCallback();
+  }
+  
+  async firstUpdated() {
+    window.scrollTo({ top: 0 });
+    await this._fetch();
+  }
+  
+  handleDialogClose() {
+    //store.updateState({ dialogContext: { name: null }});
+    //const router = getRouter();
+    //router.go('/settings', { replace: true });
+  }
+  
+  handleCloseClick() {
+    this.dispatchEvent(new CustomEvent('request-close', {
+      bubbles: true,
+      composed: true,
+    }));
+  }
 
+  async _fetch() {
+    try {
+      this._loading = true;
+      this._timezones = await getTimezones();
+      this._current_timezone = await getTimezone();
+
+    } catch (e) {
+      console.error(e.toString());
+    } finally {
+      this._loading = false;
+    }
+  }
+
+  async _attemptSubmit() {
+    this._inflight = true;
+
+    // Only input elements that have a name attribute are sent to backend.
+    const formFields = this.shadowRoot.querySelectorAll('sl-input[name], sl-select[name], sl-checkbox[name]');
+    const hasInvalidField = Array.from(formFields).some(field => field.hasAttribute('data-invalid'));
+
+    await asyncTimeout(2000);
+
+    if (hasInvalidField) {
+      createAlert('warning', 'Uh oh, invalid data detected.');
+      this._inflight = false;
+      return;
+    }
+
+    let didSucceed = false
+
+    try {
+      await setTimezone({ timezone: this._changes.timezone });
+      didSucceed = true;
+    } catch (err) {
+      console.error('Error occurred when saving config', err);
+      createAlert('danger', ['Failed to save config', 'Please refresh and try again'])
+    } finally {
+      this._inflight = false;
+      if (didSucceed) {
+        //await this.onSuccess();
+        this.handleDialogClose(); 
+      }
+    }
+  }
+
+  _handleTimezoneInputChange(e) {
+    const field = e.target.getAttribute('data-field');
+    this._changes[field] = e.target.value;
+  }
+
+  render() {
+    console.log(JSON.stringify(this._current_timezone))
+    return html`
+      <h1>Date and Time</h1>
+
+      <div class="form-control">
+            <sl-select
+              name="timezone"
+              
+              required
+              label="Timezone" 
+              ?disabled=${this._inflight}
+              data-field="timezone"
+              value=${this._current_timezone}
+              help-text="Where in the world should your clock be set to"
+              @sl-change=${this._handleTimezoneInputChange}
+            >
+              ${this._timezones.map(
+                (timezone) =>
+                  html`<sl-option value=${timezone.label}>${timezone.label}</sl-option>`,
+              )}
+            </sl-select>
+        <div slot="footer">
+          <sl-button variant="primary" ?disabled=${this._inflight} ?loading=${this._inflight} @click=${this._attemptSubmit}>Submit</sl-button>
+        </div>
+      </div>
     `
   }
 }

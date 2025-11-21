@@ -13,8 +13,11 @@ export async function checkForUpdates() {
   return res;
 }
 
-export async function commenceUpdate() {
-  const res = await client.post(`/system/updates/commence`, {}, {
+export async function commenceUpdate(pkg, version) {
+  const res = await client.post(`/system/update`, {
+    package: pkg,
+    version
+  }, {
     noLogoutRedirect: true,
     mock: postResponse,
   });

@@ -2,6 +2,9 @@ export function _checkForChanges() {
   if (!this.fields?.sections) return;
   let dirty = 0;
 
+  // Track validity per form section so we can disable Save when required fields are missing
+  let allValid = true;
+
   // Firstly, check if any field differs from prior state.
   this.fields.sections.forEach((section) => {
     let flattenedFields = [];
@@ -24,9 +27,27 @@ export function _checkForChanges() {
     });
 
     this[`_form_${section.name}_count`] = sectionChangeCount;
+
+    // Compute validity for this section's form if it exists
+    const form = this.shadowRoot && this.shadowRoot.querySelector(`form#${section.name}`);
+    let sectionValid = true;
+    if (form) {
+      try {
+        sectionValid = this.checkValidity(form);
+      } catch {
+        sectionValid = false;
+      }
+    } else {
+      sectionValid = false;
+    }
+    this[`_form_${section.name}_valid`] = sectionValid;
+    if (!sectionValid) {
+      allValid = false;
+    }
   });
 
   this._dirty = dirty;
+  this._allFormsValid = allValid;
 
   // [HACK] Process rules on next tick
   // Secondly, test whether any rule targeted fields have condition changes.

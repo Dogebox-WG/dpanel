@@ -35,15 +35,15 @@ export class RemoteAccessSettings extends LitElement {
       _show_private_key_warning: { type: Boolean },
       _new_key_value: { type: String },
       _ssh_state: { type: Object },
-      // Tailscale state
+      // Tailscale
       _tailscale_state: { type: Object },
+      _tailscale_status: { type: Object },
+      _tailscale_rebuilding: { type: Boolean },
+      _tailscale_checking: { type: Boolean },
       _tailscale_auth_key: { type: String },
       _tailscale_hostname: { type: String },
       _tailscale_advertise_routes: { type: String },
       _tailscale_tags: { type: String },
-      _tailscale_inflight: { type: Boolean },
-      _tailscale_pending_action: { type: String },
-      _tailscale_runtime_status: { type: Object },
     }
   }
 
@@ -239,32 +239,53 @@ export class RemoteAccessSettings extends LitElement {
     this._ssh_state = {};
     // Tailscale
     this._tailscale_state = {};
+    this._tailscale_status = null;
+    this._tailscale_rebuilding = false;
+    this._tailscale_checking = true; // Start in checking state
     this._tailscale_auth_key = "";
     this._tailscale_hostname = "";
     this._tailscale_advertise_routes = "";
     this._tailscale_tags = "";
-    this._tailscale_inflight = false;
-    this._tailscale_pending_action = null;
-    this._tailscale_runtime_status = null;
-    this._refreshInterval = null;
+    this._pollInterval = null;
   }
 
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    if (this._refreshInterval) {
-      clearInterval(this._refreshInterval);
-    }
-  }
-
-  firstUpdated() {
+  connectedCallback() {
+    super.connectedCallback();
+    // Reset to checking state when component reconnects
+    this._tailscale_checking = true;
+    this._tailscale_status = null;
+    this._checkingAttempts = 0;
+    
     this.fetchSSHState();
     this.fetchSSHPublicKeys();
     this.fetchTailscaleState();
     this.fetchTailscaleStatus();
+    this.startPolling();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.stopPolling();
+  }
+
+  startPolling() {
+    this.stopPolling();
+    // Poll status every 3 seconds when component is visible
+    this._pollInterval = setInterval(() => {
+      if (this._tailscale_state.enabled) {
+        this.fetchTailscaleStatus();
+      }
+    }, 3000);
+  }
+
+  stopPolling() {
+    if (this._pollInterval) {
+      clearInterval(this._pollInterval);
+      this._pollInterval = null;
+    }
   }
 
   async fetchSSHState() {
-    this._inflight_state_fetch = true;
     try {
       const res = await getSSHState();
       if (res) {
@@ -272,8 +293,6 @@ export class RemoteAccessSettings extends LitElement {
       }
     } catch (err) {
       createAlert('warning', 'Failed to fetch SSH state');
-    } finally {
-      this._inflight_state_fetch = false;
     }
   }
 
@@ -281,38 +300,10 @@ export class RemoteAccessSettings extends LitElement {
     try {
       const res = await getTailscaleState();
       if (res) {
-        const previousEnabled = this._tailscale_state.enabled;
         this._tailscale_state = res;
-        
-        // Populate form fields with current values
         this._tailscale_hostname = res.hostname || "";
         this._tailscale_advertise_routes = res.advertiseRoutes || "";
         this._tailscale_tags = res.tags || "";
-        // Don't populate auth key - it's sensitive
-        
-        // Clear pending action if state change completed
-        if (this._tailscale_pending_action) {
-          if (this._tailscale_pending_action === 'enabling' && res.enabled) {
-            this._tailscale_pending_action = null;
-            if (this._refreshInterval) {
-              clearInterval(this._refreshInterval);
-              this._refreshInterval = null;
-            }
-          } else if (this._tailscale_pending_action === 'disabling' && !res.enabled) {
-            this._tailscale_pending_action = null;
-            if (this._refreshInterval) {
-              clearInterval(this._refreshInterval);
-              this._refreshInterval = null;
-            }
-          } else if (this._tailscale_pending_action === 'configuring') {
-            // Config changes are harder to detect, just clear after a few polls
-            this._tailscale_pending_action = null;
-            if (this._refreshInterval) {
-              clearInterval(this._refreshInterval);
-              this._refreshInterval = null;
-            }
-          }
-        }
       }
     } catch (err) {
       createAlert('warning', 'Failed to fetch Tailscale state');
@@ -323,27 +314,43 @@ export class RemoteAccessSettings extends LitElement {
     try {
       const res = await getTailscaleStatus();
       if (res) {
-        this._tailscale_runtime_status = res;
+        // Only update status and clear checking state if we got a real response
+        // (not an error like "service not responding")
+        const isRealStatus = res.backendState && !res.error;
+        
+        if (isRealStatus) {
+          this._tailscale_status = res;
+          this._tailscale_checking = false;
+          this._tailscale_rebuilding = false;
+          this._checkingAttempts = 0;
+        } else if (this._tailscale_checking || this._tailscale_rebuilding) {
+          // Still checking/rebuilding - increment attempts
+          this._checkingAttempts = (this._checkingAttempts || 0) + 1;
+          // After 10 attempts (30 seconds), give up and show the error
+          if (this._checkingAttempts >= 10) {
+            this._tailscale_status = res;
+            this._tailscale_checking = false;
+            this._tailscale_rebuilding = false;
+          }
+        } else {
+          // Not in checking/rebuilding mode, show the status as-is
+          this._tailscale_status = res;
+        }
       }
     } catch (err) {
-      // Silently fail - status is optional
-      console.log('Failed to fetch Tailscale runtime status', err);
+      console.log('Failed to fetch Tailscale status', err);
     }
   }
 
   async fetchSSHPublicKeys() {
-    // spinner start
     this._loading = true;
-
     await asyncTimeout(1000);
-
     try {
       const res = await getSSHPublicKeys();
       if (res.keys) {
         this._ssh_public_keys = res.keys
       }
     } catch (err) {
-      // failed to fetch keys
       this._server_fault = err.message;
       console.log('ER', err);
     } finally {
@@ -367,7 +374,7 @@ export class RemoteAccessSettings extends LitElement {
     this._inflight = true;
     await asyncTimeout(1000);
     try {
-      const res = await addSSHPublicKey(this._new_key_value.trim())
+      await addSSHPublicKey(this._new_key_value.trim())
       await asyncTimeout(2000);
       this._inflight = false;
       this._show_add_key_dialog = false;
@@ -383,7 +390,7 @@ export class RemoteAccessSettings extends LitElement {
     this._inflight = true;
     await asyncTimeout(1000);
     try {
-      const res = await deleteSSHPublicKey(this._selected_key_id_for_trash)
+      await deleteSSHPublicKey(this._selected_key_id_for_trash)
       await asyncTimeout(2000);
       this._selected_key_id_for_trash = "";
       this._inflight = false;
@@ -412,56 +419,20 @@ export class RemoteAccessSettings extends LitElement {
 
   async handleTailscaleToggle(e) {
     const enabling = e.target.checked;
-    this._tailscale_inflight = true;
-    this._tailscale_pending_action = enabling ? 'enabling' : 'disabling';
+    this._tailscale_rebuilding = true;
     
     try {
       await setTailscaleState({ enabled: enabling });
       this._tailscale_state = { ...this._tailscale_state, enabled: enabling };
-      
-      if (enabling) {
-        createAlert('success', 'Enabling Tailscale. A system rebuild is in progress...');
-      } else {
-        createAlert('success', 'Disabling Tailscale. A system rebuild is in progress...');
-      }
-      
-      // Start polling to refresh state after rebuild completes
-      this.startRefreshPolling();
+      createAlert('success', enabling ? 'Enabling Tailscale...' : 'Disabling Tailscale...');
     } catch (err) {
       createAlert('danger', 'Failed to change Tailscale state');
-      this._tailscale_pending_action = null;
-    } finally {
-      this._tailscale_inflight = false;
+      this._tailscale_rebuilding = false;
     }
-  }
-
-  startRefreshPolling() {
-    // Clear any existing interval
-    if (this._refreshInterval) {
-      clearInterval(this._refreshInterval);
-    }
-    
-    // Poll every 5 seconds for up to 2 minutes
-    let pollCount = 0;
-    const maxPolls = 24;
-    
-    this._refreshInterval = setInterval(async () => {
-      pollCount++;
-      await this.fetchTailscaleState();
-      await this.fetchTailscaleStatus();
-      
-      // Stop polling after max attempts or if no pending action
-      if (pollCount >= maxPolls) {
-        clearInterval(this._refreshInterval);
-        this._refreshInterval = null;
-        this._tailscale_pending_action = null;
-      }
-    }, 5000);
   }
 
   async handleTailscaleConfigSave() {
-    this._tailscale_inflight = true;
-    this._tailscale_pending_action = 'configuring';
+    this._tailscale_rebuilding = true;
     
     try {
       await setTailscaleConfig({
@@ -470,17 +441,117 @@ export class RemoteAccessSettings extends LitElement {
         advertiseRoutes: this._tailscale_advertise_routes,
         tags: this._tailscale_tags,
       });
-      createAlert('success', 'Tailscale configuration saved. A system rebuild is in progress...');
-      // Clear auth key from input after saving
+      createAlert('success', 'Tailscale configuration saved.');
       this._tailscale_auth_key = "";
-      // Start polling to refresh state
-      this.startRefreshPolling();
+      // Refresh state to get updated hasAuthKey
+      await this.fetchTailscaleState();
     } catch (err) {
       createAlert('danger', 'Failed to save Tailscale configuration');
-      this._tailscale_pending_action = null;
-    } finally {
-      this._tailscale_inflight = false;
+      this._tailscale_rebuilding = false;
     }
+  }
+
+  renderTailscaleStatus() {
+    const status = this._tailscale_status;
+    
+    // Show rebuilding message if a rebuild is in progress
+    if (this._tailscale_rebuilding) {
+      return html`
+        <div class="tailscale-status-header pending">
+          <sl-spinner style="--indicator-color: var(--sl-color-warning-500); --track-width: 2px; font-size: 1rem;"></sl-spinner>
+          <span>System rebuild in progress...</span>
+        </div>
+      `;
+    }
+    
+    // Show checking message while waiting for first valid status
+    if (this._tailscale_checking) {
+      return html`
+        <div class="tailscale-status-header pending">
+          <sl-spinner style="--indicator-color: #777; --track-width: 2px; font-size: 1rem;"></sl-spinner>
+          <span>Checking status...</span>
+        </div>
+      `;
+    }
+    
+    // Show status based on backend state
+    if (status?.backendState === 'Running') {
+      return html`
+        <div class="tailscale-status-header connected">
+          <sl-icon name="check-circle-fill"></sl-icon>
+          <span>Connected</span>
+        </div>
+        <div class="tailscale-status-details">
+          ${status.tailscaleIP ? html`
+            <div class="detail-row">
+              <span class="detail-label">Tailscale IP</span>
+              <span>${status.tailscaleIP}</span>
+            </div>
+          ` : nothing}
+          ${status.hostname ? html`
+            <div class="detail-row">
+              <span class="detail-label">DNS Name</span>
+              <span>${status.hostname}</span>
+            </div>
+          ` : nothing}
+        </div>
+      `;
+    }
+    
+    if (status?.backendState === 'NeedsLogin') {
+      return html`
+        <div class="tailscale-status-header pending">
+          <sl-icon name="exclamation-triangle-fill"></sl-icon>
+          <span>Needs Authentication</span>
+        </div>
+        <div class="tailscale-status-details">
+          Tailscale is running but not authenticated. Add or update your auth key below.
+        </div>
+      `;
+    }
+    
+    if (status?.backendState === 'Starting') {
+      return html`
+        <div class="tailscale-status-header pending">
+          <sl-spinner style="--indicator-color: var(--sl-color-warning-500); --track-width: 2px; font-size: 1rem;"></sl-spinner>
+          <span>Starting...</span>
+        </div>
+      `;
+    }
+    
+    // Not running or error
+    if (status?.error || status?.backendState === 'NotRunning') {
+      return html`
+        <div class="tailscale-status-header disconnected">
+          <sl-icon name="x-circle-fill"></sl-icon>
+          <span>Not Running</span>
+        </div>
+        <div class="tailscale-status-details" style="color: var(--sl-color-danger-500);">
+          ${status?.error || 'Tailscale service is not running.'}
+        </div>
+      `;
+    }
+    
+    // No auth key configured
+    if (!this._tailscale_state.hasAuthKey) {
+      return html`
+        <div class="tailscale-status-header disconnected">
+          <sl-icon name="exclamation-circle"></sl-icon>
+          <span>Needs Configuration</span>
+        </div>
+        <div class="tailscale-status-details" style="color: var(--sl-color-warning-500);">
+          Add an auth key below to connect to your Tailscale network.
+        </div>
+      `;
+    }
+    
+    // Loading/unknown state
+    return html`
+      <div class="tailscale-status-header pending">
+        <sl-spinner style="--indicator-color: #777; --track-width: 2px; font-size: 1rem;"></sl-spinner>
+        <span>Checking status...</span>
+      </div>
+    `;
   }
 
   render() {
@@ -564,7 +635,7 @@ export class RemoteAccessSettings extends LitElement {
           <sl-switch 
             @sl-change=${this.handleTailscaleToggle} 
             ?checked=${this._tailscale_state.enabled}
-            ?disabled=${this._tailscale_inflight}
+            ?disabled=${this._tailscale_rebuilding}
             help-text="Enable Tailscale VPN service on your Dogebox.">
             Enable Tailscale
           </sl-switch>
@@ -573,84 +644,7 @@ export class RemoteAccessSettings extends LitElement {
         ${this._tailscale_state.enabled ? html`
           <!-- Status Display -->
           <div class="tailscale-status">
-            ${this._tailscale_pending_action ? html`
-              <div class="tailscale-status-header pending">
-                <sl-spinner style="--indicator-color: var(--sl-color-warning-500); --track-width: 2px; font-size: 1rem;"></sl-spinner>
-                <span>System rebuild in progress...</span>
-              </div>
-              <div class="tailscale-status-details">
-                ${this._tailscale_pending_action === 'enabling' ? 'Enabling Tailscale service...' : 
-                  this._tailscale_pending_action === 'disabling' ? 'Disabling Tailscale service...' : 
-                  'Applying configuration changes...'}
-              </div>
-            ` : html`
-              ${this._tailscale_runtime_status?.backendState === 'Running' ? html`
-                <!-- Connected State -->
-                <div class="tailscale-status-header connected">
-                  <sl-icon name="check-circle-fill"></sl-icon>
-                  <span>Connected</span>
-                </div>
-                <div class="tailscale-status-details">
-                  ${this._tailscale_runtime_status.tailscaleIP ? html`
-                    <div class="detail-row">
-                      <span class="detail-label">Tailscale IP</span>
-                      <span>${this._tailscale_runtime_status.tailscaleIP}</span>
-                    </div>
-                  ` : nothing}
-                  ${this._tailscale_runtime_status.hostname ? html`
-                    <div class="detail-row">
-                      <span class="detail-label">DNS Name</span>
-                      <span>${this._tailscale_runtime_status.hostname}</span>
-                    </div>
-                  ` : nothing}
-                  ${this._tailscale_state.advertiseRoutes ? html`
-                    <div class="detail-row">
-                      <span class="detail-label">Routes</span>
-                      <span>${this._tailscale_state.advertiseRoutes}</span>
-                    </div>
-                  ` : nothing}
-                </div>
-              ` : this._tailscale_runtime_status?.backendState === 'NeedsLogin' ? html`
-                <!-- Needs Login State -->
-                <div class="tailscale-status-header pending">
-                  <sl-icon name="exclamation-triangle-fill"></sl-icon>
-                  <span>Needs Authentication</span>
-                </div>
-                <div class="tailscale-status-details">
-                  <div style="color: var(--sl-color-warning-500);">
-                    Tailscale service is running but not authenticated. Add or update your auth key below.
-                  </div>
-                </div>
-              ` : this._tailscale_runtime_status?.backendState === 'NotRunning' || this._tailscale_runtime_status?.error ? html`
-                <!-- Not Running State -->
-                <div class="tailscale-status-header disconnected">
-                  <sl-icon name="x-circle-fill"></sl-icon>
-                  <span>Not Running</span>
-                </div>
-                <div class="tailscale-status-details">
-                  <div style="color: var(--sl-color-danger-500);">
-                    ${this._tailscale_runtime_status?.error || 'Tailscale service is not running. Try disabling and re-enabling.'}
-                  </div>
-                </div>
-              ` : !this._tailscale_state.hasAuthKey ? html`
-                <!-- No Auth Key State -->
-                <div class="tailscale-status-header disconnected">
-                  <sl-icon name="exclamation-circle"></sl-icon>
-                  <span>Needs Configuration</span>
-                </div>
-                <div class="tailscale-status-details">
-                  <div style="color: var(--sl-color-warning-500);">
-                    ⚠️ Add an auth key below to connect to your Tailscale network.
-                  </div>
-                </div>
-              ` : html`
-                <!-- Unknown/Loading State -->
-                <div class="tailscale-status-header disconnected">
-                  <sl-spinner style="--indicator-color: #777; --track-width: 2px; font-size: 1rem;"></sl-spinner>
-                  <span>Checking status...</span>
-                </div>
-              `}
-            `}
+            ${this.renderTailscaleStatus()}
           </div>
 
           <!-- Configuration Form -->
@@ -691,8 +685,7 @@ export class RemoteAccessSettings extends LitElement {
             <div class="config-actions">
               <sl-button 
                 variant="primary" 
-                ?loading=${this._tailscale_inflight}
-                ?disabled=${this._tailscale_pending_action}
+                ?loading=${this._tailscale_rebuilding}
                 @click=${this.handleTailscaleConfigSave}>
                 Save Configuration
               </sl-button>

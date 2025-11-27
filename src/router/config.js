@@ -50,6 +50,14 @@ export const routes = [
     before: [isAuthed, asPage, withDialog],
   },
   {
+    path: "/settings/customise-os",
+    component: "x-page-customise-os",
+    pageTitle: "Customise OS",
+    pageAction: "back",
+    before: [isAuthed, asPage],
+    animate: true,
+  },
+  {
     path: "/pups",
     component: "x-page-pup-library",
     pageTitle: "Installed Pups",

@@ -162,6 +162,7 @@ export class DateTimeSettings extends LitElement {
     let didSucceed = false
 
     try {
+      console.log(this._changes.timezone);
       await setTimezone({ timezone: this._changes.timezone });
       didSucceed = true;
     } catch (err) {
@@ -196,6 +197,7 @@ export class DateTimeSettings extends LitElement {
               data-field="timezone"
               value=${this._current_timezone}
               help-text="Where in the world should your clock be set to"
+              hoist
               @sl-change=${this._handleTimezoneInputChange}
             >
               ${this._timezones.map(

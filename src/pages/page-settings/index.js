@@ -8,6 +8,7 @@ import {
 import "/components/common/action-row/action-row.js";
 import "/components/views/action-check-updates/index.js";
 import "/components/views/action-date-time/index.js";
+import "/components/views/action-language/index.js";
 import "/components/views/action-remote-access/index.js";
 import "/components/views/x-log-viewer/index.js";
 import "/components/views/x-activity-log.js";
@@ -164,7 +165,7 @@ class SettingsPage extends LitElement {
   render() {
     const { updateAvailable } = store.getContext('sys')
     const dialog = store.getContext('dialog')
-    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "date-time"].includes(dialog.name);
+    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "language", "date-time"].includes(dialog.name);
     
     // Debug logging
     console.log('Settings page render:', {
@@ -196,6 +197,9 @@ class SettingsPage extends LitElement {
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
+	          <action-row prefix="keyboard" name="language" label="Language" href="/settings/language">
+	            Hello? こんいちは？ Guten tag? Olá?
+	          </action-row>
 	          <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
 	            Where are we?  What time is it?
 	          </action-row>
@@ -233,6 +237,7 @@ class SettingsPage extends LitElement {
           ["remote-access", () => html`<x-action-remote-access></x-action-remote-access>`],
           ["versions", () => renderVersionsDialog(store, this.handleDialogClose)],
           ["import-blockchain", () => this.renderImportBlockchainDialog()],
+          ["language", () => html`<x-action-language></x-action-language>`],
           ["date-time", () => html`<x-action-date-time></x-action-date-time>`],
         ])}
       </sl-dialog>

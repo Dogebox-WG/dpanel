@@ -195,14 +195,6 @@ class SettingsPage extends LitElement {
     const dialog = store.getContext('dialog')
     const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain"].includes(dialog.name);
     
-    // Debug logging
-    console.log('Settings page render:', {
-      showImportLogs: this.showImportLogs,
-      showImportLogsModal: this.showImportLogsModal,
-      systemLogsLength: this.systemLogs.length,
-      systemLogs: this.systemLogs,
-      shouldShowLogs: this.showImportLogs || this.systemLogs.length > 0
-    });
     return html`
       <div class="padded">
         <section>

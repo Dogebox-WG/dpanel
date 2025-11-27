@@ -1,7 +1,6 @@
 import { LitElement, html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { getCustomNix, saveCustomNix, validateCustomNix } from '/api/system/custom-nix.js';
 import { createAlert } from '/components/common/alert.js';
-import { getRouter } from '/router/index.js';
 
 class PageCustomiseOS extends LitElement {
   static get properties() {
@@ -20,15 +19,15 @@ class PageCustomiseOS extends LitElement {
   static styles = css`
     :host {
       display: block;
-      height: 100%;
-      background: var(--sl-color-neutral-50);
+      height: calc(100vh - 80px);
+      overflow: hidden;
     }
 
     .container {
       display: flex;
       flex-direction: column;
       height: 100%;
-      max-height: 100vh;
+      overflow: hidden;
     }
 
     .banner {
@@ -36,31 +35,19 @@ class PageCustomiseOS extends LitElement {
       justify-content: space-between;
       align-items: center;
       padding: 0.75em 1em;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
     .banner-left {
       display: flex;
       align-items: center;
-      gap: 0.75em;
-    }
-
-    .banner-left sl-icon {
-      font-size: 1.5rem;
-      color: var(--sl-color-primary-400);
-    }
-
-    .banner-title {
-      font-family: "Comic Neue", sans-serif;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: white;
     }
 
     .banner-subtitle {
-      font-size: 0.75rem;
-      color: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+      font-family: "Comic Neue", sans-serif;
     }
 
     .banner-right {
@@ -103,29 +90,71 @@ class PageCustomiseOS extends LitElement {
       flex-direction: column;
       overflow: hidden;
       padding: 1em;
-      background: #0d1117;
+      background: rgba(0,0,0,0.2);
+      min-height: 0;
     }
 
-    .editor {
+    .editor-wrapper {
       flex: 1;
-      width: 100%;
+      position: relative;
+      min-height: 0;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .editor-wrapper:focus-within {
+      border-color: rgba(255,255,255,0.25);
+    }
+
+    .editor-highlight,
+    .editor {
       font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
       font-size: 0.9rem;
       line-height: 1.5;
-      background: #161b22;
-      color: #c9d1d9;
-      border: 1px solid #30363d;
-      border-radius: 8px;
       padding: 1em;
-      resize: none;
-      tab-size: 2;
+      margin: 0;
+      border: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
-    .editor:focus {
-      outline: none;
-      border-color: var(--sl-color-primary-500);
-      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+    .editor-highlight {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.4);
+      color: rgba(255,255,255,0.85);
+      pointer-events: none;
+      overflow: auto;
     }
+
+    .editor {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      color: transparent;
+      caret-color: white;
+      resize: none;
+      outline: none;
+      box-sizing: border-box;
+      overflow: auto;
+    }
+
+    /* Syntax highlighting colors */
+    .hl-comment { color: rgba(255,255,255,0.35); }
+    .hl-string { color: #98c379; }
+    .hl-keyword { color: #c678dd; }
+    .hl-boolean { color: #d19a66; }
+    .hl-bracket { color: #e5c07b; }
+    .hl-attribute { color: #61afef; }
+    .hl-operator { color: #56b6c2; }
 
     .error-display {
       margin-top: 0.5em;
@@ -148,26 +177,6 @@ class PageCustomiseOS extends LitElement {
       height: 100%;
     }
 
-    .saving-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      gap: 1em;
-    }
-
-    .saving-overlay span {
-      color: white;
-      font-family: "Comic Neue", sans-serif;
-      font-size: 1.1rem;
-    }
   `;
 
   constructor() {
@@ -195,6 +204,15 @@ class PageCustomiseOS extends LitElement {
     }
   }
 
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    // Update the highlighted content directly via innerHTML
+    const highlight = this.shadowRoot?.querySelector('.editor-highlight');
+    if (highlight) {
+      highlight.innerHTML = this.highlightNix(this._content);
+    }
+  }
+
   async loadContent() {
     this._loading = true;
     try {
@@ -213,7 +231,20 @@ class PageCustomiseOS extends LitElement {
 
   handleContentChange(e) {
     this._content = e.target.value;
+    this.syncScroll(e.target);
     this.scheduleValidation();
+  }
+
+  handleScroll(e) {
+    this.syncScroll(e.target);
+  }
+
+  syncScroll(textarea) {
+    const highlight = this.shadowRoot.querySelector('.editor-highlight');
+    if (highlight) {
+      highlight.scrollTop = textarea.scrollTop;
+      highlight.scrollLeft = textarea.scrollLeft;
+    }
   }
 
   scheduleValidation() {
@@ -248,20 +279,21 @@ class PageCustomiseOS extends LitElement {
   }
 
   async handleSave() {
-    if (!this.canSave) return;
+    if (!this.canSave || this._saving) return;
 
     this._saving = true;
     try {
       const res = await saveCustomNix(this._content);
-      // The save triggers a rebuild job - wait for it
+      
+      // Check if response indicates an error
+      if (res.error) {
+        throw new Error(res.error);
+      }
+      
       createAlert('success', 'Configuration saved. System rebuild in progress...');
       
       // Update original content since we saved
       this._originalContent = this._content;
-      
-      // Redirect to activity page to monitor the rebuild
-      const router = getRouter();
-      router.navigate('/activity');
     } catch (err) {
       createAlert('danger', 'Failed to save configuration');
       console.error('Save error:', err);
@@ -286,6 +318,64 @@ class PageCustomiseOS extends LitElement {
       this._content = textarea.value;
       this.scheduleValidation();
     }
+  }
+
+  highlightNix(code) {
+    // Use placeholder tokens to avoid regex collisions
+    const TOKENS = {
+      SPAN_OPEN: '\u0001',
+      SPAN_CLOSE: '\u0002',
+      QUOTE: '\u0003',
+    };
+    
+    const span = (cls, content) => `${TOKENS.SPAN_OPEN}${cls}${TOKENS.SPAN_CLOSE}${content}${TOKENS.SPAN_OPEN}/${TOKENS.SPAN_CLOSE}`;
+    
+    // Escape HTML first
+    let escaped = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    
+    // Process line by line to handle comments properly
+    const lines = escaped.split('\n');
+    const highlighted = lines.map(line => {
+      // Check if line is a comment (starts with # after optional whitespace)
+      if (/^\s*#/.test(line)) {
+        return span('hl-comment', line);
+      }
+      
+      let result = line;
+      
+      // Strings (double quotes) - protect quotes first
+      result = result.replace(/"([^"\\]|\\.)*"/g, match => span('hl-string', match));
+      
+      // Keywords
+      result = result.replace(/\b(if|then|else|let|in|with|inherit|rec|import|assert|or)\b/g, 
+        match => span('hl-keyword', match));
+      
+      // Booleans and null
+      result = result.replace(/\b(true|false|null)\b/g, match => span('hl-boolean', match));
+      
+      // Attribute names (dotted path followed by optional space and =)
+      result = result.replace(/\b([a-zA-Z_][a-zA-Z0-9_.-]*)\s*(?==)/g, 
+        match => span('hl-attribute', match));
+      
+      // Brackets, braces, parens
+      result = result.replace(/([{}\[\]()])/g, match => span('hl-bracket', match));
+      
+      // Operators (but not = inside our tokens)
+      result = result.replace(/(=&gt;|==|!=|&lt;=|&gt;=|\+\+|\/\/)/g, match => span('hl-operator', match));
+      result = result.replace(/([=;:])/g, match => span('hl-operator', match));
+      
+      return result;
+    });
+    
+    // Convert tokens to actual HTML
+    let html = highlighted.join('\n') + '\n';
+    html = html.replace(new RegExp(`${TOKENS.SPAN_OPEN}([^${TOKENS.SPAN_CLOSE}]+)${TOKENS.SPAN_CLOSE}`, 'g'), '<span class="$1">');
+    html = html.replace(new RegExp(`${TOKENS.SPAN_OPEN}/${TOKENS.SPAN_CLOSE}`, 'g'), '</span>');
+    
+    return html;
   }
 
   renderValidationStatus() {
@@ -328,11 +418,7 @@ class PageCustomiseOS extends LitElement {
       <div class="container">
         <div class="banner">
           <div class="banner-left">
-            <sl-icon name="code-slash"></sl-icon>
-            <div>
-              <div class="banner-title">Custom OS Configuration</div>
-              <div class="banner-subtitle">Edit your custom NixOS configuration below</div>
-            </div>
+            <div class="banner-subtitle">Edit your custom NixOS configuration below</div>
           </div>
           <div class="banner-right">
             ${this.renderValidationStatus()}
@@ -340,25 +426,29 @@ class PageCustomiseOS extends LitElement {
               variant="primary" 
               size="small"
               ?disabled=${!this.canSave}
+              ?loading=${this._saving}
               @click=${this.handleSave}
             >
-              <sl-icon slot="prefix" name="save"></sl-icon>
               Save & Rebuild
             </sl-button>
           </div>
         </div>
         
         <div class="editor-container">
-          <textarea 
-            class="editor"
-            .value=${this._content}
-            @input=${this.handleContentChange}
-            @keydown=${this.handleKeyDown}
-            spellcheck="false"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-          ></textarea>
+          <div class="editor-wrapper">
+            <pre class="editor-highlight"></pre>
+            <textarea 
+              class="editor"
+              .value=${this._content}
+              @input=${this.handleContentChange}
+              @scroll=${this.handleScroll}
+              @keydown=${this.handleKeyDown}
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+            ></textarea>
+          </div>
           
           ${this._validationError ? html`
             <div class="error-display">${this._validationError}</div>
@@ -366,15 +456,8 @@ class PageCustomiseOS extends LitElement {
         </div>
       </div>
 
-      ${this._saving ? html`
-        <div class="saving-overlay">
-          <sl-spinner style="font-size: 3rem; --indicator-color: white;"></sl-spinner>
-          <span>Saving and rebuilding system...</span>
-        </div>
-      ` : nothing}
     `;
   }
 }
 
 customElements.define('x-page-customise-os', PageCustomiseOS);
-

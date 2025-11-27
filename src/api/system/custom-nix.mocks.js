@@ -11,11 +11,18 @@ export const getCustomNixResponse = {
   # This file is included in the system configuration when it exists.
   
   # Example: Enable Tailscale VPN
-  # Uncomment below and replace with your auth key from:
-  # https://login.tailscale.com/admin/settings/keys
+  # 1. Uncomment the lines below
+  # 2. Replace tskey-auth-XXXXX-XXXXXXXXXXXXXXXXX with your auth key from:
+  #    https://login.tailscale.com/admin/settings/keys
+  # 3. Save & Rebuild - Tailscale will auto-connect
   #
   # services.tailscale.enable = true;
-  # services.tailscale.authKeyFile = pkgs.writeText "tailscale-authkey" "tskey-auth-XXXXX-XXXXXXXXXXXXXXXXX";
+  # services.tailscale.authKeyFile = "/etc/tailscale/authkey";
+  # environment.etc."tailscale/authkey" = {
+  #   text = "tskey-auth-XXXXX-XXXXXXXXXXXXXXXXX";
+  #   mode = "0400";
+  # };
+  # environment.systemPackages = [ pkgs.tailscale ];
   # networking.firewall.trustedInterfaces = [ "tailscale0" ];
   # networking.firewall.allowedUDPPorts = [ 41641 ];
 }
@@ -41,4 +48,3 @@ export const validateCustomNixResponse = {
     valid: true
   }
 };
-

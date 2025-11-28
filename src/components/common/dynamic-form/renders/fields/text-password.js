@@ -6,7 +6,7 @@ export function _render_password(field) {
   const { currentKey, isDirtyKey, repeatKey } = this.propKeys(field.name);
 
   // Custom validation to check if both passwords match
-  // Must run BEFORE _checkForChanges to ensure custom validity is set correctly
+  // Ensures custom validity is set correctly before form submission
   const validatePasswordsMatch = () => {
     const passwordEl = this.shadowRoot.querySelector(`[name=${field.name}]`)
     if (!passwordEl) return;
@@ -15,16 +15,16 @@ export function _render_password(field) {
       : passwordEl.setCustomValidity('');
   };
 
-  // Custom input handler that validates BEFORE triggering _checkForChanges
+  // Custom input handler that validates passwords match before triggering change detection
   const handlePasswordInput = (event, isRepeatField = false) => {
     // Update the state value
     const propKey = isRepeatField ? repeatKey : currentKey;
     this[propKey] = event.target.value;
-    // Validate passwords match BEFORE _checkForChanges runs
+    // Validate passwords match to ensure custom validity is correct before submission
     if (field.requireConfirmation) {
       validatePasswordsMatch();
     }
-    // Now trigger change detection (which will call checkValidity)
+    // Trigger change detection
     this._checkForChanges();
   };
 

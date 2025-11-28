@@ -128,7 +128,6 @@ export function _generateErrorField(field) {
 
 export function _generateFormControls(options = {}) {
   const changeCount = this[`_form_${options.formId}_count`];
-  const isFormValid = this[`_form_${options.formId}_valid`];
   return html`
     <div class="footer-controls">
       ${this.allowDiscardChanges && changeCount
@@ -150,7 +149,7 @@ export function _generateFormControls(options = {}) {
         type="submit"
         class=${this.theme}
         ?loading=${this._loading}
-        ?disabled=${!changeCount || this._celebrate || !isFormValid}
+        ?disabled=${!changeCount || this._celebrate}
         form=${options.formId}
       >
         ${this._celebrate ? html`

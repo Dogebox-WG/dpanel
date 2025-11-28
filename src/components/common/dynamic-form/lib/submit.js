@@ -9,6 +9,14 @@ export function checkValidity(form) {
   return isValid;
 }
 
+export function reportValidity(form) {
+  if (!form) {
+    throw new Error('dynamic-form reportValidity called without providing form Node')
+  }
+  const formControls = getFormControls(form);
+  return [...formControls].every(control => control.reportValidity());
+}
+
 export function getChanges(form) {
   if (!form) {
     throw new Error('dynamic-form getChanges called without providing form Node')
@@ -31,11 +39,11 @@ export function getChanges(form) {
 
 export async function _handleSubmit(event) {
   event.preventDefault();
-  const isValid = this.checkValidity(event.currentTarget);
+  const isValid = this.reportValidity(event.currentTarget);
   const stagedChanges = this.getChanges(event.currentTarget);
 
   if (!isValid) {
-    // Form has validation issues.
+    // Form has validation issues - reportValidity will show errors to user.
     return
   }
 

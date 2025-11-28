@@ -29,7 +29,7 @@ export function _checkForChanges() {
     this[`_form_${section.name}_count`] = sectionChangeCount;
 
     // Compute validity for this section's form if it exists
-    const form = this.shadowRoot && this.shadowRoot.querySelector(`form#${section.name}`);
+    const form = this.shadowRoot && this.shadowRoot.querySelector(`form#${CSS.escape(section.name)}`);
     let sectionValid = true;
     if (form) {
       try {

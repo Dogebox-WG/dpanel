@@ -35,7 +35,7 @@ export function _getTargetForm(changedProperties) {
 
     const formSelector = isDataInitialization
       ? 'form'
-      : `form#${this._activeFormId}`;
+      : `form#${CSS.escape(this._activeFormId)}`;
 
   return this.shadowRoot.querySelector(formSelector);
 }

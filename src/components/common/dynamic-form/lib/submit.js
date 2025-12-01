@@ -1,17 +1,9 @@
 import { getFormControls } from '/vendor/@shoelace/cdn@2.14.0/utilities/form.js';
 
+// Validates all form controls and displays validation errors to the user.
 export function checkValidity(form) {
   if (!form) {
     throw new Error('dynamic-form checkValidity called without providing form Node')
-  }
-  const formControls = getFormControls(form)
-  const isValid = [...formControls].every(control => control.checkValidity());
-  return isValid;
-}
-
-export function reportValidity(form) {
-  if (!form) {
-    throw new Error('dynamic-form reportValidity called without providing form Node')
   }
   const formControls = getFormControls(form);
   return [...formControls].every(control => control.reportValidity());
@@ -39,11 +31,11 @@ export function getChanges(form) {
 
 export async function _handleSubmit(event) {
   event.preventDefault();
-  const isValid = this.reportValidity(event.currentTarget);
+  const isValid = this.checkValidity(event.currentTarget);
   const stagedChanges = this.getChanges(event.currentTarget);
 
   if (!isValid) {
-    // Form has validation issues - reportValidity will show errors to user.
+    // Form has validation issues - checkValidity will show errors to user.
     return
   }
 

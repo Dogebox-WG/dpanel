@@ -2,7 +2,7 @@ export function _checkForChanges() {
   if (!this.fields?.sections) return;
   let dirty = 0;
 
-  // Check if any field differs from prior state.
+  // Firstly, check if any field differs from prior state.
   this.fields.sections.forEach((section) => {
     let flattenedFields = [];
     let sectionChangeCount = 0;

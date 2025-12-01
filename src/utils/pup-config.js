@@ -1,26 +1,8 @@
 // Supported config field types for pup manifests.
-// These are the canonical types that match the form renderer functions (_render_text, _render_toggle, etc.)
+// These map directly to _render_<type> functions in the dynamic-form component.
 const SUPPORTED_TYPES = new Set([
-  "text", "password", "number", "toggle",
-  "email", "textarea", "select", "checkbox", "radio", "date", "range", "color"
+  "text", "password", "number", "toggle", "email", "textarea", "select", "checkbox", "radio", "date", "range", "color"
 ]);
-
-// TYPE_MAP provides a 1:1 mapping to render function names.
-// Field types map directly to _render_<type> functions in the dynamic-form component.
-const TYPE_MAP = {
-  text: "text",
-  password: "password",
-  number: "number",
-  toggle: "toggle",
-  email: "email",
-  textarea: "textarea",
-  select: "select",
-  checkbox: "checkbox",
-  radio: "radio",
-  date: "date",
-  range: "range",
-  color: "color",
-};
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "on"]);
 
@@ -40,7 +22,7 @@ export function buildPupConfig(manifestConfig, storedValues = {}) {
       }
 
       const dynamicField = {
-        type: TYPE_MAP[field.type],
+        type: field.type,
         label: field.label || field.name,
         name: field.name,
         required: Boolean(field.required),

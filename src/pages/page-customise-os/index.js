@@ -34,6 +34,7 @@ class PageCustomiseOS extends LitElement {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 2em;
       padding: 0.75em 1em;
       background: rgba(0,0,0,0.3);
       border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -41,13 +42,21 @@ class PageCustomiseOS extends LitElement {
 
     .banner-left {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
     }
 
     .banner-subtitle {
       font-size: 0.85rem;
       color: rgba(255,255,255,0.5);
       font-family: "Comic Neue", sans-serif;
+    }
+
+    .banner-warning {
+      font-size: 0.75rem;
+      color: #f59e0b;
+      font-family: "Comic Neue", sans-serif;
+      margin-top: 0.25em;
     }
 
     .banner-right {
@@ -278,6 +287,11 @@ class PageCustomiseOS extends LitElement {
     return this.hasChanges && this._isValid && !this._validating && !this._saving;
   }
 
+  get warningsDismissed() {
+    const trimmed = this._content?.trimStart();
+    return trimmed?.startsWith('#i-know-what-im-doing\n') || trimmed?.startsWith('#i-know-what-im-doing\r\n');
+  }
+
   async handleSave() {
     if (!this.canSave || this._saving) return;
 
@@ -419,6 +433,11 @@ class PageCustomiseOS extends LitElement {
         <div class="banner">
           <div class="banner-left">
             <div class="banner-subtitle">Edit your custom NixOS configuration below</div>
+            ${!this.warningsDismissed ? html`
+              <div class="banner-warning">⚠️ Warning: Invalid configuration may prevent your system from booting - If you break something, edit /etc/nixos/dogebox/custom.nix manually via ssh</div>
+              <div class="banner-warning">Is someone asking you to edit this file? They are probably trying to scam you</div>
+              <div class="banner-warning">To dismiss this warning, add #i-know-what-im-doing to the beginning of the file</div>
+            ` : nothing}
           </div>
           <div class="banner-right">
             ${this.renderValidationStatus()}

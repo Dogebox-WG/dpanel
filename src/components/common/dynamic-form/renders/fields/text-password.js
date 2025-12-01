@@ -6,11 +6,26 @@ export function _render_password(field) {
   const { currentKey, isDirtyKey, repeatKey } = this.propKeys(field.name);
 
   // Custom validation to check if both passwords match
-  const validatePasswordsMatch = (event) => {
+  // Ensures custom validity is set correctly before form submission
+  const validatePasswordsMatch = () => {
     const passwordEl = this.shadowRoot.querySelector(`[name=${field.name}]`)
+    if (!passwordEl) return;
     this[currentKey] !== this[repeatKey]
       ? passwordEl.setCustomValidity('Passwords do not match')
       : passwordEl.setCustomValidity('');
+  };
+
+  // Custom input handler that validates passwords match before triggering change detection
+  const handlePasswordInput = (event, isRepeatField = false) => {
+    // Update the state value
+    const propKey = isRepeatField ? repeatKey : currentKey;
+    this[propKey] = event.target.value;
+    // Validate passwords match to ensure custom validity is correct before submission
+    if (field.requireConfirmation) {
+      validatePasswordsMatch();
+    }
+    // Trigger change detection
+    this._checkForChanges();
   };
 
   return html`
@@ -30,10 +45,7 @@ export function _render_password(field) {
       ?disabled=${field.disabled}
       ?password-toggle=${field.passwordToggle}
       ?data-dirty-field=${this[isDirtyKey]}
-      @input=${(event) => {
-          this._handleInput(event);
-          field.requireConfirmation && validatePasswordsMatch(event);
-        }}
+      @input=${(event) => handlePasswordInput(event, false)}
     >
     </sl-input>
     ${field.requireConfirmation ? html`
@@ -49,10 +61,7 @@ export function _render_password(field) {
         .value=${ifd(this[repeatKey])}
         required
         password-toggle
-        @input=${(event) => {
-          this._handleInput(event);
-          validatePasswordsMatch(event);
-        }}
+        @input=${(event) => handlePasswordInput(event, true)}
       >
     </sl-input>
     ` : nothing }

@@ -50,7 +50,6 @@ class JobActivityPage extends LitElement {
       display: flex;
       gap: 1em;
       margin-bottom: 2em;
-      flex-wrap: wrap;
       align-items: center;
     }
     
@@ -58,8 +57,12 @@ class JobActivityPage extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.5em;
-      flex: 0 0 auto;
       width: 280px;
+    }
+    
+    .filter-item sl-input,
+    .filter-item sl-select {
+      flex: 1;
     }
     
     .filter-label {
@@ -67,8 +70,14 @@ class JobActivityPage extends LitElement {
       color: #999;
       font-weight: 600;
       white-space: nowrap;
-      flex: 0 0 auto;
-      width: 60px;
+      width: 50px;
+    }
+    
+    @media (max-width: 1150px) {
+      .filters {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
     
     @media (max-width: 768px) {
@@ -86,10 +95,6 @@ class JobActivityPage extends LitElement {
       }
       
       .header-actions {
-        width: 100%;
-      }
-      
-      .filter-item {
         width: 100%;
       }
     }
@@ -152,10 +157,6 @@ class JobActivityPage extends LitElement {
     this.searchQuery = '';
     this.statusFilter = 'all';
     this.dateFilter = 'all';
-  }
-  
-  connectedCallback() {
-    super.connectedCallback();
   }
   
   showMoreActive() {

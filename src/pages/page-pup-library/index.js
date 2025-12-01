@@ -8,8 +8,12 @@ import { bindToClass } from '/utils/class-bind.js'
 import * as renderMethods from './renders/index.js';
 
 const initialSort = (a, b) => {
-  if (a.state.manifest.package < b.state.manifest.package) { return -1; }
-  if (a.state.manifest.package > b.state.manifest.package) { return 1; }
+  const nameA = a?.state?.manifest?.meta?.name || '';
+  const nameB = b?.state?.manifest?.meta?.name || '';
+  
+  // Default alphabetical sort
+  if (nameA < nameB) return -1;
+  if (nameA > nameB) return 1;
   return 0;
 }
 

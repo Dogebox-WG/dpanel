@@ -80,6 +80,12 @@ export const routes = [
     before: [isAuthed, asPage],
   },
   {
+    path: "/monitoring",
+    component: "x-page-monitoring",
+    pageTitle: "Monitoring",
+    before: [isAuthed, asPage],
+  },
+  {
     path: "/explore/:sourceid/:pupname",
     component: "x-page-pup-store-listing",
     dynamicTitle: true,

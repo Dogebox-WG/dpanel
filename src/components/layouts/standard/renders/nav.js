@@ -37,6 +37,11 @@ export function renderNav(CURPATH) {
               Explore
             </a>
 
+            <a href="/monitoring" class="menu-item ${CURPATH.startsWith("/monitoring") ? "active" : ""}">
+              <sl-icon name="speedometer2"></sl-icon>
+              Monitoring
+            </a>
+
             <a href="/settings" class="menu-item ${CURPATH.startsWith("/settings") ? "active" : ""}">
               <sl-icon name="sliders"></sl-icon>
               Settings

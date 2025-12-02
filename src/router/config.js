@@ -44,6 +44,14 @@ export const routes = [
     before: [isAuthed, asPage],
   },
   {
+    path: "/settings/customise-os",
+    component: "x-page-customise-os",
+    pageTitle: "Customise OS",
+    pageAction: "back",
+    before: [isAuthed, asPage],
+    animate: true,
+  },
+  {
     path: "/settings/:dialog",
     component: "x-page-settings",
     pageTitle: "Settings",

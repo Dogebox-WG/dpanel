@@ -10,3 +10,4 @@ import "./page-logs/index.js";
 import "./page-settings/index.js";
 import "./page-stats/index.js";
 import "./page-activity/index.js";
+import "./page-customise-os/index.js";

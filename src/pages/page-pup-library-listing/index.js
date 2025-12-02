@@ -334,7 +334,7 @@ class PupPage extends LitElement {
       </action-row>
 
       <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
-        Customize ${pkg.state.manifest.meta.name}
+        Customise ${pkg.state.manifest.meta.name}
       </action-row>
 
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>

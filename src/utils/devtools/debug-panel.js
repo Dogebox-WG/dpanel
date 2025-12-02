@@ -165,6 +165,9 @@ class DebugPanel extends LitElement {
       `;
       document.body.appendChild(alert);
       alert.toast();
+    }
+  }
+
   createMockJob() {
     const jobTypes = [
       { displayName: 'NixOS Rebuild' },

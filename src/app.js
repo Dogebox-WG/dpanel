@@ -61,6 +61,9 @@ import { pkgController } from "/controllers/package/index.js"
 // Pup update service
 import { pupUpdates } from "/state/pup-updates.js";
 
+// Job WebSocket
+import { jobWebSocket } from "/controllers/sockets/job-channel.js";
+
 class DPanelApp extends LitElement {
   static properties = {
     ready: { type: Boolean },
@@ -102,12 +105,16 @@ class DPanelApp extends LitElement {
 
     // Menu animating event handler
     this.addEventListener("menu-toggle-request", this._handleMenuToggleRequest);
+
+    // Connect to job WebSocket (works in both mock and real mode)
+    jobWebSocket.connect();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._debouncedHandleResize);
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
+    jobWebSocket.disconnect();
     super.disconnectedCallback();
   }
 
@@ -156,8 +163,12 @@ class DPanelApp extends LitElement {
         showWelcomeModal();
       }
 
+<<<<<<< HEAD
       // Initialize pup update service to check for updates
       pupUpdates.init();
+=======
+      // Activities loaded via WebSocket (no HTTP fetch needed)
+>>>>>>> main
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

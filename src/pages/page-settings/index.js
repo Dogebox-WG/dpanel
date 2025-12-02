@@ -15,6 +15,7 @@ import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { getRouter } from "/router/index.js";
 import { pkgController } from "/controllers/package/index.js";
+import { jobsController } from "/controllers/jobs/index.js";
 import { promptPowerOff, promptReboot } from "./power-helpers.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
 import { importBlockchain } from '/api/system/import-blockchain-data.js';
@@ -59,6 +60,8 @@ class SettingsPage extends LitElement {
       showImportLogs: { type: Boolean },
       systemLogs: { type: Array },
       showImportLogsModal: { type: Boolean },
+      isSystemUpdateLocked: { type: Boolean },
+      systemUpdateStatus: { type: String },
     };
   }
 
@@ -66,6 +69,9 @@ class SettingsPage extends LitElement {
     super();
     this.context = new StoreSubscriber(this, store);
     this.pkgController = pkgController;
+    this.isSystemUpdateLocked = jobsController.isSystemUpdateLocked();
+    this.systemUpdateStatus = jobsController.getActiveSystemUpdateStatus();
+    this.updatesRowDescription = this.buildUpdatesRowDescription();
     this.inflight_import_blockchain = false;
     this.showImportLogs = false;
     this.systemLogs = [];
@@ -76,6 +82,7 @@ class SettingsPage extends LitElement {
     super.connectedCallback();
     // Subscribe to pkgController for system activity updates
     this.pkgController.addObserver(this);
+    jobsController.addObserver(this);
     console.log('Settings page subscribed to pkgController for system activity updates');
   }
 
@@ -83,12 +90,27 @@ class SettingsPage extends LitElement {
     super.disconnectedCallback();
     // Unsubscribe from pkgController
     this.pkgController.removeObserver(this);
+    jobsController.removeObserver(this);
     
     // Reset import state when leaving the page
     this.inflight_import_blockchain = false;
     this.showImportLogs = false;
     this.systemLogs = [];
     this.showImportLogsModal = false;
+  }x
+
+  onJobsUpdate(state) {
+    if (
+      state?.isSystemUpdateLocked === this.isSystemUpdateLocked &&
+      state?.systemUpdateStatus === this.systemUpdateStatus
+    ) {
+      return;
+    }
+
+    this.isSystemUpdateLocked = state?.isSystemUpdateLocked;
+    this.systemUpdateStatus = state?.systemUpdateStatus;
+    this.updatesRowDescription = this.buildUpdatesRowDescription();
+    this.requestUpdate();
   }
 
   handleDialogClose() {
@@ -154,10 +176,18 @@ class SettingsPage extends LitElement {
       this.systemLogs = allSystemLogs.filter(log => 
         log.step === "import-blockchain-data"
       );
-      
+
       console.log('Filtered blockchain logs:', this.systemLogs);
     }
     super.requestUpdate();
+  }
+
+  buildUpdatesRowDescription() {
+    if (this.isSystemUpdateLocked) {
+      const status = this.systemUpdateStatus || "active";
+      return `Disabled while a system update is ${status}.`;
+    }
+    return "Check for updates";
   }
 
   render() {
@@ -165,14 +195,6 @@ class SettingsPage extends LitElement {
     const dialog = store.getContext('dialog')
     const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain"].includes(dialog.name);
     
-    // Debug logging
-    console.log('Settings page render:', {
-      showImportLogs: this.showImportLogs,
-      showImportLogsModal: this.showImportLogsModal,
-      systemLogsLength: this.systemLogs.length,
-      systemLogs: this.systemLogs,
-      shouldShowLogs: this.showImportLogs || this.systemLogs.length > 0
-    });
     return html`
       <div class="padded">
         <section>
@@ -183,8 +205,8 @@ class SettingsPage extends LitElement {
             <action-row prefix="info-circle" label="Version" href="/settings/versions" @click=${notYet}>
               View version details
             </action-row>
-            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" @click=${notYet}>
-              Check for updates
+            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" ?disabled=${this.isSystemUpdateLocked}>
+              ${this.updatesRowDescription}
             </action-row>
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>
               Add or remove Wifi networks
@@ -195,7 +217,10 @@ class SettingsPage extends LitElement {
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
-          <div class="list-wrap">
+            <action-row prefix="code-slash" label="Customise OS" href="/settings/customise-os">
+              Add custom NixOS configuration (Tailscale, VPN, etc)
+            </action-row>
+          </div>
         </section>
 
 

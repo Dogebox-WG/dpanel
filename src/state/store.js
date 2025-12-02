@@ -61,6 +61,11 @@ class Store {
       useFoundationPupBinaryCache: false,
       useFoundationOSBinaryCache: false,
     };
+    this.jobsContext = {
+      jobs: [],
+      loading: false,
+      error: null,
+    };
 
     // Hydrate state from localStorage unless flush parameter is present.
     if (!isUnauthedRoute() && !hasFlushParam()) {
@@ -101,7 +106,6 @@ class Store {
         const savedState = JSON.parse(localStorage.getItem("storeState"));
         if (savedState) {
           this.networkContext = savedState.networkContext;
-          // Load other slices as needed
         }
       } catch (error) {
         console.warn(
@@ -187,6 +191,12 @@ class Store {
       this.setupContext = {
         ...this.setupContext,
         ...partialState.setupContext,
+      };
+    }
+    if (partialState.jobsContext) {
+      this.jobsContext = {
+        ...this.jobsContext,
+        ...partialState.jobsContext,
       };
     }
     // Other slices..

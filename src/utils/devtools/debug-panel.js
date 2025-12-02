@@ -165,6 +165,57 @@ class DebugPanel extends LitElement {
       `;
       document.body.appendChild(alert);
       alert.toast();
+  createMockJob() {
+    const jobTypes = [
+      { displayName: 'NixOS Rebuild' },
+      { displayName: 'System Upgrade' },
+      { displayName: 'Install Core Pup' },
+      { displayName: 'Uninstall Pup' },
+      { displayName: 'Enable SSH' },
+      { displayName: 'Disable SSH' },
+      { displayName: 'Backup System' }
+    ];
+    
+    const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
+    
+    if (window.__jobWS) {
+      window.__jobWS.createMockJob(randomJob.displayName);
+    } else {
+      alert('Job WebSocket not initialized. Make sure "Network Mocks" is enabled.');
+    }
+  }
+
+  async clearAllJobs() {
+    const { store } = await import('/state/store.js');
+    
+    const confirmed = confirm('Clear all jobs? This cannot be undone.');
+    if (!confirmed) return;
+    
+    store.updateState({
+      jobsContext: {
+        jobs: []
+      }
+    });
+    console.log('All jobs cleared');
+  }
+
+  async clearCompletedJobs() {
+    const { store } = await import('/state/store.js');
+    const { clearCompletedJobs } = await import('/api/jobs/jobs.js');
+    
+    try {
+      await clearCompletedJobs(0);
+      
+      const remainingJobs = store.jobsContext.jobs.filter(
+        a => !['completed', 'failed', 'cancelled'].includes(a.status)
+      );
+      store.updateState({
+        jobsContext: { jobs: remainingJobs }
+      });
+      
+      console.log('Completed jobs cleared');
+    } catch (err) {
+      console.error('Failed to clear completed jobs:', err);
     }
   }
 
@@ -200,6 +251,11 @@ class DebugPanel extends LitElement {
                   <sl-menu slot="submenu">
                     <sl-menu-label>Response Hooks</sl-menu-label>
                     <sl-menu-item type="checkbox" ?checked=${this._hook_bump_version} @click=${this.handleBumpVersionToggle}>Bump version</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Jobs (Mock Only)</sl-menu-label>
+                    <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
+                    <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
+                    <sl-menu-item @click=${this.clearCompletedJobs}>Clear Completed Jobs</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

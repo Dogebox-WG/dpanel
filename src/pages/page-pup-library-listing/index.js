@@ -129,7 +129,7 @@ class PupPage extends LitElement {
 
   submitConfig = async (stagedChanges, formNode, dynamicForm) => {
     // Define callbacks
-    const pupId = this.context.store.pupContext.id
+    const pupId = this.context.store.pupContext.state.id
     const callbacks = {
       onSuccess: () => dynamicForm.commitChanges(formNode),
       onError: (errorPayload) => {
@@ -333,11 +333,9 @@ class PupPage extends LitElement {
         <sl-switch slot="suffix" ?checked=${!disableActions && pkg.state.enabled} @sl-input=${this.handleStartStop} ?disabled=${this.inflight_startstop || labels.installationId !== "ready"}></sl-switch>
       </action-row>
 
-      ${nothing || html`
-        <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
-          Customize ${pkg.state.manifest.meta.name}
-        </action-row>
-      `}
+      <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
+        Customise ${pkg.state.manifest.meta.name}
+      </action-row>
 
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
         Ea sint dolor commodo.

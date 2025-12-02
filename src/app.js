@@ -163,12 +163,8 @@ class DPanelApp extends LitElement {
         showWelcomeModal();
       }
 
-<<<<<<< HEAD
       // Initialize pup update service to check for updates
       pupUpdates.init();
-=======
-      // Activities loaded via WebSocket (no HTTP fetch needed)
->>>>>>> main
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

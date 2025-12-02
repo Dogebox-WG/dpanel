@@ -195,14 +195,6 @@ class SettingsPage extends LitElement {
     const dialog = store.getContext('dialog')
     const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain"].includes(dialog.name);
     
-    // Debug logging
-    console.log('Settings page render:', {
-      showImportLogs: this.showImportLogs,
-      showImportLogsModal: this.showImportLogsModal,
-      systemLogsLength: this.systemLogs.length,
-      systemLogs: this.systemLogs,
-      shouldShowLogs: this.showImportLogs || this.systemLogs.length > 0
-    });
     return html`
       <div class="padded">
         <section>
@@ -225,7 +217,10 @@ class SettingsPage extends LitElement {
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
-          <div class="list-wrap">
+            <action-row prefix="code-slash" label="Customise OS" href="/settings/customise-os">
+              Add custom NixOS configuration (Tailscale, VPN, etc)
+            </action-row>
+          </div>
         </section>
 
 

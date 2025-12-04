@@ -1,27 +1,88 @@
 import { getAllPupUpdates } from '/api/pup-updates/pup-updates.js';
 import { store } from '/state/store.js';
 
-const IGNORED_UPDATES_STORAGE_KEY = 'dpanel:ignoredUpdates';
+const SKIPPED_UPDATES_STORAGE_KEY = 'dpanel:skippedUpdates';
+const CACHED_UPDATES_STORAGE_KEY = 'dpanel:cachedPupUpdates';
 
 /**
  * Pup update state management.
  * The backend (dogeboxd) handles periodic update checking and caching.
  * This module fetches cached data from the backend and updates the frontend store,
- * and manages locally ignored updates.
+ * and manages locally skipped updates.
  */
 class PupUpdates {
   constructor() {
-    this.ignoredUpdates = this._loadIgnored();
+    // skippedUpdates format: { pupId: { skippedAtVersion: "1.0.0", latestVersionAtSkip: "1.2.0" } }
+    this.skippedUpdates = this._loadSkipped();
   }
 
   /**
-   * Initialize - fetches initial cached update info from backend
+   * Initialize - loads cached data immediately from localStorage only
+   * Does NOT trigger a backend refresh (backend handles periodic checks automatically)
    */
   async init() {
     console.log('PupUpdates: Initializing...');
     
-    // Fetch initial cached update info from backend
-    await this.refresh();
+    // Load cached update info from localStorage for immediate display
+    // Backend will handle periodic checks and send websocket events when updates are found
+    this._loadCachedUpdates();
+  }
+
+  /**
+   * Load cached update info from localStorage for immediate display on page load
+   */
+  _loadCachedUpdates() {
+    try {
+      const stored = localStorage.getItem(CACHED_UPDATES_STORAGE_KEY);
+      if (stored) {
+        const cached = JSON.parse(stored);
+        console.log('[PupUpdates State] Loading cached updates from localStorage:', cached);
+        
+        // Calculate total updates available (excluding skipped)
+        let totalUpdatesAvailable = 0;
+        const updateInfo = cached.updateInfo || {};
+        for (const pupId in updateInfo) {
+          if (updateInfo[pupId].updateAvailable && !this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion)) {
+            totalUpdatesAvailable++;
+          }
+        }
+        
+        // Update store with cached data immediately
+        store.updateState({
+          pupUpdatesContext: {
+            updateInfo,
+            lastChecked: cached.lastChecked,
+            totalUpdatesAvailable,
+            isChecking: false,
+            error: null
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[PupUpdates State] Failed to load cached updates from localStorage:', error);
+    }
+  }
+
+  /**
+   * Save update info to localStorage for fast loading on page refresh
+   */
+  _saveCachedUpdates(updateInfo, lastChecked) {
+    try {
+      localStorage.setItem(CACHED_UPDATES_STORAGE_KEY, JSON.stringify({
+        updateInfo,
+        lastChecked
+      }));
+    } catch (error) {
+      console.error('[PupUpdates State] Failed to save cached updates to localStorage:', error);
+    }
+  }
+
+  /**
+   * Clear cached updates from localStorage
+   */
+  clearCachedUpdates() {
+    localStorage.removeItem(CACHED_UPDATES_STORAGE_KEY);
+    console.log('[PupUpdates State] Cleared cached updates from localStorage');
   }
 
   /**
@@ -30,30 +91,63 @@ class PupUpdates {
    * This just fetches the current cached state.
    */
   async refresh() {
+    console.log('[PupUpdates State] refresh() called');
+    console.log('[PupUpdates State] Current store.networkContext.useMocks:', store.networkContext?.useMocks);
+    
+    // Set loading state
+    store.updateState({
+      pupUpdatesContext: {
+        ...store.pupUpdatesContext,
+        isChecking: true
+      }
+    });
+
     try {
-      console.log('PupUpdates: Fetching cached update info from backend...');
+      console.log('[PupUpdates State] Fetching cached update info from backend/mock...');
       const updateInfo = await getAllPupUpdates();
+      console.log('[PupUpdates State] Got updateInfo:', updateInfo);
+      console.log('[PupUpdates State] updateInfo keys:', Object.keys(updateInfo || {}));
       
-      // Count total updates available
+      // Count total updates available (excluding skipped ones)
       let totalUpdatesAvailable = 0;
       for (const pupId in updateInfo) {
-        if (updateInfo[pupId].updateAvailable) {
+        const isSkipped = this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion);
+        console.log(`[PupUpdates State] Pup ${pupId}: updateAvailable=${updateInfo[pupId].updateAvailable}, isSkipped=${isSkipped}`);
+        if (updateInfo[pupId].updateAvailable && !isSkipped) {
           totalUpdatesAvailable++;
         }
       }
       
+      console.log(`[PupUpdates State] Total updates available: ${totalUpdatesAvailable}`);
+      
       // Update the store
+      const lastChecked = new Date().toISOString();
+      const newContext = {
+        updateInfo,
+        lastChecked,
+        totalUpdatesAvailable,
+        isChecking: false,
+        error: null
+      };
+      console.log('[PupUpdates State] Updating store with:', newContext);
+      
       store.updateState({
-        pupUpdatesContext: {
-          updateInfo,
-          lastChecked: new Date().toISOString(),
-          totalUpdatesAvailable
-        }
+        pupUpdatesContext: newContext
       });
       
-      console.log(`PupUpdates: Found ${totalUpdatesAvailable} pup(s) with updates available`);
+      // Cache to localStorage for fast loading on page refresh
+      this._saveCachedUpdates(updateInfo, lastChecked);
+      
+      console.log('[PupUpdates State] Store updated. Current pupUpdatesContext:', store.pupUpdatesContext);
     } catch (error) {
-      console.error('PupUpdates: Failed to fetch update info:', error);
+      console.error('[PupUpdates State] Failed to fetch update info:', error);
+      store.updateState({
+        pupUpdatesContext: {
+          ...store.pupUpdatesContext,
+          isChecking: false,
+          error: error.message || 'Failed to check for updates'
+        }
+      });
     }
   }
 
@@ -61,15 +155,30 @@ class PupUpdates {
    * Get update info for a specific pup
    */
   getUpdateInfo(pupId) {
-    return store.pupUpdatesContext.updateInfo[pupId] || null;
+    const info = store.pupUpdatesContext.updateInfo[pupId] || null;
+    console.log(`[PupUpdates State] getUpdateInfo(${pupId}):`, info);
+    return info;
   }
 
   /**
-   * Check if a specific pup has an update available
+   * Check if a specific pup has an update available (respecting skipped updates)
+   * @param {string} pupId - The pup ID
+   * @returns {boolean} True if update is available and not skipped
    */
   hasUpdate(pupId) {
+    console.log(`[PupUpdates State] hasUpdate(${pupId}) called`);
+    console.log(`[PupUpdates State] Current pupUpdatesContext:`, store.pupUpdatesContext);
+    
     const info = this.getUpdateInfo(pupId);
-    return info ? info.updateAvailable : false;
+    if (!info || !info.updateAvailable) {
+      console.log(`[PupUpdates State] hasUpdate(${pupId}) = false (no info or not available)`);
+      return false;
+    }
+    // Check if this update is skipped
+    const isSkipped = this.isUpdateSkipped(pupId, info.latestVersion);
+    const result = !isSkipped;
+    console.log(`[PupUpdates State] hasUpdate(${pupId}) = ${result} (isSkipped=${isSkipped})`);
+    return result;
   }
 
   /**
@@ -81,109 +190,175 @@ class PupUpdates {
   }
 
   // ========================================================================
-  // Ignored Updates Management
+  // Skipped Updates Management (new pattern: skip all versions up to latest)
   // ========================================================================
 
   /**
-   * Load ignored updates from localStorage
-   * @returns {Object} Map of pupId -> [ignoredVersions...]
+   * Load skipped updates from localStorage
+   * @returns {Object} Map of pupId -> { skippedAtVersion, latestVersionAtSkip }
    */
-  _loadIgnored() {
+  _loadSkipped() {
     try {
-      const stored = localStorage.getItem(IGNORED_UPDATES_STORAGE_KEY);
+      const stored = localStorage.getItem(SKIPPED_UPDATES_STORAGE_KEY);
       if (stored) {
         return JSON.parse(stored);
       }
     } catch (error) {
-      console.error('Failed to load ignored updates from localStorage:', error);
+      console.error('Failed to load skipped updates from localStorage:', error);
     }
     return {};
   }
 
   /**
-   * Save ignored updates to localStorage
+   * Save skipped updates to localStorage
    */
-  _saveIgnored() {
+  _saveSkipped() {
     try {
-      localStorage.setItem(IGNORED_UPDATES_STORAGE_KEY, JSON.stringify(this.ignoredUpdates));
+      localStorage.setItem(SKIPPED_UPDATES_STORAGE_KEY, JSON.stringify(this.skippedUpdates));
     } catch (error) {
-      console.error('Failed to save ignored updates to localStorage:', error);
+      console.error('Failed to save skipped updates to localStorage:', error);
     }
   }
 
   /**
-   * Ignore a specific version of a pup
+   * Skip all available updates for a pup (up to current latest)
+   * The skip will be lifted when a version newer than latestVersionAtSkip is released
    * @param {string} pupId - The pup ID
-   * @param {string} version - The version to ignore
+   */
+  skipUpdate(pupId) {
+    const info = this.getUpdateInfo(pupId);
+    if (!info || !info.updateAvailable) {
+      return;
+    }
+
+    this.skippedUpdates[pupId] = {
+      skippedAtVersion: info.currentVersion,
+      latestVersionAtSkip: info.latestVersion,
+      skippedAt: new Date().toISOString()
+    };
+    this._saveSkipped();
+    
+    // Re-calculate totalUpdatesAvailable after skipping
+    this._updateTotalCount();
+    
+    console.log(`PupUpdates: Skipped updates for ${pupId} up to version ${info.latestVersion}`);
+  }
+
+  /**
+   * Check if updates are currently skipped for a pup
+   * @param {string} pupId - The pup ID
+   * @param {string} latestVersion - The current latest version available
+   * @returns {boolean} True if updates are skipped and latestVersion <= latestVersionAtSkip
+   */
+  isUpdateSkipped(pupId, latestVersion) {
+    const skipInfo = this.skippedUpdates[pupId];
+    if (!skipInfo) {
+      return false;
+    }
+
+    // Compare versions: if latestVersion > latestVersionAtSkip, the skip is no longer valid
+    // Simple string comparison works for semver in most cases for this purpose
+    // But we need proper comparison
+    return this._compareVersions(latestVersion, skipInfo.latestVersionAtSkip) <= 0;
+  }
+
+  /**
+   * Compare two semver strings
+   * @returns {number} -1 if a < b, 0 if a == b, 1 if a > b
+   */
+  _compareVersions(a, b) {
+    if (!a || !b) return 0;
+    
+    const partsA = a.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+    const partsB = b.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+    
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+      const partA = partsA[i] || 0;
+      const partB = partsB[i] || 0;
+      if (partA < partB) return -1;
+      if (partA > partB) return 1;
+    }
+    return 0;
+  }
+
+  /**
+   * Clear skipped status for a pup
+   * @param {string} pupId - The pup ID
+   */
+  clearSkipped(pupId) {
+    delete this.skippedUpdates[pupId];
+    this._saveSkipped();
+    
+    // Re-calculate totalUpdatesAvailable after clearing skip
+    this._updateTotalCount();
+  }
+
+  /**
+   * Get skip info for a pup
+   * @param {string} pupId - The pup ID
+   * @returns {Object|null} Skip info or null if not skipped
+   */
+  getSkipInfo(pupId) {
+    return this.skippedUpdates[pupId] || null;
+  }
+
+  /**
+   * Get all skipped updates
+   * @returns {Object} Map of pupId -> skip info
+   */
+  getAllSkipped() {
+    return { ...this.skippedUpdates };
+  }
+
+  /**
+   * Update the total updates count in the store
+   * (called after skip/unskip operations)
+   */
+  _updateTotalCount() {
+    const updateInfo = store.pupUpdatesContext.updateInfo || {};
+    let totalUpdatesAvailable = 0;
+    
+    for (const pupId in updateInfo) {
+      if (updateInfo[pupId].updateAvailable && !this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion)) {
+        totalUpdatesAvailable++;
+      }
+    }
+    
+    store.updateState({
+      pupUpdatesContext: {
+        ...store.pupUpdatesContext,
+        totalUpdatesAvailable
+      }
+    });
+  }
+
+  // ========================================================================
+  // Legacy compatibility (redirects to new skip pattern)
+  // ========================================================================
+
+  /**
+   * @deprecated Use skipUpdate instead
    */
   ignoreUpdate(pupId, version) {
-    if (!this.ignoredUpdates[pupId]) {
-      this.ignoredUpdates[pupId] = [];
-    }
-
-    if (!this.ignoredUpdates[pupId].includes(version)) {
-      this.ignoredUpdates[pupId].push(version);
-      this._saveIgnored();
-    }
+    console.warn('ignoreUpdate is deprecated, use skipUpdate instead');
+    this.skipUpdate(pupId);
   }
 
   /**
-   * Check if a specific version is ignored
-   * @param {string} pupId - The pup ID
-   * @param {string} version - The version to check
-   * @returns {boolean} True if the version is ignored
+   * @deprecated Use isUpdateSkipped instead
    */
   isUpdateIgnored(pupId, version) {
-    return this.ignoredUpdates[pupId]?.includes(version) || false;
+    const info = this.getUpdateInfo(pupId);
+    return this.isUpdateSkipped(pupId, info?.latestVersion || version);
   }
 
   /**
-   * Clear all ignored versions for a pup
-   * @param {string} pupId - The pup ID
+   * @deprecated Use clearSkipped instead
    */
   clearIgnored(pupId) {
-    delete this.ignoredUpdates[pupId];
-    this._saveIgnored();
-  }
-
-  /**
-   * Get all ignored versions for a pup
-   * @param {string} pupId - The pup ID
-   * @returns {Array} Array of ignored versions
-   */
-  getIgnoredVersions(pupId) {
-    return this.ignoredUpdates[pupId] || [];
-  }
-
-  /**
-   * Get all ignored updates
-   * @returns {Object} Map of pupId -> [ignoredVersions...]
-   */
-  getAllIgnored() {
-    return { ...this.ignoredUpdates };
-  }
-
-  /**
-   * Persist to bootstrap API (optional, for future implementation)
-   * This would save ignored updates to the backend for cross-device sync
-   */
-  async persistToBootstrap() {
-    // TODO: Implement bootstrap API persistence
-    // For now, this is client-side only
-    console.log('Bootstrap persistence not yet implemented');
-  }
-
-  /**
-   * Load from bootstrap API (optional, for future implementation)
-   * This would load ignored updates from the backend
-   */
-  async loadFromBootstrap() {
-    // TODO: Implement bootstrap API loading
-    // For now, this is client-side only
-    console.log('Bootstrap loading not yet implemented');
+    this.clearSkipped(pupId);
   }
 }
 
 // Export as singleton
 export const pupUpdates = new PupUpdates();
-

@@ -10,6 +10,8 @@ import { bindToClass } from "/utils/class-bind.js";
 import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
 import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
+import { pupUpdates } from '/state/pup-updates.js';
+import { store } from '/state/store.js';
 
 class DebugPanel extends LitElement {
   static properties = {
@@ -140,7 +142,18 @@ class DebugPanel extends LitElement {
 
   async handleCheckPupUpdates() {
     try {
+      console.log('[DevPanel] handleCheckPupUpdates - starting');
       const result = await checkPupUpdates('all');
+      console.log('[DevPanel] handleCheckPupUpdates - check result:', result);
+      
+      // In mock mode, we need to manually refresh the state
+      // (In real mode, the backend sends a websocket event that triggers refresh)
+      if (store.networkContext.useMocks) {
+        console.log('[DevPanel] Mock mode - refreshing update state...');
+        await pupUpdates.refresh();
+        console.log('[DevPanel] Update state refreshed');
+      }
+      
       const alert = Object.assign(document.createElement('sl-alert'), {
         variant: 'success',
         duration: 3000,
@@ -148,7 +161,7 @@ class DebugPanel extends LitElement {
       });
       alert.innerHTML = `
         <sl-icon slot="icon" name="check-circle"></sl-icon>
-        Update check initiated! Job ID: ${result.jobId || 'N/A'}
+        Pup update check initiated
       `;
       document.body.appendChild(alert);
       alert.toast();
@@ -167,6 +180,43 @@ class DebugPanel extends LitElement {
       alert.toast();
     }
   }
+
+  handleClearUpdateCache() {
+    // Clear the store's pupUpdatesContext
+    store.updateState({
+      pupUpdatesContext: {
+        updateInfo: {},
+        lastChecked: null,
+        totalUpdatesAvailable: 0,
+        isChecking: false,
+        error: null
+      }
+    });
+    
+    // Clear cached updates from localStorage (for fast page load)
+    pupUpdates.clearCachedUpdates();
+    
+    // Clear skipped updates from localStorage
+    localStorage.removeItem('dpanel:skippedUpdates');
+    
+    // Clear any legacy ignored updates
+    localStorage.removeItem('dpanel:ignoredUpdates');
+    
+    console.log('Update cache cleared');
+    
+    const alert = Object.assign(document.createElement('sl-alert'), {
+      variant: 'success',
+      duration: 3000,
+      closable: true
+    });
+    alert.innerHTML = `
+      <sl-icon slot="icon" name="trash"></sl-icon>
+      Update cache cleared
+    `;
+    document.body.appendChild(alert);
+    alert.toast();
+  }
+
 
   createMockJob() {
     const jobTypes = [
@@ -266,6 +316,7 @@ class DebugPanel extends LitElement {
                     <sl-divider></sl-divider>
                     <sl-menu-label>Pup Upgrades</sl-menu-label>
                     <sl-menu-item @click=${this.handleCheckPupUpdates}>Check for Updates</sl-menu-item>
+                    <sl-menu-item @click=${this.handleClearUpdateCache}>Clear Update Cache</sl-menu-item>
                   </sl-menu>
                 </sl-menu-item>
                 <sl-menu-item @click=${this.showSettingsDialog}>Open Config</sl-menu-item>

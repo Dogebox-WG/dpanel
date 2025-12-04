@@ -23,6 +23,7 @@ import * as renderMethods from "./renders/index.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { pkgController } from "/controllers/package/index.js";
+import { pupUpdates } from "/state/pup-updates.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
@@ -100,17 +101,6 @@ class PupPage extends LitElement {
 
   async firstUpdated() {
     this.addEventListener("sl-hide", this.handleDialogClose);
-    // this.checks = this.context.store.pupContext?.manifest?.checks;
-
-    // if (this.pupId === "Core") {
-    //   await asyncTimeout(1200);
-    //   this.checks[1].status = "success";
-    //   this.requestUpdate();
-
-    //   await asyncTimeout(800);
-    //   this.checks[2].status = "success";
-    //   this.requestUpdate();
-    // }
   }
 
   handleDialogClose() {
@@ -213,6 +203,23 @@ class PupPage extends LitElement {
 
     this._confirmedName = "";
     this.clearDialog();
+  }
+
+  handleUpgradeStarted(e) {
+    // Close the dialog and show a message
+    this.clearDialog();
+    createAlert('neutral', `Upgrading ${this.context.store.pupContext.state.manifest.meta.name}...`, 'arrow-up-circle', 3000);
+  }
+
+  handleUpdateSkipped(e) {
+    // Close the dialog
+    this.clearDialog();
+  }
+
+  get hasUpdate() {
+    const pupId = this.context.store.pupContext?.state?.id;
+    if (!pupId) return false;
+    return pupUpdates.hasUpdate(pupId);
   }
 
   render() {
@@ -337,6 +344,12 @@ class PupPage extends LitElement {
         Customise ${pkg.state.manifest.meta.name}
       </action-row>
 
+      ${this.hasUpdate ? html`
+        <action-row prefix="arrow-up-circle" name="update" label="Update Available" .trigger=${this.handleMenuClick} highlight>
+          A new version of ${pkg.state.manifest.meta.name} is available
+        </action-row>
+      ` : nothing}
+
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
         Ea sint dolor commodo.
       </action-row-->
@@ -387,6 +400,9 @@ class PupPage extends LitElement {
             <div style="display: flex; flex-direction: column; width: 100%;">
               <div class="section-title">
                 <h3>Status</h3>
+                ${this.hasUpdate ? html`
+                  <sl-badge variant="primary" pill pulse class="update-badge">Update Available</sl-badge>
+                ` : nothing}
               </div>
               ${this.renderStatus(labels, pkg)}
               <sl-progress-bar value="0" ?indeterminate=${isLoadingStatus || isInstallationLoadingStatus} class="loading-bar ${statusInstallationId}"></sl-progress-bar>
@@ -507,6 +523,9 @@ class PupPage extends LitElement {
 
     section .section-title {
       margin-bottom: 0em;
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
     }
 
     section .section-title.disabled {
@@ -516,6 +535,11 @@ class PupPage extends LitElement {
     section .section-title h3 {
       text-transform: uppercase;
       font-family: "Comic Neue";
+    }
+
+    .update-badge {
+      font-family: 'Comic Neue';
+      font-weight: bold;
     }
 
     section div.underscored {
@@ -530,6 +554,7 @@ class PupPage extends LitElement {
       z-index: 960;
       background: rgb(24, 24, 24);
     }
+
 
     .loading-bar {
       --height: 1px;

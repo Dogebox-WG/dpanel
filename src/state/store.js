@@ -47,6 +47,8 @@ class Store {
       updateInfo: {}, // Map of pupId -> PupUpdateInfo
       lastChecked: null,
       totalUpdatesAvailable: 0,
+      isChecking: false,
+      error: null,
     };
     this.promptContext = {
       display: false,

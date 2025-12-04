@@ -5,6 +5,7 @@ import {
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
 import "/components/views/action-dependency-manage/dependency.js";
+import "/components/views/x-pup-update-panel/index.js";
 import { buildPupConfig } from "/utils/pup-config.js";
 
 export function renderDialog() {
@@ -15,6 +16,16 @@ export function renderDialog() {
   const ints = pkg?.state?.manifest?.interfaces || [];
   const depsEl = html`<x-action-manage-deps .dependencies=${deps} .providers=${pkg.state.providers} editMode pupId=${pkg.state.id}></x-action-manage-deps>`;
   const intsEl = html`<x-action-interface-list .interfaces=${ints}></x-action-interface-list>`;
+  
+  const updateEl = html`
+    <x-pup-update-panel 
+      pupId=${pkg.state.id}
+      pupName=${pkg.state.manifest.meta.name}
+      currentVersion=${pkg.state.version}
+      @upgrade-started=${this.handleUpgradeStarted}
+      @update-skipped=${this.handleUpdateSkipped}
+    ></x-pup-update-panel>
+  `;
 
   const preventUninstallEl = html`
     <p>Cannot uninstall a running Pup.<br/>Please disable ${pkg.state.manifest.meta.name } and try again.</p>
@@ -63,6 +74,7 @@ export function renderDialog() {
         ["ints", () => intsEl],
         ["configure", () => configEl],
         ["uninstall", () => isStopped ? uninstallEl : preventUninstallEl],
+        ["update", () => updateEl],
       ],
       () => html`<span>View not provided: ${this.open_dialog}</span>`,
     )}

@@ -9,6 +9,7 @@
   import "/components/common/tag-set/tag-set.js";
   import { store } from "/state/store.js";
   import { StoreSubscriber } from "/state/subscribe.js";
+  import { pupUpdates } from "/state/pup-updates.js";
 
   class PupCard extends LitElement {
     static get properties() {
@@ -38,8 +39,8 @@
     }
 
     get hasUpdate() {
-      const info = this.updateInfo;
-      return info ? info.updateAvailable : false;
+      // Use the pupUpdates singleton which respects skipped updates
+      return pupUpdates.hasUpdate(this.pupId);
     }
 
     get status() {

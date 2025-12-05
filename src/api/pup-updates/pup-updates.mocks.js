@@ -27,23 +27,19 @@ const defaultMockConfig = {
 export function getMockConfig() {
   try {
     const stored = localStorage.getItem(MOCK_CONFIG_KEY);
-    console.log('[PupUpdates Mock] getMockConfig - stored:', stored);
     if (stored) {
       const parsed = { ...defaultMockConfig, ...JSON.parse(stored) };
-      console.log('[PupUpdates Mock] getMockConfig - returning parsed:', parsed);
       return parsed;
     }
   } catch (e) {
     console.error('[PupUpdates Mock] Failed to load mock pup update config:', e);
   }
-  console.log('[PupUpdates Mock] getMockConfig - returning defaults:', defaultMockConfig);
   return defaultMockConfig;
 }
 
 // Save mock configuration
 export function saveMockConfig(config) {
   try {
-    console.log('[PupUpdates Mock] saveMockConfig:', config);
     localStorage.setItem(MOCK_CONFIG_KEY, JSON.stringify(config));
   } catch (e) {
     console.error('[PupUpdates Mock] Failed to save mock pup update config:', e);
@@ -52,7 +48,6 @@ export function saveMockConfig(config) {
 
 // Reset to defaults
 export function resetMockConfig() {
-  console.log('[PupUpdates Mock] resetMockConfig called');
   localStorage.removeItem(MOCK_CONFIG_KEY);
 }
 
@@ -81,7 +76,6 @@ function buildAvailableVersions(config) {
     });
   }
   
-  console.log('[PupUpdates Mock] buildAvailableVersions:', versions);
   return versions;
 }
 
@@ -89,37 +83,31 @@ function buildAvailableVersions(config) {
 function getInstalledPupIds() {
   try {
     const pups = pkgController.pups;
-    console.log('[PupUpdates Mock] getInstalledPupIds - pkgController.pups:', pups);
     
     if (pups && pups.length > 0) {
       // Return IDs of pups that have state (i.e., are installed)
       const ids = pups
         .filter(pup => {
           const hasState = pup.state && pup.state.id;
-          console.log('[PupUpdates Mock] getInstalledPupIds - checking pup:', pup?.state?.manifest?.meta?.name, 'hasState:', hasState);
           return hasState;
         })
         .map(pup => pup.state.id);
       
-      console.log('[PupUpdates Mock] getInstalledPupIds - found IDs:', ids);
       return ids;
     }
   } catch (e) {
     console.error('[PupUpdates Mock] Failed to get installed pup IDs:', e);
   }
-  console.log('[PupUpdates Mock] getInstalledPupIds - returning empty array');
   return [];
 }
 
 export const mockPupUpdatesApi = {
   getAllPupUpdates: async () => {
-    console.log('[PupUpdates Mock] getAllPupUpdates called');
     await new Promise(resolve => setTimeout(resolve, 500));
     const config = getMockConfig();
     
     // Get actual installed pup IDs and return mock update data for each
     const pupIds = getInstalledPupIds();
-    console.log('[PupUpdates Mock] getAllPupUpdates - pupIds to mock:', pupIds);
     
     const result = {};
     
@@ -134,12 +122,10 @@ export const mockPupUpdatesApi = {
       };
     }
     
-    console.log('[PupUpdates Mock] getAllPupUpdates - returning:', result);
     return result;
   },
 
   getPupUpdate: async (pupId) => {
-    console.log('[PupUpdates Mock] getPupUpdate called for pupId:', pupId);
     await new Promise(resolve => setTimeout(resolve, 300));
     const config = getMockConfig();
     
@@ -152,36 +138,28 @@ export const mockPupUpdatesApi = {
       lastChecked: new Date()
     };
     
-    console.log('[PupUpdates Mock] getPupUpdate - returning:', result);
     return result;
   },
 
   checkPupUpdates: async (pupId) => {
-    console.log('[PupUpdates Mock] checkPupUpdates called for pupId:', pupId);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const result = { jobId: 'job-' + Math.random().toString(36).substr(2, 9) };
-    console.log('[PupUpdates Mock] checkPupUpdates - returning:', result);
     return result;
   },
 
   upgradePup: async (pupId, targetVersion) => {
-    console.log('[PupUpdates Mock] upgradePup called for pupId:', pupId, 'targetVersion:', targetVersion);
     await new Promise(resolve => setTimeout(resolve, 500));
     const result = { jobId: 'job-' + Math.random().toString(36).substr(2, 9) };
-    console.log('[PupUpdates Mock] upgradePup - returning:', result);
     return result;
   },
 
   rollbackPup: async (pupId) => {
-    console.log('[PupUpdates Mock] rollbackPup called for pupId:', pupId);
     await new Promise(resolve => setTimeout(resolve, 500));
     const result = { jobId: 'job-' + Math.random().toString(36).substr(2, 9) };
-    console.log('[PupUpdates Mock] rollbackPup - returning:', result);
     return result;
   },
 
   getPreviousVersion: async (pupId) => {
-    console.log('[PupUpdates Mock] getPreviousVersion called for pupId:', pupId);
     await new Promise(resolve => setTimeout(resolve, 300));
     const result = {
       version: '0.9.0',
@@ -198,7 +176,25 @@ export const mockPupUpdatesApi = {
       sourceId: 'source-123',
       sourceLocation: 'https://github.com/example/pup'
     };
-    console.log('[PupUpdates Mock] getPreviousVersion - returning:', result);
+    return result;
+  },
+
+  getSkippedUpdates: async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Return empty object for now - skipped updates are managed in localStorage
+    const result = {};
+    return result;
+  },
+
+  skipPupUpdate: async (pupId) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const result = { status: 'success' };
+    return result;
+  },
+
+  clearSkippedUpdate: async (pupId) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const result = { status: 'success' };
     return result;
   }
 };

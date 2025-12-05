@@ -1,4 +1,4 @@
-import { getAllPupUpdates } from '/api/pup-updates/pup-updates.js';
+import { getAllPupUpdates, getSkippedUpdates, skipPupUpdate as apiSkipPupUpdate, clearSkippedUpdate as apiClearSkippedUpdate } from '/api/pup-updates/pup-updates.js';
 import { store } from '/state/store.js';
 
 const SKIPPED_UPDATES_STORAGE_KEY = 'dpanel:skippedUpdates';
@@ -7,25 +7,26 @@ const CACHED_UPDATES_STORAGE_KEY = 'dpanel:cachedPupUpdates';
 /**
  * Pup update state management.
  * The backend (dogeboxd) handles periodic update checking and caching.
- * This module fetches cached data from the backend and updates the frontend store,
- * and manages locally skipped updates.
+ * This module fetches cached data from the backend and updates the frontend store.
+ * Skipped updates are now persisted to the backend, with localStorage as a cache.
  */
 class PupUpdates {
   constructor() {
-    // skippedUpdates format: { pupId: { skippedAtVersion: "1.0.0", latestVersionAtSkip: "1.2.0" } }
-    this.skippedUpdates = this._loadSkipped();
+    // skippedUpdates format: { pupId: { skippedAtVersion: "1.0.0", latestVersionAtSkip: "1.2.0", skippedAt: "..." } }
+    this.skippedUpdates = this._loadSkippedFromLocalStorage();
   }
 
   /**
-   * Initialize - loads cached data immediately from localStorage only
+   * Initialize - loads cached data immediately from localStorage and backend
    * Does NOT trigger a backend refresh (backend handles periodic checks automatically)
    */
   async init() {
-    console.log('PupUpdates: Initializing...');
-    
     // Load cached update info from localStorage for immediate display
     // Backend will handle periodic checks and send websocket events when updates are found
     this._loadCachedUpdates();
+    
+    // Load skipped updates from backend (with localStorage as fallback)
+    await this._loadSkippedFromBackend();
   }
 
   /**
@@ -36,7 +37,6 @@ class PupUpdates {
       const stored = localStorage.getItem(CACHED_UPDATES_STORAGE_KEY);
       if (stored) {
         const cached = JSON.parse(stored);
-        console.log('[PupUpdates State] Loading cached updates from localStorage:', cached);
         
         // Calculate total updates available (excluding skipped)
         let totalUpdatesAvailable = 0;
@@ -82,7 +82,6 @@ class PupUpdates {
    */
   clearCachedUpdates() {
     localStorage.removeItem(CACHED_UPDATES_STORAGE_KEY);
-    console.log('[PupUpdates State] Cleared cached updates from localStorage');
   }
 
   /**
@@ -91,9 +90,6 @@ class PupUpdates {
    * This just fetches the current cached state.
    */
   async refresh() {
-    console.log('[PupUpdates State] refresh() called');
-    console.log('[PupUpdates State] Current store.networkContext.useMocks:', store.networkContext?.useMocks);
-    
     // Set loading state
     store.updateState({
       pupUpdatesContext: {
@@ -103,22 +99,16 @@ class PupUpdates {
     });
 
     try {
-      console.log('[PupUpdates State] Fetching cached update info from backend/mock...');
       const updateInfo = await getAllPupUpdates();
-      console.log('[PupUpdates State] Got updateInfo:', updateInfo);
-      console.log('[PupUpdates State] updateInfo keys:', Object.keys(updateInfo || {}));
       
       // Count total updates available (excluding skipped ones)
       let totalUpdatesAvailable = 0;
       for (const pupId in updateInfo) {
         const isSkipped = this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion);
-        console.log(`[PupUpdates State] Pup ${pupId}: updateAvailable=${updateInfo[pupId].updateAvailable}, isSkipped=${isSkipped}`);
         if (updateInfo[pupId].updateAvailable && !isSkipped) {
           totalUpdatesAvailable++;
         }
       }
-      
-      console.log(`[PupUpdates State] Total updates available: ${totalUpdatesAvailable}`);
       
       // Update the store
       const lastChecked = new Date().toISOString();
@@ -129,7 +119,6 @@ class PupUpdates {
         isChecking: false,
         error: null
       };
-      console.log('[PupUpdates State] Updating store with:', newContext);
       
       store.updateState({
         pupUpdatesContext: newContext
@@ -137,8 +126,6 @@ class PupUpdates {
       
       // Cache to localStorage for fast loading on page refresh
       this._saveCachedUpdates(updateInfo, lastChecked);
-      
-      console.log('[PupUpdates State] Store updated. Current pupUpdatesContext:', store.pupUpdatesContext);
     } catch (error) {
       console.error('[PupUpdates State] Failed to fetch update info:', error);
       store.updateState({
@@ -156,7 +143,6 @@ class PupUpdates {
    */
   getUpdateInfo(pupId) {
     const info = store.pupUpdatesContext.updateInfo[pupId] || null;
-    console.log(`[PupUpdates State] getUpdateInfo(${pupId}):`, info);
     return info;
   }
 
@@ -166,18 +152,13 @@ class PupUpdates {
    * @returns {boolean} True if update is available and not skipped
    */
   hasUpdate(pupId) {
-    console.log(`[PupUpdates State] hasUpdate(${pupId}) called`);
-    console.log(`[PupUpdates State] Current pupUpdatesContext:`, store.pupUpdatesContext);
-    
     const info = this.getUpdateInfo(pupId);
     if (!info || !info.updateAvailable) {
-      console.log(`[PupUpdates State] hasUpdate(${pupId}) = false (no info or not available)`);
       return false;
     }
     // Check if this update is skipped
     const isSkipped = this.isUpdateSkipped(pupId, info.latestVersion);
     const result = !isSkipped;
-    console.log(`[PupUpdates State] hasUpdate(${pupId}) = ${result} (isSkipped=${isSkipped})`);
     return result;
   }
 
@@ -194,10 +175,10 @@ class PupUpdates {
   // ========================================================================
 
   /**
-   * Load skipped updates from localStorage
-   * @returns {Object} Map of pupId -> { skippedAtVersion, latestVersionAtSkip }
+   * Load skipped updates from localStorage (for immediate display on page load)
+   * @returns {Object} Map of pupId -> { skippedAtVersion, latestVersionAtSkip, skippedAt }
    */
-  _loadSkipped() {
+  _loadSkippedFromLocalStorage() {
     try {
       const stored = localStorage.getItem(SKIPPED_UPDATES_STORAGE_KEY);
       if (stored) {
@@ -210,9 +191,31 @@ class PupUpdates {
   }
 
   /**
-   * Save skipped updates to localStorage
+   * Load skipped updates from backend (authoritative source)
+   * Updates localStorage cache after loading
    */
-  _saveSkipped() {
+  async _loadSkippedFromBackend() {
+    try {
+      const skipped = await getSkippedUpdates();
+      
+      // Update in-memory state
+      this.skippedUpdates = skipped || {};
+      
+      // Update localStorage cache
+      this._saveSkippedToLocalStorage();
+      
+      // Recalculate total count
+      this._updateTotalCount();
+    } catch (error) {
+      console.error('[PupUpdates State] Failed to load skipped updates from backend:', error);
+      // Keep using localStorage cache on error
+    }
+  }
+
+  /**
+   * Save skipped updates to localStorage (as cache)
+   */
+  _saveSkippedToLocalStorage() {
     try {
       localStorage.setItem(SKIPPED_UPDATES_STORAGE_KEY, JSON.stringify(this.skippedUpdates));
     } catch (error) {
@@ -223,25 +226,36 @@ class PupUpdates {
   /**
    * Skip all available updates for a pup (up to current latest)
    * The skip will be lifted when a version newer than latestVersionAtSkip is released
+   * Now persists to backend instead of just localStorage
    * @param {string} pupId - The pup ID
    */
-  skipUpdate(pupId) {
+  async skipUpdate(pupId) {
     const info = this.getUpdateInfo(pupId);
     if (!info || !info.updateAvailable) {
       return;
     }
 
-    this.skippedUpdates[pupId] = {
-      skippedAtVersion: info.currentVersion,
-      latestVersionAtSkip: info.latestVersion,
-      skippedAt: new Date().toISOString()
-    };
-    this._saveSkipped();
-    
-    // Re-calculate totalUpdatesAvailable after skipping
-    this._updateTotalCount();
-    
-    console.log(`PupUpdates: Skipped updates for ${pupId} up to version ${info.latestVersion}`);
+    try {
+      // Call backend API to persist the skip
+      await apiSkipPupUpdate(pupId);
+      
+      // Update local state
+      this.skippedUpdates[pupId] = {
+        pupId: pupId,
+        skippedAtVersion: info.currentVersion,
+        latestVersionAtSkip: info.latestVersion,
+        skippedAt: new Date().toISOString()
+      };
+      
+      // Update localStorage cache
+      this._saveSkippedToLocalStorage();
+      
+      // Re-calculate totalUpdatesAvailable after skipping
+      this._updateTotalCount();
+    } catch (error) {
+      console.error(`PupUpdates: Failed to skip update for ${pupId}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -283,14 +297,26 @@ class PupUpdates {
 
   /**
    * Clear skipped status for a pup
+   * Now persists to backend instead of just localStorage
    * @param {string} pupId - The pup ID
    */
-  clearSkipped(pupId) {
-    delete this.skippedUpdates[pupId];
-    this._saveSkipped();
-    
-    // Re-calculate totalUpdatesAvailable after clearing skip
-    this._updateTotalCount();
+  async clearSkipped(pupId) {
+    try {
+      // Call backend API to clear the skip
+      await apiClearSkippedUpdate(pupId);
+      
+      // Update local state
+      delete this.skippedUpdates[pupId];
+      
+      // Update localStorage cache
+      this._saveSkippedToLocalStorage();
+      
+      // Re-calculate totalUpdatesAvailable after clearing skip
+      this._updateTotalCount();
+    } catch (error) {
+      console.error(`PupUpdates: Failed to clear skip for ${pupId}:`, error);
+      throw error;
+    }
   }
 
   /**

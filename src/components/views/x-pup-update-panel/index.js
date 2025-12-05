@@ -124,15 +124,20 @@ class PupUpdatePanel extends LitElement {
     }
   }
 
-  _handleSkip() {
-    pupUpdates.skipUpdate(this.pupId);
-    createAlert('neutral', `Skipped updates for ${this.pupName}`, 'skip-forward', 3000);
-    
-    this.dispatchEvent(new CustomEvent('update-skipped', {
-      detail: { pupId: this.pupId },
-      bubbles: true,
-      composed: true
-    }));
+  async _handleSkip() {
+    try {
+      await pupUpdates.skipUpdate(this.pupId);
+      createAlert('neutral', `Skipped updates for ${this.pupName}`, 'skip-forward', 3000);
+      
+      this.dispatchEvent(new CustomEvent('update-skipped', {
+        detail: { pupId: this.pupId },
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      console.error('Failed to skip update:', error);
+      createAlert('danger', `Failed to skip update: ${error.message}`, 'exclamation-triangle', 5000);
+    }
   }
 
   _formatDate(dateStr) {

@@ -121,7 +121,6 @@ class SocketChannel {
           
           // If this was a CheckPupUpdates action that succeeded, refresh cached update info
           if (!data.error && data.update && (data.update.pupsChecked !== undefined || data.update.updateInfo)) {
-            console.log('CheckPupUpdates completed, refreshing cached update info...');
             await pupUpdates.refresh();
           }
           break;
@@ -148,7 +147,6 @@ class SocketChannel {
 
         case "pup-updates-checked":
           // Backend has completed a periodic or manual update check
-          console.log('PupUpdates: Backend completed update check', data.update);
           await pupUpdates.refresh();
           break;
 

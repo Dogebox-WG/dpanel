@@ -142,16 +142,13 @@ class DebugPanel extends LitElement {
 
   async handleCheckPupUpdates() {
     try {
-      console.log('[DevPanel] handleCheckPupUpdates - starting');
+
       const result = await checkPupUpdates('all');
-      console.log('[DevPanel] handleCheckPupUpdates - check result:', result);
       
       // In mock mode, we need to manually refresh the state
       // (In real mode, the backend sends a websocket event that triggers refresh)
       if (store.networkContext.useMocks) {
-        console.log('[DevPanel] Mock mode - refreshing update state...');
         await pupUpdates.refresh();
-        console.log('[DevPanel] Update state refreshed');
       }
       
       const alert = Object.assign(document.createElement('sl-alert'), {
@@ -201,8 +198,6 @@ class DebugPanel extends LitElement {
     
     // Clear any legacy ignored updates
     localStorage.removeItem('dpanel:ignoredUpdates');
-    
-    console.log('Update cache cleared');
     
     const alert = Object.assign(document.createElement('sl-alert'), {
       variant: 'success',

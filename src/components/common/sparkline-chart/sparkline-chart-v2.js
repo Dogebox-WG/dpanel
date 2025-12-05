@@ -49,12 +49,8 @@ class SparklineChart extends LitElement {
       display: none;
       pointer-events: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    }
-    .label {
-      font-size: var(--sl-font-size-x-small);
-    }
-    .label[disabled] {
-      color: grey;
+      overflow-wrap: anywhere;
+      user-select: text;
     }
     .sparkline--cursor {
       stroke: #ffbd11;
@@ -81,6 +77,7 @@ class SparklineChart extends LitElement {
       onmousemove: (event, datapoint) => {
         if (this.disabled || datapoint == null) return;
         const tooltip = this.shadowRoot.querySelector('.tooltip');
+        if (!tooltip) return;
 
         const val =
           typeof datapoint === 'number'
@@ -91,22 +88,19 @@ class SparklineChart extends LitElement {
           datapoint && Number.isInteger(datapoint.index) ? datapoint.index : 0;
 
         const ts = this._timestamps?.[idx];
+        const tsLabel = this._fmtTs(ts);
 
         tooltip.style.display = 'block';
 
-        // Optional header/description at the top of the tooltip.
-        const header = this.title
-          ? `<div style="font-weight: bold; margin-bottom: 4px; opacity: 0.95;">${this.title}</div>`
-          : '';
-
-        tooltip.innerHTML = `${header}Value: ${val}<br><span style="opacity:0.8; font-size:11px;">${this._fmtTs(ts)}</span>`;
+        tooltip.innerHTML =
+          `Value: ${val}<br><span style="opacity:0.8; font-size:11px;">${tsLabel}</span>`;
         tooltip.style.top = `${event.offsetY}px`;
         tooltip.style.left = `${event.offsetX + 20}px`;
       },
       onmouseout: () => {
         if (this.disabled) return;
         const tooltip = this.shadowRoot.querySelector('.tooltip');
-        tooltip.style.display = 'none';
+        if (tooltip) tooltip.style.display = 'none';
       },
       interactive: true
     };
@@ -131,7 +125,6 @@ class SparklineChart extends LitElement {
   render() {
     const fill = this.disabled ? "rgba(255, 255, 255, 0.1)" : "rgba(7, 255, 174, 0.2)";
     return html`
-      ${this.label ? html`<span class="label" ?disabled=${this.disabled}>${this.label}</span>` : ''}
       <svg
         part="sparkline-svg"
         preserveAspectRatio="none"
@@ -151,20 +144,24 @@ class SparklineChart extends LitElement {
   }
 
   drawSparkline() {
-    // Normalize input into parallel arrays of numbers (values) and timestamps (optional)
-    const toSeriesWithTs = (arrLike) => {
-      if (!arrLike) return { values: [], ts: [] };
+    // Normalize into [{ value, ts? }, ...]
+    const toPoints = (arrLike) => {
+      if (!arrLike) return [];
       if (typeof arrLike === 'string') {
         try { arrLike = JSON.parse(arrLike); } catch { /* ignore */ }
       }
 
-      const values = [];
-      const ts = [];
+      const points = [];
       const tsKeys = ['ts','time','timestamp','date','t'];
 
+      const pickTs = (obj) => {
+        if (!obj) return undefined;
+        const k = tsKeys.find(k => obj[k] != null);
+        return k ? obj[k] : undefined;
+      };
+
       for (const item of Array.from(arrLike)) {
-        let v;
-        let tVal = undefined;
+        let v, tVal;
 
         if (Array.isArray(item) && item.length >= 2) {
           // [timestamp, value]
@@ -174,8 +171,8 @@ class SparklineChart extends LitElement {
           // { value, ts/time/timestamp/... }
           const key = ['value','v','n','val','y','x'].find(k => item[k] != null);
           v = key ? item[key] : item;
-          const tKey = tsKeys.find(k => item[k] != null);
-          if (tKey) tVal = item[tKey];
+          tVal = pickTs(item);
+          if (tVal == null && item.meta) tVal = pickTs(item.meta);
         } else {
           // primitive number/string
           v = item;
@@ -184,17 +181,18 @@ class SparklineChart extends LitElement {
         if (typeof v === 'string') v = v.replace(/[,\s%]/g, '');
         const n = Number(v);
         if (Number.isFinite(n)) {
-          values.push(n);
-          ts.push(tVal ?? null);
+          const p = { value: n };
+          if (tVal != null) p.ts = tVal;
+          points.push(p);
         }
       }
 
-      return { values: values.slice(-500), ts: ts.slice(-500) };
+      return points.slice(-500);
     };
 
-    const { values: numericSeries, ts } = this.mock
-      ? toSeriesWithTs(generateMockSparklineData(10))
-      : toSeriesWithTs(this.data);
+    const points = this.mock
+      ? toPoints(generateMockSparklineData(10))
+      : toPoints(this.data);
 
     const svg = this.shadowRoot.querySelector('svg[part="sparkline-svg"]');
     if (!svg) return;
@@ -211,38 +209,35 @@ class SparklineChart extends LitElement {
     if (!svg.hasAttribute('stroke-width')) svg.setAttribute('stroke-width', '2');
 
     // Need at least two points
-    if (numericSeries.length < 2) {
+    if (points.length < 2) {
       svg.innerHTML = '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="gray">-</text>';
-      this._timestamps = ts;
+      this._timestamps = points.map(p => p.ts ?? null);
       return;
     }
 
     // If incoming data has no timestamps at all, synthesize them (10s spacing).
-    const hasAnyTs = Array.isArray(ts) && ts.some(t => t !== null && t !== undefined && String(t) !== '');
-    let tsUse = ts;
+    const hasAnyTs = points.some(p => p.ts !== null && p.ts !== undefined && String(p.ts) !== '');
     if (!hasAnyTs) {
       const step = this._fallbackStepMs;
-      const start = Date.now() - step * (numericSeries.length - 1);
-      tsUse = Array.from({ length: numericSeries.length }, (_, i) => start + i * step);
+      const start = Date.now() - step * (points.length - 1);
+      points.forEach((p, i) => { p.ts = start + i * step; });
     }
 
     // Prevent zero-height y-range (flat series)
-    let series = numericSeries.slice();
-    const min = Math.min(...series), max = Math.max(...series);
+    const min = Math.min(...points.map(p => p.value));
+    const max = Math.max(...points.map(p => p.value));
     if (min === max) {
       const eps = (Math.abs(min) || 1) * 1e-6;
-      series[0] -= eps;
-      series[series.length - 1] += eps;
+      points[0].value -= eps;
+      points[points.length - 1].value += eps;
     }
 
-    // Build objects + keep timestamps aligned
-    const objects = series.map(v => ({ value: v }));
-    this._timestamps = tsUse.slice(-objects.length);
+    this._timestamps = points.map(p => p.ts ?? null);
 
     try {
-      sparkline(svg, objects, this.options);
+      sparkline(svg, points, this.options);
     } catch (e) {
-      console.error('[sparkline] draw failed', { series: objects, raw: this.data }, e);
+      console.error('[sparkline] draw failed', { series: points, raw: this.data }, e);
       svg.innerHTML = '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="gray">-</text>';
     }
   }

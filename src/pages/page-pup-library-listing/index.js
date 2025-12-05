@@ -148,12 +148,11 @@ class PupPage extends LitElement {
     const callbacks = {
       onSuccess: () => dynamicForm.commitChanges(formNode),
       onError: (errorPayload) => {
-        dynamicForm.retainChanges(); // To cease the form from spinning
-        this.displayConfigUpdateErr(errorPayload); // Display a failure banner
+        dynamicForm.retainChanges();
+        this.displayConfigUpdateErr(errorPayload);
       },
     };
 
-    // Invoke pkgContrller model update, supplying data and callbacks
     const res = await pkgController.requestPupChanges(
       pupId,
       stagedChanges,
@@ -392,11 +391,22 @@ class PupPage extends LitElement {
 
       return html`
         <div class="metrics-wrap">
-          ${enriched.map((metric) => html`
-            <div class="metric-container">
-              <x-metric .metric=${metric}></x-metric>
-            </div>
-          `)}
+          ${enriched.map(
+            (metric) => html`
+              <div class="metric-container">
+                <div
+                  class="metric-label"
+                  title=${(metric.description ||
+                  metric.label ||
+                  metric.name ||
+                  "").trim()}
+                >
+                  ${metric.label ?? metric.name ?? ""}
+                </div>
+                <x-metric .metric=${metric}></x-metric>
+              </div>
+            `,
+          )}
         </div>
       `;
     };
@@ -412,11 +422,22 @@ class PupPage extends LitElement {
 
       return html`
         <div class="metrics-wrap">
-          ${pkg.stats.systemMetrics.map((metric) => html`
-            <div class="metric-container">
-              <x-metric .metric=${metric}></x-metric>
-            </div>
-          `)}
+          ${pkg.stats.systemMetrics.map(
+            (metric) => html`
+              <div class="metric-container">
+                <div
+                  class="metric-label"
+                  title=${(metric.description ||
+                  metric.label ||
+                  metric.name ||
+                  "").trim?.() || ""}
+                >
+                  ${metric.label ?? metric.name ?? ""}
+                </div>
+                <x-metric .metric=${metric}></x-metric>
+              </div>
+            `,
+          )}
         </div>
       `;
     };
@@ -635,11 +656,6 @@ class PupPage extends LitElement {
       color: var(--sl-color-neutral-400);
     }
 
-    section .section-title h3 {
-      text-transform: uppercase;
-      font-family: "Comic Neue";
-    }
-
     .update-badge {
       font-family: 'Comic Neue';
       font-weight: bold;
@@ -698,6 +714,14 @@ class PupPage extends LitElement {
       width: 100%;
     }
 
+    .metric-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #07ffae;
+      margin: 0 0 0.35rem 0;
+      user-select: text;
+      pointer-events: auto;
+    }
   `;
 }
 

@@ -8,7 +8,7 @@ const CACHED_UPDATES_STORAGE_KEY = 'dpanel:cachedPupUpdates';
  * Pup update state management.
  * The backend (dogeboxd) handles periodic update checking and caching.
  * This module fetches cached data from the backend and updates the frontend store.
- * Skipped updates are now persisted to the backend, with localStorage as a cache.
+ * Skipped updates are persisted to the backend, with localStorage as a cache.
  */
 class PupUpdates {
   constructor() {
@@ -21,11 +21,7 @@ class PupUpdates {
    * Does NOT trigger a backend refresh (backend handles periodic checks automatically)
    */
   async init() {
-    // Load cached update info from localStorage for immediate display
-    // Backend will handle periodic checks and send websocket events when updates are found
     this._loadCachedUpdates();
-    
-    // Load skipped updates from backend (with localStorage as fallback)
     await this._loadSkippedFromBackend();
   }
 

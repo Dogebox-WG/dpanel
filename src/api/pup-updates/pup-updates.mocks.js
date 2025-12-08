@@ -181,7 +181,7 @@ export const mockPupUpdatesApi = {
 
   getSkippedUpdates: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
-    // Return empty object for now - skipped updates are managed in localStorage
+    // Return map of pupId -> skippedVersion
     const result = {};
     return result;
   },

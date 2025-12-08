@@ -14,7 +14,7 @@ const CACHED_UPDATES_STORAGE_KEY = 'dpanel:cachedPupUpdates';
  */
 class PupUpdates {
   constructor() {
-    // skippedUpdates format: { pupId: { skippedAtVersion: "1.0.0", latestVersionAtSkip: "1.2.0", skippedAt: "..." } }
+    // skippedUpdates format: { "dogenet": "1.2.0", "core": "2.0.1" } - maps pupId to skipped version
     this.skippedUpdates = this._loadSkippedFromLocalStorage();
   }
 
@@ -272,7 +272,7 @@ class PupUpdates {
 
   /**
    * Load skipped updates from localStorage (for immediate display on page load)
-   * @returns {Object} Map of pupId -> { skippedAtVersion, latestVersionAtSkip, skippedAt }
+   * @returns {Object} Map of pupId -> skippedVersion (string)
    */
   _loadSkippedFromLocalStorage() {
     try {
@@ -321,7 +321,7 @@ class PupUpdates {
 
   /**
    * Skip all available updates for a pup (up to current latest)
-   * The skip will be lifted when a version newer than latestVersionAtSkip is released
+   * The skip will be lifted when a version newer than the skipped version is released
    * Now persists to backend instead of just localStorage
    * @param {string} pupId - The pup ID
    */
@@ -335,13 +335,8 @@ class PupUpdates {
       // Call backend API to persist the skip
       await apiSkipPupUpdate(pupId);
       
-      // Update local state
-      this.skippedUpdates[pupId] = {
-        pupId: pupId,
-        skippedAtVersion: info.currentVersion,
-        latestVersionAtSkip: info.latestVersion,
-        skippedAt: new Date().toISOString()
-      };
+      // Update local state - just store the skipped version
+      this.skippedUpdates[pupId] = info.latestVersion;
       
       // Update localStorage cache
       this._saveSkippedToLocalStorage();
@@ -358,18 +353,16 @@ class PupUpdates {
    * Check if updates are currently skipped for a pup
    * @param {string} pupId - The pup ID
    * @param {string} latestVersion - The current latest version available
-   * @returns {boolean} True if updates are skipped and latestVersion <= latestVersionAtSkip
+   * @returns {boolean} True if updates are skipped and latestVersion <= skippedVersion
    */
   isUpdateSkipped(pupId, latestVersion) {
-    const skipInfo = this.skippedUpdates[pupId];
-    if (!skipInfo) {
+    const skippedVersion = this.skippedUpdates[pupId];
+    if (!skippedVersion) {
       return false;
     }
 
-    // Compare versions: if latestVersion > latestVersionAtSkip, the skip is no longer valid
-    // Simple string comparison works for semver in most cases for this purpose
-    // But we need proper comparison
-    return this._compareVersions(latestVersion, skipInfo.latestVersionAtSkip) <= 0;
+    // Compare versions: if latestVersion > skippedVersion, the skip is no longer valid
+    return this._compareVersions(latestVersion, skippedVersion) <= 0;
   }
 
   /**
@@ -450,7 +443,7 @@ class PupUpdates {
   /**
    * Get skip info for a pup
    * @param {string} pupId - The pup ID
-   * @returns {Object|null} Skip info or null if not skipped
+   * @returns {string|null} Skipped version or null if not skipped
    */
   getSkipInfo(pupId) {
     return this.skippedUpdates[pupId] || null;

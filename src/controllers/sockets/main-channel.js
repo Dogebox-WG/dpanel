@@ -145,11 +145,6 @@ class SocketChannel {
           sysController.ingestSystemUpdateAvailableEvent(data)
           break;
 
-        case "pup-updates-checked":
-          // Backend has completed a periodic or manual update check
-          await pupUpdates.refresh();
-          break;
-
         case "recovery":
           console.log("--RECOVERY", data.update);
           this.recoveryLogs = [...this.recoveryLogs, data.update];

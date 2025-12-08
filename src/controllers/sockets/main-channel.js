@@ -187,6 +187,13 @@ class SocketChannel {
             store.updateState({
               jobsContext: { activities }
             });
+            
+            // Clear update info when a pup is uninstalled or purged
+            if (data.update.action && (data.update.action === 'uninstall' || data.update.action === 'purge')) {
+              if (data.update.state && data.update.state.id) {
+                pupUpdates.clearUpdateInfo(data.update.state.id);
+              }
+            }
           }
           break;
       }
@@ -228,7 +235,6 @@ class SocketChannel {
   addObserver(observer) {
     if (!this.observers.includes(observer)) {
       this.observers.push(observer);
-      console.log("OBSERVER ADDED", observer);
     }
   }
 

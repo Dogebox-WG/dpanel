@@ -11,6 +11,8 @@ import { pupUpdates } from "/state/pup-updates.js";
 import { upgradePup } from "/api/pup-updates/pup-updates.js";
 import { pkgController } from "/controllers/package/index.js";
 import { createAlert } from "/components/common/alert.js";
+import { compareVersions } from "/utils/version.js";
+import "/components/common/version-selector/index.js";
 
 /**
  * Pup Update Panel Component
@@ -78,20 +80,11 @@ class PupUpdatePanel extends LitElement {
   }
 
   _compareVersions(a, b) {
-    if (!a || !b) return 0;
-    const partsA = a.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
-    const partsB = b.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
-    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-      const partA = partsA[i] || 0;
-      const partB = partsB[i] || 0;
-      if (partA < partB) return -1;
-      if (partA > partB) return 1;
-    }
-    return 0;
+    return compareVersions(a, b);
   }
 
   _handleVersionChange(e) {
-    this._selectedVersion = e.target.value;
+    this._selectedVersion = e.detail.version;
   }
 
   async _handleUpgrade() {
@@ -199,19 +192,13 @@ class PupUpdatePanel extends LitElement {
           <div class="version-row">
             <span class="label">Target Version</span>
             ${versions.length > 1 ? html`
-              <sl-select 
-                value=${targetVersion}
-                @sl-change=${this._handleVersionChange}
+              <version-selector
+                .versions=${versions}
+                .selectedVersion=${targetVersion}
+                @version-change=${this._handleVersionChange}
                 size="small"
                 class="version-select"
-              >
-                ${versions.map((v, i) => html`
-                  <sl-option value=${v.version}>
-                    ${v.version}
-                    ${i === 0 ? ' (latest)' : ''}
-                  </sl-option>
-                `)}
-              </sl-select>
+              ></version-selector>
             ` : html`
               <span class="version target">${targetVersion}</span>
             `}

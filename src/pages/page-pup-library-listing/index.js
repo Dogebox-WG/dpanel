@@ -46,6 +46,7 @@ class PupPage extends LitElement {
       inflight_purge: { type: Boolean },
       _HARDCODED_UNINSTALL_WAIT_TIME: { type: Number },
       activityLogs: { type: Array },
+      rollbackAvailable: { type: Boolean },
     };
   }
 
@@ -63,6 +64,7 @@ class PupPage extends LitElement {
     this._confirmedName = "";
     this._HARDCODED_UNINSTALL_WAIT_TIME = 0;
     this.activityLogs = [];
+    this.rollbackAvailable = false;
     this.renderDialog = renderDialog.bind(this);
     this.renderActions = renderActions.bind(this);
     this.renderStatus = renderStatus.bind(this);
@@ -180,6 +182,9 @@ class PupPage extends LitElement {
     this.inflight_uninstall = true;
     this.requestUpdate();
 
+    // Clear update info immediately to prevent stale cache on page refresh
+    pupUpdates.clearUpdateInfo(pupId);
+
     const actionName = 'uninstall'
     const callbacks = {
       onSuccess: async () => {
@@ -220,6 +225,30 @@ class PupPage extends LitElement {
     const pupId = this.context.store.pupContext?.state?.id;
     if (!pupId) return false;
     return pupUpdates.hasUpdate(pupId);
+  }
+
+  async updated(changedProperties) {
+    super.updated(changedProperties);
+    
+    // Check for rollback availability when pup becomes broken
+    const pkg = this.getPup();
+    if (pkg && pkg.state.installation === 'broken') {
+      await this.checkRollbackAvailability();
+    }
+  }
+
+  async checkRollbackAvailability() {
+    const pupId = this.context.store.pupContext?.state?.id;
+    if (!pupId) return;
+    
+    try {
+      const { getPreviousVersion } = await import('/api/pup-updates/pup-updates.js');
+      const result = await getPreviousVersion(pupId);
+      this.rollbackAvailable = result.rollbackPossible || false;
+    } catch (error) {
+      console.error('Failed to check rollback availability:', error);
+      this.rollbackAvailable = false;
+    }
   }
 
   render() {
@@ -404,7 +433,7 @@ class PupPage extends LitElement {
                   <sl-badge variant="primary" pill pulse class="update-badge">Update Available</sl-badge>
                 ` : nothing}
               </div>
-              ${this.renderStatus(labels, pkg)}
+              ${this.renderStatus(labels, pkg, this.rollbackAvailable)}
               <sl-progress-bar value="0" ?indeterminate=${isLoadingStatus || isInstallationLoadingStatus} class="loading-bar ${statusInstallationId}"></sl-progress-bar>
             </div>
           </div>

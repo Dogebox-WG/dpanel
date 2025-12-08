@@ -9,6 +9,7 @@ import { StoreSubscriber } from "/state/subscribe.js";
 import { store } from "/state/store.js";
 import { mocks } from "/api/mocks.js";
 import { getMockConfig, saveMockConfig, resetMockConfig } from "/api/pup-updates/pup-updates.mocks.js";
+import { compareVersions } from "/utils/version.js";
 
 class DebugSettingsDialog extends LitElement {
   static properties = {
@@ -139,7 +140,7 @@ class DebugSettingsDialog extends LitElement {
     
     const versions = [...(this._pupUpdateConfig.availableVersions || []), newVersion];
     // Sort descending by version
-    versions.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
+    versions.sort((a, b) => compareVersions(b.version, a.version));
     
     this._pupUpdateConfig = { ...this._pupUpdateConfig, availableVersions: versions };
     saveMockConfig(this._pupUpdateConfig);

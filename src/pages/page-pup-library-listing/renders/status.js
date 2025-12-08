@@ -2,7 +2,7 @@ import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min
 import { rollbackPup } from "/api/pup-updates/pup-updates.js";
 import { createAlert } from "/components/common/alert.js";
 
-export function renderStatus(labels, pkg) {
+export function renderStatus(labels, pkg, rollbackAvailable = false) {
   let { statusId, statusLabel, installationId, installationLabel } = labels;
   const isInstallationLoadingStatus = ["uninstalling", "purging", "upgrading"].includes(installationId)
 
@@ -57,12 +57,6 @@ export function renderStatus(labels, pkg) {
   `
 
   const [ brokenReason, isRecoverable ] = getBrokenReason(pkg)
-  
-  // Check if this broken state might be from a failed upgrade
-  const mightBeUpgradeFailure = installationId === "broken" && 
-    (pkg.state.brokenReason === "download_failed" || 
-     pkg.state.brokenReason === "nix_apply_failed" ||
-     pkg.state.brokenReason === "state_update_failed");
 
   const handleRollback = async () => {
     try {
@@ -97,10 +91,10 @@ export function renderStatus(labels, pkg) {
           Error Code: ${pkg.state.brokenReason}
         </sl-alert>
 
-        ${mightBeUpgradeFailure ? html`
+        ${rollbackAvailable ? html`
           <div class="rollback-section">
             <h4><sl-icon name="arrow-counterclockwise"></sl-icon> Rollback Available</h4>
-            <p>If this failure occurred during an upgrade, you can attempt to rollback to the previous working version.</p>
+            <p>This failure occurred during an upgrade. You can attempt to rollback to the previous working version.</p>
             <sl-button variant="warning" size="small" @click=${handleRollback}>
               <sl-icon slot="prefix" name="arrow-counterclockwise"></sl-icon>
               Rollback to Previous Version

@@ -1,5 +1,7 @@
 import { getAllPupUpdates, getSkippedUpdates, skipPupUpdate as apiSkipPupUpdate, clearSkippedUpdate as apiClearSkippedUpdate } from '/api/pup-updates/pup-updates.js';
 import { store } from '/state/store.js';
+import { pkgController } from '/controllers/package/index.js';
+import { compareVersions } from '/utils/version.js';
 
 const SKIPPED_UPDATES_STORAGE_KEY = 'dpanel:skippedUpdates';
 const CACHED_UPDATES_STORAGE_KEY = 'dpanel:cachedPupUpdates';
@@ -21,8 +23,86 @@ class PupUpdates {
    * Does NOT trigger a backend refresh (backend handles periodic checks automatically)
    */
   async init() {
+    console.log('[PupUpdates] Initializing pup updates state');
     this._loadCachedUpdates();
     await this._loadSkippedFromBackend();
+    
+    // Clean up stale entries after initial load
+    this._reconcileCache();
+  }
+
+  /**
+   * Reconcile the update cache with actually installed pups
+   * Removes entries for pups that are no longer installed
+   */
+  _reconcileCache() {
+    let updateInfo = store.pupUpdatesContext.updateInfo || {};
+    // Ensure updateInfo is actually an object, not a string or other type
+    if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+      console.warn('[PupUpdates] Invalid updateInfo type, resetting to empty object:', typeof updateInfo);
+      updateInfo = {};
+    }
+    const installedPupIds = pkgController.stateIndex || {};
+    
+    // If no pups are loaded yet, skip reconciliation
+    if (Object.keys(installedPupIds).length === 0 && Object.keys(updateInfo).length === 0) {
+      console.log('[PupUpdates] Reconciliation: skipping, no data loaded yet');
+      return;
+    }
+    
+    let cleaned = false;
+    const staleEntries = [];
+    
+    // Check each cached update entry
+    for (const pupId in updateInfo) {
+      // If this pup is not in the installed pups list, it's stale
+      if (!installedPupIds[pupId]) {
+        staleEntries.push(pupId);
+        delete updateInfo[pupId];
+        cleaned = true;
+      }
+    }
+    
+    if (cleaned) {
+      console.log(`[PupUpdates] Reconciliation: removed ${staleEntries.length} stale update entries:`, staleEntries);
+      
+      // Also clean up skipped updates for uninstalled pups
+      for (const pupId of staleEntries) {
+        delete this.skippedUpdates[pupId];
+      }
+      this._saveSkippedToLocalStorage();
+      
+      // Recalculate total count
+      let totalUpdatesAvailable = 0;
+      for (const pupId in updateInfo) {
+        if (this.hasUpdate(pupId)) {
+          totalUpdatesAvailable++;
+        }
+      }
+      
+      // Update store
+      store.updateState({
+        pupUpdatesContext: {
+          ...store.pupUpdatesContext,
+          updateInfo,
+          totalUpdatesAvailable
+        }
+      });
+      
+      // Update localStorage cache
+      this._saveCachedUpdates(updateInfo, store.pupUpdatesContext.lastChecked);
+    } else {
+      console.log('[PupUpdates] Reconciliation: cache is clean, no stale entries found');
+    }
+  }
+
+  /**
+   * Manually trigger cache reconciliation
+   * Useful for debugging or recovering from sync issues
+   */
+  reconcile() {
+    console.log('[PupUpdates] Manual reconciliation triggered');
+    this._reconcileCache();
   }
 
   /**
@@ -34,16 +114,16 @@ class PupUpdates {
       if (stored) {
         const cached = JSON.parse(stored);
         
-        // Calculate total updates available (excluding skipped)
+        // Calculate total updates available (excluding skipped and upgrading/broken)
         let totalUpdatesAvailable = 0;
         const updateInfo = cached.updateInfo || {};
         for (const pupId in updateInfo) {
-          if (updateInfo[pupId].updateAvailable && !this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion)) {
+          if (this.hasUpdate(pupId)) {
             totalUpdatesAvailable++;
           }
         }
-        
-        // Update store with cached data immediately
+    
+    // Update store with cached data immediately
         store.updateState({
           pupUpdatesContext: {
             updateInfo,
@@ -53,6 +133,8 @@ class PupUpdates {
             error: null
           }
         });
+      } else {
+        console.log('[PupUpdates] No cached updates found in localStorage');
       }
     } catch (error) {
       console.error('[PupUpdates State] Failed to load cached updates from localStorage:', error);
@@ -86,6 +168,8 @@ class PupUpdates {
    * This just fetches the current cached state.
    */
   async refresh() {
+    console.log('[PupUpdates] Refreshing update info from backend');
+    
     // Set loading state
     store.updateState({
       pupUpdatesContext: {
@@ -97,11 +181,10 @@ class PupUpdates {
     try {
       const updateInfo = await getAllPupUpdates();
       
-      // Count total updates available (excluding skipped ones)
+      // Count total updates available (excluding skipped and upgrading/broken)
       let totalUpdatesAvailable = 0;
       for (const pupId in updateInfo) {
-        const isSkipped = this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion);
-        if (updateInfo[pupId].updateAvailable && !isSkipped) {
+        if (this.hasUpdate(pupId)) {
           totalUpdatesAvailable++;
         }
       }
@@ -138,7 +221,11 @@ class PupUpdates {
    * Get update info for a specific pup
    */
   getUpdateInfo(pupId) {
-    const info = store.pupUpdatesContext.updateInfo[pupId] || null;
+    const updateInfo = store.pupUpdatesContext.updateInfo;
+    if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+      return null;
+    }
+    const info = updateInfo[pupId] || null;
     return info;
   }
 
@@ -152,10 +239,23 @@ class PupUpdates {
     if (!info || !info.updateAvailable) {
       return false;
     }
+    
     // Check if this update is skipped
-    const isSkipped = this.isUpdateSkipped(pupId, info.latestVersion);
-    const result = !isSkipped;
-    return result;
+    if (this.isUpdateSkipped(pupId, info.latestVersion)) {
+      return false;
+    }
+    
+    // Hide updates if an upgrade is in progress or has failed
+    const pupState = pkgController.stateIndex[pupId];
+    if (pupState) {
+      const installation = pupState.installation;
+      // Don't show update badge if upgrading or broken (failed upgrade)
+      if (installation === 'upgrading' || installation === 'broken') {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   /**
@@ -275,20 +375,10 @@ class PupUpdates {
   /**
    * Compare two semver strings
    * @returns {number} -1 if a < b, 0 if a == b, 1 if a > b
+   * @deprecated Use compareVersions from /utils/version.js instead
    */
   _compareVersions(a, b) {
-    if (!a || !b) return 0;
-    
-    const partsA = a.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
-    const partsB = b.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
-    
-    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-      const partA = partsA[i] || 0;
-      const partB = partsB[i] || 0;
-      if (partA < partB) return -1;
-      if (partA > partB) return 1;
-    }
-    return 0;
+    return compareVersions(a, b);
   }
 
   /**
@@ -316,6 +406,48 @@ class PupUpdates {
   }
 
   /**
+   * Clear update info for a pup (called when pup is uninstalled)
+   * @param {string} pupId - The pup ID
+   */
+  clearUpdateInfo(pupId) {
+    console.log(`[PupUpdates] Clearing update info for uninstalled pup: ${pupId}`);
+    
+    let updateInfo = store.pupUpdatesContext.updateInfo || {};
+    // Ensure updateInfo is actually an object, not a string or other type
+    if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+      console.warn('[PupUpdates] Invalid updateInfo type in clearUpdateInfo, resetting to empty object:', typeof updateInfo);
+      updateInfo = {};
+    }
+    
+    // Remove the pup from update info
+    delete updateInfo[pupId];
+    
+    // Also clear any skipped status
+    delete this.skippedUpdates[pupId];
+    
+    // Recalculate total count
+    let totalUpdatesAvailable = 0;
+    for (const pid in updateInfo) {
+      if (this.hasUpdate(pid)) {
+        totalUpdatesAvailable++;
+      }
+    }
+    
+    // Update store
+    store.updateState({
+      pupUpdatesContext: {
+        ...store.pupUpdatesContext,
+        updateInfo,
+        totalUpdatesAvailable
+      }
+    });
+    
+    // Update localStorage caches
+    this._saveCachedUpdates(updateInfo, store.pupUpdatesContext.lastChecked);
+    this._saveSkippedToLocalStorage();
+  }
+
+  /**
    * Get skip info for a pup
    * @param {string} pupId - The pup ID
    * @returns {Object|null} Skip info or null if not skipped
@@ -337,11 +469,16 @@ class PupUpdates {
    * (called after skip/unskip operations)
    */
   _updateTotalCount() {
-    const updateInfo = store.pupUpdatesContext.updateInfo || {};
+    let updateInfo = store.pupUpdatesContext.updateInfo || {};
+    // Ensure updateInfo is actually an object, not a string or other type
+    if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+      console.warn('[PupUpdates] Invalid updateInfo type in _updateTotalCount, using empty object:', typeof updateInfo);
+      updateInfo = {};
+    }
     let totalUpdatesAvailable = 0;
     
     for (const pupId in updateInfo) {
-      if (updateInfo[pupId].updateAvailable && !this.isUpdateSkipped(pupId, updateInfo[pupId].latestVersion)) {
+      if (this.hasUpdate(pupId)) {
         totalUpdatesAvailable++;
       }
     }
@@ -384,3 +521,29 @@ class PupUpdates {
 
 // Export as singleton
 export const pupUpdates = new PupUpdates();
+
+// Expose debug utilities to window
+if (typeof window !== 'undefined') {
+  window.pupUpdates = {
+    reconcile: () => {
+      console.log('[Debug] Manually triggering cache reconciliation');
+      pupUpdates.reconcile();
+    },
+    clearAll: () => {
+      console.log('[Debug] Clearing all update cache and skipped updates');
+      pupUpdates.skippedUpdates = {};
+      pupUpdates._saveSkippedToLocalStorage();
+      store.updateState({
+        pupUpdatesContext: {
+          updateInfo: {},
+          lastChecked: null,
+          totalUpdatesAvailable: 0,
+          isChecking: false,
+          error: null
+        }
+      });
+      pupUpdates._saveCachedUpdates({}, null);
+      console.log('[Debug] All caches cleared');
+    }
+  };
+}

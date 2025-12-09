@@ -5,6 +5,7 @@ import { compareVersions } from '/utils/version.js';
 
 const SKIPPED_UPDATES_STORAGE_KEY = 'dpanel:skippedUpdates';
 const CACHED_UPDATES_STORAGE_KEY = 'dpanel:cachedPupUpdates';
+const CACHE_VERSION = 1; // Increment this to invalidate old caches
 
 /**
  * Pup update state management.
@@ -107,9 +108,24 @@ class PupUpdates {
       if (stored) {
         const cached = JSON.parse(stored);
         
+        // Check cache version - invalidate if mismatch
+        if (cached.version !== CACHE_VERSION) {
+          console.log(`[PupUpdates] Cache version mismatch (${cached.version} vs ${CACHE_VERSION}), clearing cache`);
+          this.clearCachedUpdates();
+          return;
+        }
+        
+        // Validate and sanitize updateInfo - ensure it's actually an object
+        let updateInfo = cached.updateInfo;
+        if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+          console.warn('[PupUpdates] Invalid cached updateInfo type, clearing cache:', typeof updateInfo);
+          // Clear the corrupted cache
+          this.clearCachedUpdates();
+          return;
+        }
+        
         // Calculate total updates available (excluding skipped and upgrading/broken)
         let totalUpdatesAvailable = 0;
-        const updateInfo = cached.updateInfo || {};
         for (const pupId in updateInfo) {
           if (this.hasUpdate(pupId)) {
             totalUpdatesAvailable++;
@@ -129,6 +145,8 @@ class PupUpdates {
       }
     } catch (error) {
       console.error('[PupUpdates State] Failed to load cached updates from localStorage:', error);
+      // Clear potentially corrupted cache
+      this.clearCachedUpdates();
     }
   }
 
@@ -138,6 +156,7 @@ class PupUpdates {
   _saveCachedUpdates(updateInfo, lastChecked) {
     try {
       localStorage.setItem(CACHED_UPDATES_STORAGE_KEY, JSON.stringify({
+        version: CACHE_VERSION,
         updateInfo,
         lastChecked
       }));
@@ -169,6 +188,11 @@ class PupUpdates {
 
     try {
       const updateInfo = await getAllPupUpdates();
+      
+      // Validate the response is an object
+      if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+        throw new Error(`Invalid update info response from backend: expected object, got ${typeof updateInfo}`);
+      }
       
       // Count total updates available (excluding skipped and upgrading/broken)
       let totalUpdatesAvailable = 0;
@@ -283,8 +307,14 @@ class PupUpdates {
     try {
       const skipped = await getSkippedUpdates();
       
+      // Validate the response is an object
+      if (typeof skipped !== 'object' || skipped === null || Array.isArray(skipped)) {
+        console.error('[PupUpdates State] Invalid skipped updates response from backend:', typeof skipped);
+        return;
+      }
+      
       // Update in-memory state
-      this.skippedUpdates = skipped || {};
+      this.skippedUpdates = skipped;
       
       // Update localStorage cache
       this._saveSkippedToLocalStorage();

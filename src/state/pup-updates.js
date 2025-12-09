@@ -23,7 +23,6 @@ class PupUpdates {
    * Does NOT trigger a backend refresh (backend handles periodic checks automatically)
    */
   async init() {
-    console.log('[PupUpdates] Initializing pup updates state');
     this._loadCachedUpdates();
     await this._loadSkippedFromBackend();
     
@@ -46,7 +45,6 @@ class PupUpdates {
     
     // If no pups are loaded yet, skip reconciliation
     if (Object.keys(installedPupIds).length === 0 && Object.keys(updateInfo).length === 0) {
-      console.log('[PupUpdates] Reconciliation: skipping, no data loaded yet');
       return;
     }
     
@@ -64,8 +62,6 @@ class PupUpdates {
     }
     
     if (cleaned) {
-      console.log(`[PupUpdates] Reconciliation: removed ${staleEntries.length} stale update entries:`, staleEntries);
-      
       // Also clean up skipped updates for uninstalled pups
       for (const pupId of staleEntries) {
         delete this.skippedUpdates[pupId];
@@ -91,8 +87,6 @@ class PupUpdates {
       
       // Update localStorage cache
       this._saveCachedUpdates(updateInfo, store.pupUpdatesContext.lastChecked);
-    } else {
-      console.log('[PupUpdates] Reconciliation: cache is clean, no stale entries found');
     }
   }
 
@@ -101,7 +95,6 @@ class PupUpdates {
    * Useful for debugging or recovering from sync issues
    */
   reconcile() {
-    console.log('[PupUpdates] Manual reconciliation triggered');
     this._reconcileCache();
   }
 
@@ -133,8 +126,6 @@ class PupUpdates {
             error: null
           }
         });
-      } else {
-        console.log('[PupUpdates] No cached updates found in localStorage');
       }
     } catch (error) {
       console.error('[PupUpdates State] Failed to load cached updates from localStorage:', error);
@@ -168,8 +159,6 @@ class PupUpdates {
    * This just fetches the current cached state.
    */
   async refresh() {
-    console.log('[PupUpdates] Refreshing update info from backend');
-    
     // Set loading state
     store.updateState({
       pupUpdatesContext: {
@@ -403,8 +392,6 @@ class PupUpdates {
    * @param {string} pupId - The pup ID
    */
   clearUpdateInfo(pupId) {
-    console.log(`[PupUpdates] Clearing update info for uninstalled pup: ${pupId}`);
-    
     let updateInfo = store.pupUpdatesContext.updateInfo || {};
     // Ensure updateInfo is actually an object, not a string or other type
     if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {

@@ -104,15 +104,6 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
       `
       : nothing
     }
-
-    ${installationId === "upgrading" ? html`
-      <sl-alert variant="neutral" open style="margin-top: 1em;">
-        <sl-spinner slot="icon"></sl-spinner>
-        <h4 style="margin: 0;">Upgrading...</h4>
-        <p style="margin: 0.5em 0 0 0;">Please wait while the pup is being upgraded. This may take a few minutes.</p>
-      </sl-alert>
-    ` : nothing}
-
     <style>${styles}</style>
   `
 };

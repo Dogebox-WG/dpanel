@@ -178,6 +178,7 @@ class PupUpdates {
    * This just fetches the current cached state.
    */
   async refresh() {
+    console.log('[PupUpdates] refresh() called');
     // Set loading state
     store.updateState({
       pupUpdatesContext: {
@@ -188,6 +189,7 @@ class PupUpdates {
 
     try {
       const updateInfo = await getAllPupUpdates();
+      console.log('[PupUpdates] Got updateInfo from backend:', updateInfo);
       
       // Validate the response is an object
       if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
@@ -197,10 +199,15 @@ class PupUpdates {
       // Count total updates available (excluding skipped and upgrading/broken)
       let totalUpdatesAvailable = 0;
       for (const pupId in updateInfo) {
-        if (this.hasUpdate(pupId)) {
+        // Pass updateInfo to hasUpdate so it checks against new data, not stale store data
+        const hasUpdate = this.hasUpdate(pupId, false, updateInfo);
+        console.log(`[PupUpdates] hasUpdate(${pupId}): ${hasUpdate}, info:`, updateInfo[pupId]);
+        if (hasUpdate) {
           totalUpdatesAvailable++;
         }
       }
+      
+      console.log('[PupUpdates] Total updates available:', totalUpdatesAvailable);
       
       // Update the store
       const lastChecked = new Date().toISOString();
@@ -243,12 +250,29 @@ class PupUpdates {
   }
 
   /**
+   * Get update info from a provided updateInfo object (doesn't read from store)
+   * Used during refresh() before the store is updated
+   */
+  _getUpdateInfoFromData(updateInfo, pupId) {
+    if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
+      return null;
+    }
+    return updateInfo[pupId] || null;
+  }
+
+  /**
    * Check if a specific pup has an update available (respecting skipped updates)
    * @param {string} pupId - The pup ID
+   * @param {boolean} debug - Enable debug logging
+   * @param {Object} updateInfoData - Optional: Check against this data instead of store
    * @returns {boolean} True if update is available and not skipped
    */
-  hasUpdate(pupId) {
-    const info = this.getUpdateInfo(pupId);
+  hasUpdate(pupId, debug = false, updateInfoData = null) {
+    // Get info from provided data or from store
+    const info = updateInfoData 
+      ? this._getUpdateInfoFromData(updateInfoData, pupId)
+      : this.getUpdateInfo(pupId);
+    
     if (!info || !info.updateAvailable) {
       return false;
     }

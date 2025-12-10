@@ -100,6 +100,11 @@ class SocketChannel {
                 console.log(`##-STATE-## installation: ${data.update.installation}`, { payload: data.update });
               }
           pkgController.updatePupModel(data.update.id, data.update)
+          
+          // Clear update info when pup is upgrading (version has changed, no longer "update available")
+          if (data.update.installation === 'upgrading') {
+            pupUpdates.clearUpdateInfo(data.update.id);
+          }
           break;
 
         case "stats":
@@ -117,11 +122,21 @@ class SocketChannel {
         case "action":
           // emitted in response to an action
           await asyncTimeout(500); // Why?
-          pkgController.resolveAction(data.id, data);
           
-          // If this was a CheckPupUpdates action that succeeded, refresh cached update info
-          if (!data.error && data.update && (data.update.pupsChecked !== undefined || data.update.updateInfo)) {
+          // Check if this is a check-pup-updates action (system-wide action, not pup-specific)
+          const isCheckUpdatesAction = data.update && 
+            (data.update.pupsChecked !== undefined || 
+             data.update.updateInfo !== undefined);
+          
+          if (isCheckUpdatesAction) {
+            if (!data.error) {
             await pupUpdates.refresh();
+            } else {
+              console.error('[MainChannel] CheckPupUpdates action failed:', data.error);
+            }
+          } else {
+            // Regular pup-specific action
+            pkgController.resolveAction(data.id, data);
           }
           break;
 
@@ -189,7 +204,16 @@ class SocketChannel {
                 pupUpdates.clearUpdateInfo(data.update.state.id);
               }
             }
+            
+            // Note: Update cache refresh happens via pup-updates-checked event
+            // No need for timer-based refresh here
           }
+          break;
+
+        case "pup-updates-checked":
+          // Backend has completed checking for updates, refresh our cache
+          console.log('[MainChannel] Received pup-updates-checked event, refreshing cache');
+          pupUpdates.refresh();
           break;
       }
       this.notify();

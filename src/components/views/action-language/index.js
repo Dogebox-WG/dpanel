@@ -8,9 +8,9 @@ import {
 import "/components/common/action-row/action-row.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
-import { getTimezone, getTimezones, setTimezone } from "/api/system/timezones.js";
+import { getKeymap, getKeymaps, setKeymap } from "/api/system/keymaps.js";
 
-export class DateTimeSettings extends LitElement {
+export class LanguageSettings extends LitElement {
   static get properties() {
     return {
     }
@@ -101,15 +101,15 @@ export class DateTimeSettings extends LitElement {
     return {
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
-      _timezones: { type: Array },
-      _timezone: { type: String },
+      _keymaps: { type: Array },
+      _keymap: { type: String },
       _changes: { type: Object },
     };
   }
 
   constructor() {
     super();
-    this._timezones = [];
+    this._keymaps = [];
     this._changes = {};
   }
  
@@ -123,9 +123,7 @@ export class DateTimeSettings extends LitElement {
   }
   
   handleDialogClose() {
-    //store.updateState({ dialogContext: { name: null }});
-    //const router = getRouter();
-    //router.go('/settings', { replace: true });
+
   }
   
   handleCloseClick() {
@@ -138,8 +136,8 @@ export class DateTimeSettings extends LitElement {
   async _fetch() {
     try {
       this._loading = true;
-      this._timezones = await getTimezones();
-      this._current_timezone = await getTimezone();
+      this._keymaps = await getKeymaps();
+      this._current_keymap = await getKeymap();
 
     } catch (e) {
       console.error(e.toString());
@@ -166,8 +164,8 @@ export class DateTimeSettings extends LitElement {
     let didSucceed = false
 
     try {
-      console.log(this._changes.timezone);
-      await setTimezone({ timezone: this._changes.timezone });
+      console.log(this._changes.keymap);
+      await setKeymap({ keymap: this._changes.keymap });
       didSucceed = true;
     } catch (err) {
       console.error('Error occurred when saving config', err);
@@ -178,37 +176,39 @@ export class DateTimeSettings extends LitElement {
         //await this.onSuccess();
         this.handleDialogClose(); 
       }
-    }
+    }      
   }
 
-  _handleTimezoneInputChange(e) {
+  _handleKeymapInputChange(e) {
     const field = e.target.getAttribute('data-field');
     this._changes[field] = e.target.value;
   }
 
   render() {
-    console.log(JSON.stringify(this._current_timezone))
+    console.log(JSON.stringify(this._current_keymap))
     return html`
-      <h1>Date and Time</h1>
+      <h1>Language</h1>
 
       <div class="form-control">
+
             <sl-select
-              name="timezone"
+              name="keymap"
               
               required
-              label="Timezone" 
+              label="Keymap" 
               ?disabled=${this._inflight}
-              data-field="timezone"
-              value=${this._current_timezone}
-              help-text="Where in the world should your clock be set to"
+              data-field="keymap"
+              value=${this._current_keymap}
+              help-text="What keyboard layout do you have?"
               hoist
-              @sl-change=${this._handleTimezoneInputChange}
+              @sl-change=${this._handleKeymapInputChange}
             >
-              ${this._timezones.map(
-                (timezone) =>
-                  html`<sl-option value=${timezone.label}>${timezone.label}</sl-option>`,
+              ${this._keymaps.map(
+                (keymap) =>
+                  html`<sl-option value=${keymap.id}>${keymap.label}</sl-option>`,
               )}
             </sl-select>
+
         <div slot="footer" class="align-end">
           <sl-button variant="primary" ?disabled=${this._inflight} ?loading=${this._inflight} @click=${this._attemptSubmit}>Submit</sl-button>
         </div>
@@ -217,4 +217,4 @@ export class DateTimeSettings extends LitElement {
   }
 }
 
-customElements.define('x-action-date-time', DateTimeSettings);
+customElements.define('x-action-language', LanguageSettings);

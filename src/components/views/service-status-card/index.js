@@ -23,7 +23,7 @@ class ServiceStatusCard extends LitElement {
       <div class="service-details">
         <div class="detail-row">
           <span class="detail-label">IP Address</span>
-          <span class="detail-value ip-value">
+          <span class="detail-value">
             ${status.ip || 'Not available'}
             ${status.ip ? html`
               <sl-copy-button value="${status.ip}" class="copy-btn"></sl-copy-button>
@@ -73,10 +73,7 @@ class ServiceStatusCard extends LitElement {
     return html`
       <div class="card ${isConnected ? 'connected' : 'disconnected'}">
         <div class="card-header">
-          <div class="service-info">
-            <sl-icon name="${def.icon}" class="service-icon"></sl-icon>
-            <span class="service-name">${def.name}</span>
-          </div>
+          <h3 class="service-name">${def.name}</h3>
           <div class="status-badge ${isConnected ? 'online' : 'offline'}">
             <span class="status-dot"></span>
             <span class="status-text">${statusText}</span>
@@ -123,22 +120,14 @@ class ServiceStatusCard extends LitElement {
       margin-bottom: 1rem;
     }
 
-    .service-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .service-icon {
-      font-size: 1.25rem;
-      color: var(--sl-color-neutral-400);
-    }
-
     .service-name {
       font-family: 'Comic Neue', sans-serif;
-      font-weight: bold;
+      text-transform: uppercase;
+      color: #fff;
+      margin: 0;
       font-size: 1rem;
-      color: var(--sl-color-neutral-100);
+      font-weight: bold;
+      letter-spacing: 0.02em;
     }
 
     .status-badge {
@@ -183,7 +172,7 @@ class ServiceStatusCard extends LitElement {
 
     .detail-label {
       font-size: 0.8rem;
-      color: var(--sl-color-neutral-500);
+      color: #07ffae;
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
@@ -191,14 +180,10 @@ class ServiceStatusCard extends LitElement {
     .detail-value {
       font-family: monospace;
       font-size: 0.9rem;
-      color: var(--sl-color-neutral-200);
+      color: #fff;
       display: flex;
       align-items: center;
       gap: 0.25rem;
-    }
-
-    .ip-value {
-      color: #ffd807;
     }
 
     .copy-btn {

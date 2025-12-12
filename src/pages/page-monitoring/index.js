@@ -17,7 +17,7 @@ const SERVICE_DEFINITIONS = {
 // Default configuration for first-time users
 const DEFAULT_CONFIG = {
   systemStats: ['cpu', 'ram'],
-  services: [],
+  services: ['tailscale'],
   pupMetrics: []
 };
 
@@ -113,9 +113,24 @@ class MonitoringPage extends LitElement {
 
       // Fetch services (optional - API may not exist yet)
       try {
+        console.log('[Monitoring] Fetching available services...');
         const servicesRes = await getAvailableServices();
+        console.log('[Monitoring] Services response:', servicesRes);
         this.availableServices = servicesRes.available || [];
+        console.log('[Monitoring] Available services:', this.availableServices);
+        
+        // Auto-migrate: add any newly configured services to the config
+        const configuredServiceIds = this.availableServices
+          .filter(s => s.configured)
+          .map(s => s.id);
+        const newServices = configuredServiceIds.filter(id => !this.config.services.includes(id));
+        if (newServices.length > 0) {
+          console.log('[Monitoring] Auto-adding new configured services:', newServices);
+          this.config.services = [...this.config.services, ...newServices];
+          this.saveConfig();
+        }
       } catch (servicesErr) {
+        console.log('[Monitoring] Failed to fetch services:', servicesErr);
         this.availableServices = [];
       }
       
@@ -367,9 +382,12 @@ class MonitoringPage extends LitElement {
 
   renderServices() {
     const enabledServiceIds = this.config.services;
+    console.log('[Monitoring] Config services:', enabledServiceIds);
+    console.log('[Monitoring] Available services to filter:', this.availableServices);
     const servicesToShow = this.availableServices.filter(
       s => s.configured && enabledServiceIds.includes(s.id)
     );
+    console.log('[Monitoring] Services to show:', servicesToShow);
 
     if (servicesToShow.length === 0) return nothing;
 
@@ -406,10 +424,20 @@ class MonitoringPage extends LitElement {
       if (!pupMetricsMap.has(pupId)) {
         pupMetricsMap.set(pupId, {
           pup,
-          metrics: []
+          metrics: [],
+          manifestMetrics: pup.state?.manifest?.metrics || []
         });
       }
       pupMetricsMap.get(pupId).metrics.push(metric);
+    }
+
+    // Sort metrics within each pup by their manifest order
+    for (const data of pupMetricsMap.values()) {
+      data.metrics.sort((a, b) => {
+        const indexA = data.manifestMetrics.findIndex(m => m.name === a.name);
+        const indexB = data.manifestMetrics.findIndex(m => m.name === b.name);
+        return indexA - indexB;
+      });
     }
 
     if (pupMetricsMap.size === 0) return nothing;
@@ -421,14 +449,14 @@ class MonitoringPage extends LitElement {
         </div>
         ${Array.from(pupMetricsMap.entries()).map(([pupId, data]) => html`
           <div class="pup-metrics-group">
-            <h4 class="pup-name">${data.pup.state?.manifest?.meta?.name || 'Unknown Pup'}</h4>
+            <h3 class="pup-name">${data.pup.state?.manifest?.meta?.name || 'Unknown Pup'}</h3>
             <div class="metrics-grid">
               ${data.metrics.map(metric => html`
                 <x-metric .metric=${{
                   name: metric.name,
                   label: metric.label,
                   type: metric.type,
-                  values: metric.values?.getValues?.() || metric.values?.Values || []
+                  values: metric.values || []
                 }}></x-metric>
               `)}
             </div>
@@ -441,6 +469,10 @@ class MonitoringPage extends LitElement {
   renderConfigDialog() {
     const configuredServices = this.availableServices.filter(s => s.configured);
     const runningPups = this.installedPups.filter(p => p.stats?.status === 'running');
+    
+    console.log('[Monitoring Config] All installed pups:', this.installedPups.map(p => p.state?.manifest?.meta?.name));
+    console.log('[Monitoring Config] Running pups:', runningPups.map(p => p.state?.manifest?.meta?.name));
+    console.log('[Monitoring Config] Running pups with metrics:', runningPups.filter(p => p.state?.manifest?.metrics?.length > 0).map(p => p.state?.manifest?.meta?.name));
 
     return html`
       <sl-dialog 
@@ -453,31 +485,22 @@ class MonitoringPage extends LitElement {
           <!-- System Stats Section -->
           <div class="config-section">
             <h4>System Stats</h4>
-            <div class="config-list">
-              <action-row prefix="cpu" label="CPU Usage">
-                Show CPU utilization
-                <sl-switch 
-                  slot="suffix" 
-                  ?checked=${this.config.systemStats.includes('cpu')}
-                  @sl-change=${(e) => this.handleSystemStatToggle('cpu', e)}
-                ></sl-switch>
-              </action-row>
-              <action-row prefix="memory" label="Memory Usage">
-                Show RAM utilization
-                <sl-switch 
-                  slot="suffix" 
-                  ?checked=${this.config.systemStats.includes('ram')}
-                  @sl-change=${(e) => this.handleSystemStatToggle('ram', e)}
-                ></sl-switch>
-              </action-row>
-              <action-row prefix="hdd" label="Disk Usage">
-                Show disk utilization
-                <sl-switch 
-                  slot="suffix" 
-                  ?checked=${this.config.systemStats.includes('disk')}
-                  @sl-change=${(e) => this.handleSystemStatToggle('disk', e)}
-                ></sl-switch>
-              </action-row>
+            <div class="metrics-toggle-grid">
+              <div class="metric-toggle-card ${this.config.systemStats.includes('cpu') ? 'enabled' : ''}"
+                   @click=${() => this.handleSystemStatToggle('cpu', { target: { checked: !this.config.systemStats.includes('cpu') } })}>
+                <sl-icon name="cpu" class="card-icon"></sl-icon>
+                <div class="metric-toggle-label">CPU</div>
+              </div>
+              <div class="metric-toggle-card ${this.config.systemStats.includes('ram') ? 'enabled' : ''}"
+                   @click=${() => this.handleSystemStatToggle('ram', { target: { checked: !this.config.systemStats.includes('ram') } })}>
+                <sl-icon name="memory" class="card-icon"></sl-icon>
+                <div class="metric-toggle-label">Memory</div>
+              </div>
+              <div class="metric-toggle-card ${this.config.systemStats.includes('disk') ? 'enabled' : ''}"
+                   @click=${() => this.handleSystemStatToggle('disk', { target: { checked: !this.config.systemStats.includes('disk') } })}>
+                <sl-icon name="hdd" class="card-icon"></sl-icon>
+                <div class="metric-toggle-label">Disk</div>
+              </div>
             </div>
           </div>
 
@@ -485,18 +508,15 @@ class MonitoringPage extends LitElement {
           ${configuredServices.length > 0 ? html`
             <div class="config-section">
               <h4>Services</h4>
-              <div class="config-list">
+              <div class="metrics-toggle-grid">
                 ${configuredServices.map(service => {
                   const def = SERVICE_DEFINITIONS[service.id] || { name: service.name, icon: 'hdd-network' };
                   return html`
-                    <action-row prefix="${def.icon}" label="${def.name}">
-                      ${def.description || 'External service'}
-                      <sl-switch 
-                        slot="suffix" 
-                        ?checked=${this.config.services.includes(service.id)}
-                        @sl-change=${(e) => this.handleServiceToggle(service.id, e)}
-                      ></sl-switch>
-                    </action-row>
+                    <div class="metric-toggle-card ${this.config.services.includes(service.id) ? 'enabled' : ''}"
+                         @click=${() => this.handleServiceToggle(service.id, { target: { checked: !this.config.services.includes(service.id) } })}>
+                      <sl-icon name="${def.icon}" class="card-icon"></sl-icon>
+                      <div class="metric-toggle-label">${def.name}</div>
+                    </div>
                   `;
                 })}
               </div>
@@ -513,18 +533,18 @@ class MonitoringPage extends LitElement {
                 
                 return html`
                   <div class="pup-config-group">
-                    <h5>${pup.state?.manifest?.meta?.name || 'Unknown'}</h5>
-                    <div class="config-list">
-                      ${metrics.map(metric => html`
-                        <action-row prefix="graph-up" label="${metric.label}">
-                          ${metric.name}
-                          <sl-switch 
-                            slot="suffix" 
-                            ?checked=${this.isPupMetricEnabled(pup.state.id, metric.name)}
-                            @sl-change=${(e) => this.handlePupMetricToggle(pup.state.id, metric.name, e)}
-                          ></sl-switch>
-                        </action-row>
-                      `)}
+                    <h3>${pup.state?.manifest?.meta?.name || 'Unknown'}</h3>
+                    <div class="metrics-toggle-grid">
+                      ${metrics.map(metric => {
+                        const icon = metric.type === 'string' ? 'card-text' : 'graph-up';
+                        return html`
+                          <div class="metric-toggle-card ${this.isPupMetricEnabled(pup.state.id, metric.name) ? 'enabled' : ''}"
+                               @click=${() => this.handlePupMetricToggle(pup.state.id, metric.name, { target: { checked: !this.isPupMetricEnabled(pup.state.id, metric.name) } })}>
+                            <sl-icon name="${icon}" class="card-icon"></sl-icon>
+                            <div class="metric-toggle-label">${metric.label}</div>
+                          </div>
+                        `;
+                      })}
                     </div>
                   </div>
                 `;
@@ -778,9 +798,12 @@ class MonitoringPage extends LitElement {
 
     .pup-name {
       font-family: 'Comic Neue', sans-serif;
-      color: var(--sl-color-neutral-400);
+      text-transform: uppercase;
+      color: #fff;
       margin: 0 0 0.75rem 0;
-      font-size: 0.9rem;
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 0.02em;
     }
 
     /* Config Dialog */
@@ -824,11 +847,79 @@ class MonitoringPage extends LitElement {
       margin-bottom: 0;
     }
 
-    .pup-config-group h5 {
+    .pup-config-group h3 {
       font-family: 'Comic Neue', sans-serif;
-      color: var(--sl-color-neutral-400);
+      text-transform: uppercase;
+      color: #fff;
       margin: 0 0 0.5rem 0;
-      font-size: 0.85rem;
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 0.02em;
+    }
+
+    .metrics-toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 0.4rem;
+    }
+
+    .metric-toggle-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.4rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      min-height: 55px;
+      user-select: none;
+    }
+
+    .metric-toggle-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .metric-toggle-card:active {
+      transform: translateY(0);
+    }
+
+    .metric-toggle-card.enabled {
+      background: rgba(7, 255, 174, 0.12);
+      border-color: rgba(7, 255, 174, 0.4);
+    }
+
+    .metric-toggle-card.enabled:hover {
+      background: rgba(7, 255, 174, 0.16);
+      border-color: rgba(7, 255, 174, 0.5);
+    }
+
+    .card-icon {
+      font-size: 1.1rem;
+      color: var(--sl-color-neutral-400);
+    }
+
+    .metric-toggle-card.enabled .card-icon {
+      color: #07ffae;
+    }
+
+    .metric-toggle-label {
+      font-family: 'Comic Neue', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--sl-color-neutral-400);
+      text-align: center;
+      line-height: 1.1;
+      word-break: break-word;
+    }
+
+    .metric-toggle-card.enabled .metric-toggle-label {
+      color: #07ffae;
     }
 
     /* Empty State */

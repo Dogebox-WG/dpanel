@@ -5,25 +5,42 @@ export const mock = {
   res: generateServicesResponse
 };
 
-function generateServicesResponse() {
-  // Simulates backend response for available/configured services
-  // Only Tailscale for now - extensible for future services
-  return {
-    available: [
-      {
-        id: 'tailscale',
-        name: 'Tailscale',
-        configured: true,
-        status: {
-          ip: '100.64.0.' + Math.floor(Math.random() * 255),
-          connected: Math.random() > 0.1, // 90% chance connected
-          hostname: 'dogebox-' + Math.floor(Math.random() * 1000)
-        }
+export const mockTailscale = {
+  name: 'Tailscale',
+  method: 'get',
+  group: 'monitoring',
+  res: () => ({ enabled: true })
+};
+
+function generateServicesResponse(path, { networkContext }) {
+  // Check if Tailscale mock is enabled
+  const tailscaleEnabled = networkContext?.['mock::monitoring::Tailscale::get'] !== false;
+  
+  console.log('[Services Mock] Tailscale enabled:', tailscaleEnabled);
+  
+  const services = [];
+  
+  // Add Tailscale if enabled
+  if (tailscaleEnabled) {
+    const isConnected = Math.random() > 0.1; // 90% chance connected
+    services.push({
+      id: 'tailscale',
+      name: 'Tailscale',
+      configured: true,
+      status: {
+        connected: isConnected,
+        ip: isConnected ? '100.64.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255) : null,
+        hostname: isConnected ? 'dogebox-' + Math.floor(Math.random() * 1000).toString().padStart(4, '0') : null
       }
-      // Future services would be added here by backend:
-      // { id: 'openvpn', name: 'OpenVPN', configured: false, status: null },
-      // { id: 'wireguard', name: 'WireGuard', configured: false, status: null }
-    ]
+    });
+  }
+  
+  // Future services would be added here by backend:
+  // { id: 'openvpn', name: 'OpenVPN', configured: false, status: null },
+  // { id: 'wireguard', name: 'WireGuard', configured: false, status: null }
+  
+  return {
+    available: services
   };
 }
 

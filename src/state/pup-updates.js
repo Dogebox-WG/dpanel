@@ -178,7 +178,6 @@ class PupUpdates {
    * This just fetches the current cached state.
    */
   async refresh() {
-    console.log('[PupUpdates] refresh() called');
     // Set loading state
     store.updateState({
       pupUpdatesContext: {
@@ -189,8 +188,6 @@ class PupUpdates {
 
     try {
       const updateInfo = await getAllPupUpdates();
-      console.log('[PupUpdates] Got updateInfo from backend:', updateInfo);
-      
       // Validate the response is an object
       if (typeof updateInfo !== 'object' || updateInfo === null || Array.isArray(updateInfo)) {
         throw new Error(`Invalid update info response from backend: expected object, got ${typeof updateInfo}`);
@@ -206,8 +203,6 @@ class PupUpdates {
           totalUpdatesAvailable++;
         }
       }
-      
-      console.log('[PupUpdates] Total updates available:', totalUpdatesAvailable);
       
       // Update the store
       const lastChecked = new Date().toISOString();

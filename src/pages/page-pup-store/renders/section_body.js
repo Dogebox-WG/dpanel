@@ -59,13 +59,13 @@ export function renderSectionBody(ready, SKELS, hasItems) {
             defaultIcon="box"
             sourceId=${pkg.def?.source?.id || 'unknown'}
             defKey=${pkg.def?.key || 'unknown'}
+            pupId=${pkg.state?.id || ''}
             pupName=${pkg.def?.key || 'unknown'}
             version=${pkg.def?.latestVersion || 'unknown'}
             logoBase64=${pkg.def?.logoBase64 || ''}
             .upstreamVersions=${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.upstreamVersions || {}}
             short="${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.shortDescription || ''}"
             ?installed=${pkg.computed?.isInstalled || false}
-            ?updateAvailable=""
             href=${pkg.computed?.storeURL || '#'}
             .source=${pkg.def?.source || null}
             .installationState=${{ id: pkg.computed?.installationId || 'unknown', label: pkg.computed?.installationLabel || 'Unknown' }}

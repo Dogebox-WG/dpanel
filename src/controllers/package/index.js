@@ -562,6 +562,10 @@ function determineInstallationId(state) {
     return { id: "installing", label: "installing" };
   }
 
+  if (installation === "upgrading") {
+    return { id: "upgrading", label: "updating" };
+  }
+
   if (installation === "ready" || installation === "unready") {
     return { id: installation, label: "installed" };
   }

@@ -29,6 +29,7 @@ class PupInstallPage extends LitElement {
       activityLogs: { type: Array },
       autoInstallDependencies: { type: Boolean },
       installWithDevModeEnabled: { type: Boolean },
+      selectedInstallVersion: { type: String },
     };
   }
 
@@ -47,6 +48,7 @@ class PupInstallPage extends LitElement {
     this.activityLogs = [];
     this.autoInstallDependencies = true;
     this.installWithDevModeEnabled = false;
+    this.selectedInstallVersion = null; // null means use latest
   }
 
   getPup() {

@@ -2,6 +2,7 @@ import WebSocketClient from "/api/sockets.js";
 import { store } from "/state/store.js";
 import { pkgController } from "/controllers/package/index.js";
 import { sysController } from "/controllers/system/index.js";
+import { pupUpdates } from "/state/pup-updates.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { performMockCycle, c1, c4, c5, mockInstallEvent } from "/api/mocks/pup-state-cycle.js";
 import { isUnauthedRoute } from "/utils/url-utils.js";
@@ -99,6 +100,11 @@ class SocketChannel {
                 console.log(`##-STATE-## installation: ${data.update.installation}`, { payload: data.update });
               }
           pkgController.updatePupModel(data.update.id, data.update)
+          
+          // Clear update info when pup is upgrading (version has changed, no longer "update available")
+          if (data.update.installation === 'upgrading') {
+            pupUpdates.clearUpdateInfo(data.update.id);
+          }
           break;
 
         case "stats":
@@ -116,7 +122,22 @@ class SocketChannel {
         case "action":
           // emitted in response to an action
           await asyncTimeout(500); // Why?
-          pkgController.resolveAction(data.id, data);
+          
+          // Check if this is a check-pup-updates action (system-wide action, not pup-specific)
+          const isCheckUpdatesAction = data.update && 
+            (data.update.pupsChecked !== undefined || 
+             data.update.updateInfo !== undefined);
+          
+          if (isCheckUpdatesAction) {
+            if (!data.error) {
+            await pupUpdates.refresh();
+            } else {
+              console.error('[MainChannel] CheckPupUpdates action failed:', data.error);
+            }
+          } else {
+            // Regular pup-specific action
+            pkgController.resolveAction(data.id, data);
+          }
           break;
 
         case "prompt": // synthetic (client side only)
@@ -176,7 +197,23 @@ class SocketChannel {
             store.updateState({
               jobsContext: { activities }
             });
+            
+            // Clear update info when a pup is uninstalled or purged
+            if (data.update.action && (data.update.action === 'uninstall' || data.update.action === 'purge')) {
+              if (data.update.state && data.update.state.id) {
+                pupUpdates.clearUpdateInfo(data.update.state.id);
+              }
+            }
+            
+            // Note: Update cache refresh happens via pup-updates-checked event
+            // No need for timer-based refresh here
           }
+          break;
+
+        case "pup-updates-checked":
+          // Backend has completed checking for updates, refresh our cache
+          console.log('[MainChannel] Received pup-updates-checked event, refreshing cache');
+          pupUpdates.refresh();
           break;
       }
       this.notify();
@@ -217,7 +254,6 @@ class SocketChannel {
   addObserver(observer) {
     if (!this.observers.includes(observer)) {
       this.observers.push(observer);
-      console.log("OBSERVER ADDED", observer);
     }
   }
 

@@ -1,8 +1,10 @@
 import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { rollbackPup } from "/api/pup-updates/pup-updates.js";
+import { createAlert } from "/components/common/alert.js";
 
-export function renderStatus(labels, pkg) {
+export function renderStatus(labels, pkg, rollbackAvailable = false) {
   let { statusId, statusLabel, installationId, installationLabel } = labels;
-  const isInstallationLoadingStatus = ["uninstalling", "purging"].includes(installationId)
+  const isInstallationLoadingStatus = ["uninstalling", "purging", "upgrading"].includes(installationId)
 
   const styles = css`
     :host {
@@ -27,13 +29,46 @@ export function renderStatus(labels, pkg) {
       &.stopped { color: var(--color-neutral); }
 
       &.broken { color: var(--sl-color-danger-600);}
+      &.upgrading { color: var(--sl-color-primary-600); }
       &.uninstalling { color: var(--sl-color-danger-600); }
       &.uninstalled { color: var(--sl-color-danger-600); }
       &.purging { color: var(--sl-color-danger-600); }
     }
+
+    .rollback-section {
+      margin-top: 1em;
+      padding: 1em;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      border: 1px solid var(--sl-color-warning-500);
+    }
+
+    .rollback-section h4 {
+      margin: 0 0 0.5em 0;
+      color: var(--sl-color-warning-500);
+      font-family: 'Comic Neue';
+    }
+
+    .rollback-section p {
+      margin: 0 0 1em 0;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
+    }
   `
 
   const [ brokenReason, isRecoverable ] = getBrokenReason(pkg)
+
+  const handleRollback = async () => {
+    try {
+      const result = await rollbackPup(pkg.state.id);
+      if (result.jobId) {
+        createAlert('neutral', `Rolling back ${pkg.state.manifest.meta.name}...`, 'arrow-counterclockwise', 5000);
+      }
+    } catch (error) {
+      console.error('Rollback failed:', error);
+      createAlert('danger', `Rollback failed: ${error.message}`, 'exclamation-triangle', 0);
+    }
+  };
 
   return html`
     ${installationId === "uninstalled" || installationId === "broken"
@@ -55,10 +90,20 @@ export function renderStatus(labels, pkg) {
           Error Message: ${brokenReason}<br />
           Error Code: ${pkg.state.brokenReason}
         </sl-alert>
+
+        ${rollbackAvailable ? html`
+          <div class="rollback-section">
+            <h4><sl-icon name="arrow-counterclockwise"></sl-icon> Rollback Available</h4>
+            <p>This failure occurred during an upgrade. You can attempt to rollback to the previous working version.</p>
+            <sl-button variant="warning" size="small" @click=${handleRollback}>
+              <sl-icon slot="prefix" name="arrow-counterclockwise"></sl-icon>
+              Rollback to Previous Version
+            </sl-button>
+          </div>
+        ` : nothing}
       `
       : nothing
     }
-
     <style>${styles}</style>
   `
 };
@@ -89,6 +134,12 @@ function getBrokenReason(pkg) {
     }
     case "nix_apply_failed": {
       return [ "We were unable to build this pup.", false ]
+    }
+    case "manifest_load_failed": {
+      return [ "We were unable to load the pup manifest.", true ]
+    }
+    case "storage_creation_failed": {
+      return [ "We were unable to create storage for this pup.", true ]
     }
     default: {
       return [ "An unknown error occurred.", true ]

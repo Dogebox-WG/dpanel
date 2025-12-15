@@ -92,6 +92,10 @@ class AppModeApp extends LitElement {
     this.mainChannel = mainChannel;
     bindToClass(renderChunks, this);
     this.context = new StoreSubscriber(this, store);
+    this._setupData = {
+      initialDeviceName:
+        window.location.hostname == "dogebox.local" ? "dogebox" : null,
+    };
   }
 
   set setupState(newValue) {
@@ -343,6 +347,7 @@ class AppModeApp extends LitElement {
                         STEP_SYS_SETTINGS,
                         () =>
                           html`<x-action-system-settings
+                            .setupData=${this._setupData}
                             .onSuccess=${this._nextStep}
                           ></x-action-system-settings>`,
                       ],
@@ -380,6 +385,7 @@ class AppModeApp extends LitElement {
                         STEP_DONE,
                         () =>
                           html`<x-page-recovery
+                            .setupData=${this._setupData}
                             .reflectorToken=${reflectorToken}
                             .isFirstTimeSetup=${this.isFirstTimeSetup}
                           ></x-page-recovery>`,

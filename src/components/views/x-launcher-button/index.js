@@ -5,19 +5,18 @@ import { getIP } from "/api/reflector/get-ip.js";
 import "/components/common/text-loader/text-loader.js";
 
 class DogeboxLauncherButton extends LitElement {
-
   static get properties() {
     return {
       reflectorToken: { type: String },
       _ready: { type: Boolean },
-      _ip: { type: String }
-    }
+      _host: { type: String },
+    };
   }
 
   constructor() {
     super();
     this._ready = false;
-    this.ip = "";
+    this._host = window.location.hostname;
 
     this.errcode = null;
 
@@ -41,7 +40,7 @@ class DogeboxLauncherButton extends LitElement {
 
         if (this.checkCount >= this.maxCheckCount) {
           this._timedOut = true;
-          this.errcode = 'ip_wait_timeout';
+          this.errcode = "ip_wait_timeout";
           clearInterval(this._intervalId);
           this.requestUpdate();
         }
@@ -59,39 +58,46 @@ class DogeboxLauncherButton extends LitElement {
     try {
       const res = await getIP(this.reflectorToken);
       if (res.ip) {
-        this._ip = res.ip;
+        if (this.stateData?.initialDeviceName) {
+          this._host = `${this.stateData.deviceName}.local`;
+        } else {
+          this._host = res.ip;
+        }
         this._ready = true;
       }
     } catch (e) {
-      if (e.message.includes('not found')) {
+      if (e.message.includes("not found")) {
         // Ignore, we just haven't got an IP address yet.
-        return
+        return;
       }
 
       clearInterval(this._intervalId);
       this._serverFault = true;
-      this.errcode = 'contacting_reflector';
+      this.errcode = "contacting_reflector";
       console.error("Failed to contact reflector", e);
       this.requestUpdate();
     }
   }
 
-  static styles = [themes, css`
-    .action-wrap {
-      display: flex;
-      flex-direction: row;
-      gap: 1em;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
+  static styles = [
+    themes,
+    css`
+      .action-wrap {
+        display: flex;
+        flex-direction: row;
+        gap: 1em;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
 
-    span.side-text {
-      color: #ccc;
-      font-size: 0.9rem;
-      font-family: var(--sl-font-sans);
-    }
-  `];
+      span.side-text {
+        color: #ccc;
+        font-size: 0.9rem;
+        font-family: var(--sl-font-sans);
+      }
+    `,
+  ];
 
   render() {
     if (this._serverFault || this._timedOut) {
@@ -105,7 +111,8 @@ class DogeboxLauncherButton extends LitElement {
         <div class="action-wrap">
           <sl-alert variant="${alertVariant}" open>
             <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-            ${text} Please refresh to try and connect, or join the Dogebox Discord server if the problem persists.
+            ${text} Please refresh to try and connect, or join the Dogebox
+            Discord server if the problem persists.
           </sl-alert>
         </div>
         <span style="font-size: 0.8rem; color: #808080;">
@@ -116,15 +123,27 @@ class DogeboxLauncherButton extends LitElement {
 
     return html`
       <div class="action-wrap">
-        <sl-tooltip content=${this._ready ? this._ip : "Dogebox IP unknown"}>
-          <sl-button size="large" href="http://${this._ip}:8080" target="_blank" ?disabled=${!this._ready} variant="${this._ready ? "primary" : null }">Launch Dogebox</sl-button>
+        <sl-tooltip content=${this._ready ? this._host : "Dogebox IP unknown"}>
+          <sl-button
+            size="large"
+            href="http://${this._host}:8080"
+            target="_blank"
+            ?disabled=${!this._ready}
+            variant="${this._ready ? "primary" : null}"
+            >Launch Dogebox</sl-button
+          >
         </sl-tooltip>
-        <span class="side-text" href="http://${this._ip}">
-          <text-loader .texts=${["Checking", "HOdL tight"]} ?loopEnd=${this._ready} endText="${this._ip}" loop></text-loader>
+        <span class="side-text" href="http://${this._host}">
+          <text-loader
+            .texts=${["Checking", "HOdL tight"]}
+            ?loopEnd=${this._ready}
+            endText="${this._host}"
+            loop
+          ></text-loader>
         </span>
       </div>
     `;
   }
 }
 
-customElements.define('x-launcher-button', DogeboxLauncherButton);
+customElements.define("x-launcher-button", DogeboxLauncherButton);

@@ -156,7 +156,10 @@ class SystemSettings extends LitElement {
     });
 
     try {
-      await setHostname({ hostname: this._changes['device-name'] });
+      await setHostname({ hostname: this._changes["device-name"] });
+      if (this.setupData) {
+        this.setupData.deviceName = this._changes["device-name"];
+      }
       await setKeymap({ keymap: this._changes.keymap });
       await setStorageDisk({ storageDevice: this._changes.disk });
       didSucceed = true;

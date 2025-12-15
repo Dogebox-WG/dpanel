@@ -105,50 +105,54 @@ class SetupCompleteView extends LitElement {
         <sl-icon class="usb" name="usb-drive-fill"></sl-icon>
         <span>Insert the startup USB to perform these actions</span>
       </div>
-    `
+    `;
   }
 
   render() {
     return html`
-      ${this.isFirstTimeSetup ? html`
-      <div class="upper">
-        <img class="hero" src="/static/img/celebrate.png" />
-        <div class="actions">
+      ${this.isFirstTimeSetup
+        ? html`
+            <div class="upper">
+              <img class="hero" src="/static/img/celebrate.png" />
+              <div class="actions">
+                <div class="pictoral-instruction" style="display: none;">
+                  <sl-icon class="usb" name="usb-drive-fill"></sl-icon>
+                  <span>Please remove the startup USB</span>
+                </div>
 
-          <div class="pictoral-instruction" style="display: none;">
-            <sl-icon class="usb" name="usb-drive-fill"></sl-icon>
-            <span>Please remove the startup USB</span>
-          </div>
+                <p>
+                  <b>Congratulations!</b> You have configured your Dogebox with
+                  a password, key and connection.
+                </p>
 
-          <p>
-            <b>Congratulations!</b> You have configured your Dogebox with a
-            password, key and connection.
-          </p>
+                <x-launcher-button
+                  .setupData=${this.setupData}
+                  .reflectorToken=${this.reflectorToken}
+                ></x-launcher-button>
 
-          <x-launcher-button
-            .reflectorToken=${this.reflectorToken}
-          ></x-launcher-button>
+                <p>
+                  Need help? Visit
+                  <a href="https://discord.gg/VEUMWpThg9" target="_blank"
+                    >our discord</a
+                  >
+                </p>
+              </div>
+            </div>
 
-          <p>
-            Need help? Visit
-            <a href="https://discord.gg/VEUMWpThg9" target="_blank">our discord</a>
-          </p>
-
-        </div>
-      </div>
-
-      <div class="center">
-        <sl-divider></sl-divider>
-      </div>
-      ` : nothing}
+            <div class="center">
+              <sl-divider></sl-divider>
+            </div>
+          `
+        : nothing}
 
       <div class="lower">
-        ${!this.isFirstTimeSetup ? html`
-          <h2>Recovery Actions</h2>
+        ${!this.isFirstTimeSetup
+          ? html`
+              <h2>Recovery Actions</h2>
 
-          ${this.renderRecoverActions()}
-        ` : nothing}
-
+              ${this.renderRecoverActions()}
+            `
+          : nothing}
       </div>
     `;
   }

@@ -33,9 +33,7 @@ export function renderNav(CURPATH) {
             <a href="/pups" class="menu-item ${CURPATH.startsWith("/pups") ? "active" : ""}">
               <sl-icon name="box-seam"></sl-icon>
               Pups
-              ${showPupUpdatesBadge ? html`
-                <sl-badge variant="primary" pill class="nav-update-badge">${pupUpdatesCount}</sl-badge>
-              ` : nothing}
+              <x-dot ?open=${showPupUpdatesBadge} style="--left: -8px;"></x-dot>
             </a>
 
             <a href="/explore" class="menu-item ${CURPATH.startsWith("/explore") ? "active" : ""}">

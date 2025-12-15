@@ -1,5 +1,6 @@
 import { postConfig } from "/api/config/config.js";
 import { pickAndPerformPupAction } from "/api/action/action.js";
+import { store } from "/state/store.js";
 
 class PkgController {
   observers = [];
@@ -11,6 +12,10 @@ class PkgController {
   sourcesIndex = {}
   assetIndex = {}
   activityIndex = {}
+
+  // Client-side freshness tracking: last seen server timestamps for per-pup updates from websockets.
+  // Used to avoid regressing state when an older bootstrap snapshot arrives.
+  lastWsTsByPupId = {}
 
   constructor() {
     this.transactionTimeoutChecker();
@@ -46,9 +51,9 @@ class PkgController {
     }
   }
 
-  setData(bootstrapResponseV2) {
+  setData(bootstrapResponseV2, meta = {}) {
     const { states, stats, assets } = bootstrapResponseV2;
-    this.handleBootstrapResponse(states, stats, assets);
+    this.handleBootstrapResponse(states, stats, assets, { ...meta, ts: bootstrapResponseV2?.ts });
     this.notify();
   }
 
@@ -57,38 +62,72 @@ class PkgController {
     this.notify();
   }
 
-  handleBootstrapResponse(states, stats, assets) {
-    this.stateIndex = states || {};
-    this.statsIndex = stats || {};
-    this.assetIndex = assets || {};
+  handleBootstrapResponse(states, stats, assets, meta = {}) {
+    const incomingStates = states || {};
+    const incomingStats = stats || {};
+    const incomingAssets = assets || {};
+    const bootstrapTs = meta.ts || 0;
+
+    const prevPups = this.pups || [];
+    const prevStateIndex = this.stateIndex || {};
+    const prevStatsIndex = this.statsIndex || {};
+    const prevAssetsIndex = this.assetIndex || {};
+
+    // Start with the incoming snapshot, then selectively preserve newer websocket-derived entries.
+    this.stateIndex = { ...incomingStates };
+    this.statsIndex = { ...incomingStats };
+    this.assetIndex = { ...incomingAssets };
     this.pups = [];
 
-    for (const [stateKey, stateData] of Object.entries(states)) {
+    const shouldPreserve = (pupId) => {
+      const wsTs = this.lastWsTsByPupId?.[pupId] || 0;
+      return bootstrapTs > 0 && wsTs > bootstrapTs;
+    };
+
+    // Preserve newer ws updates for any pup present in incoming snapshot.
+    for (const pupId of Object.keys(this.stateIndex)) {
+      if (!shouldPreserve(pupId)) continue;
+      if (prevStateIndex[pupId]) this.stateIndex[pupId] = prevStateIndex[pupId];
+      if (prevStatsIndex[pupId]) this.statsIndex[pupId] = prevStatsIndex[pupId];
+      if (prevAssetsIndex[pupId]) this.assetIndex[pupId] = prevAssetsIndex[pupId];
+    }
+
+    // Also preserve ws-created pups that aren't yet present in the snapshot (rare, but possible).
+    for (const pupId of Object.keys(prevStateIndex)) {
+      if (this.stateIndex[pupId]) continue;
+      if (!shouldPreserve(pupId)) continue;
+      this.stateIndex[pupId] = prevStateIndex[pupId];
+      if (prevStatsIndex[pupId]) this.statsIndex[pupId] = prevStatsIndex[pupId];
+      if (prevAssetsIndex[pupId]) this.assetIndex[pupId] = prevAssetsIndex[pupId];
+    }
+
+    for (const [stateKey, stateData] of Object.entries(this.stateIndex)) {
 
       // Do we have this pup in memory?
-      const { pup, index } = this.getPupMaster({ pupId: stateKey })
+      const existingIndex = prevPups.findIndex(p => p?.state?.id === stateKey);
+      const existing = existingIndex >= 0 ? prevPups[existingIndex] : null;
 
       // Update it in place.
-      if (pup) {
-        this.pups[index] = {
-          ...this.pups[index],
+      if (existing) {
+        this.pups.push({
+          ...existing,
           state: stateData,
-          stats: stats[stateKey],
-          assets: assets[stateKey],
-        }
-        this.pups[index].computed = {
-          ...this.pups[index].computed,
-          ...this.determineCalculatedVals(this.pups[index])
-        }
+          stats: this.statsIndex[stateKey],
+          assets: this.assetIndex[stateKey],
+        });
+        this.pups[this.pups.length - 1].computed = {
+          ...(this.pups[this.pups.length - 1].computed || {}),
+          ...this.determineCalculatedVals(this.pups[this.pups.length - 1])
+        };
       }
 
-      if (!pup) {
+      if (!existing) {
         let newPup = {
           computed: null,
           def: null,
           state: stateData,
-          stats: stats[stateKey],
-          assets: assets[stateKey],
+          stats: this.statsIndex[stateKey],
+          assets: this.assetIndex[stateKey],
         }
         newPup.computed = this.determineCalculatedVals(newPup);
         this.pups.push(newPup);
@@ -98,7 +137,11 @@ class PkgController {
 
   determineCalculatedVals(pup) {
     const isInstalled = !!pup.state
-    const status = determineStatusId(pup.state, pup.stats);
+
+    const activeActions = pup.state?.id ? this.getActionsForPup(pup.state.id) : [];
+    const activeJobs = pup.state?.id ? this.getJobsForPup(pup.state.id) : [];
+    // Determining the status here allows the correct status to persist a page refresh
+    const status = determineStatusId(pup.state, pup.stats, activeActions, activeJobs);
     const installation = determineInstallationId(pup.state);
     let out;
     try {
@@ -178,7 +221,6 @@ class PkgController {
         }
       }
     } catch (definitionProcessingError) {
-      console.debug('Issue while processing pup definiions')
       console.error(definitionProcessingError);
     }
   }
@@ -210,6 +252,16 @@ class PkgController {
     if (this.sourcesIndex[sourceId]) {
       delete this.sourcesIndex[sourceId];
     }
+    this.notify();
+  }
+
+  removePupById(pupId, meta = {}) {
+    if (!pupId) return;
+    delete this.stateIndex[pupId];
+    delete this.statsIndex[pupId];
+    delete this.assetIndex[pupId];
+    delete this.activityIndex[pupId];
+    this.pups = this.pups.filter(p => p?.state?.id !== pupId);
     this.notify();
   }
 
@@ -253,7 +305,7 @@ class PkgController {
     });
   }
 
-  resolveAction(txn, payload) {
+  resolveAction(txn, payload, meta = {}) {
     const foundActionIndex = this.actions.findIndex(
       (action) => action.txn === txn,
     );
@@ -279,14 +331,14 @@ class PkgController {
 
     switch (foundAction.actionType) {
       case "UPDATE-PUP":
-        this.updatePupModel(foundAction.pupId, payload.update);
+        this.updatePupModel(foundAction.pupId, payload.update, meta);
         break;
       case "PUP-ACTION":
         // TODO.
         if (foundAction.pupId === "--") {
           return;
         }
-        this.updatePupModel(foundAction.pupId, payload.update);
+        this.updatePupModel(foundAction.pupId, payload.update, meta);
         break;
     }
 
@@ -301,7 +353,7 @@ class PkgController {
     }
   }
 
-  updatePupStatsModel(pupId, newPupStatsData) {
+  updatePupStatsModel(pupId, newPupStatsData, meta = {}) {
     if (this.stateIndex[newPupStatsData.id]) {
       // Update index data in place.
       this.statsIndex[newPupStatsData.id] = newPupStatsData
@@ -313,6 +365,12 @@ class PkgController {
         this.pups[foundIndex].computed = this.determineCalculatedVals(this.pups[foundIndex])
       }
 
+      if (meta?.ts) {
+        const id = newPupStatsData.id;
+        const prev = this.lastWsTsByPupId?.[id] || 0;
+        this.lastWsTsByPupId[id] = Math.max(prev, meta.ts);
+      }
+
       // Notify subscribers of change
       this.notify();
 
@@ -322,7 +380,7 @@ class PkgController {
     }
   }
 
-  updatePupModel(pupId, newPupStateData) {
+  updatePupModel(pupId, newPupStateData, meta = {}) {
     if (!isValidState(newPupStateData)) {
       console.warn("Validation error. Invalid pupState structure");
       return;
@@ -350,7 +408,7 @@ class PkgController {
       // the user has called /bootstrap.
       let pup = {
         computed: null,
-        def: toEnrichedDef(this.sourcesIndex[newPupStateData.source.id]?.pups[newPupStateData.manifest.meta.name] || null),
+        def: (this.sourcesIndex[newPupStateData.source.id]?.pups[newPupStateData.manifest.meta.name] || null),
         state: newPupStateData,
         assets: null,
         stats: this.statsIndex[newPupStateData.id] || null,
@@ -359,6 +417,12 @@ class PkgController {
 
       this.stateIndex[pup.state.id] = newPupStateData;
       this.pups.push(pup)
+    }
+
+    if (meta?.ts) {
+      const id = newPupStateData.id;
+      const prev = this.lastWsTsByPupId?.[id] || 0;
+      this.lastWsTsByPupId[id] = Math.max(prev, meta.ts);
     }
 
     // Notify subscribers of change
@@ -448,7 +512,7 @@ class PkgController {
         ) {
           try {
             const registeredActionIndex = this.actions.findIndex(
-              (b) => b.id === a.id,
+              (b) => b.txn === a.txn,
             );
             this.actions.splice(registeredActionIndex, 1);
             a.callbacks.onTimeout();
@@ -464,6 +528,32 @@ class PkgController {
 
   getInstalledPupsForSource(sourceId) {
     return this.pups.filter(p => p.state?.source?.id === sourceId);
+  }
+
+  getActionsForPup(pupId) {
+    return this.actions.filter(a => a.id === pupId);
+  }
+
+  getJobsForPup(pupId) {
+    // Get active jobs for this pup (enable/disable/install/etc)
+    const jobs = store?.jobsContext?.jobs || [];
+    const activeJobs = jobs.filter(j => 
+      j.pupID === pupId && 
+      j.status !== 'completed' && 
+      j.status !== 'failed' && 
+      j.status !== 'cancelled'
+    );
+    return activeJobs;
+  }
+
+  recomputeAllDerivedValues() {
+    // Re-derive computed values for all pups (called when jobs are loaded after page refresh)
+    for (const pup of this.pups) {
+      if (pup.state) {
+        pup.computed = this.determineCalculatedVals(pup);
+      }
+    }
+    this.notify(null, { type: 'jobs-loaded' });
   }
 
   getSourceList() {
@@ -507,7 +597,11 @@ class PkgController {
       }
     }*/
 
-    const id = data?.update?.pupID || 'system'
+    const id =
+      data?.update?.pupID ??
+      data?.update?.PupID ??
+      data?.update?.pupId ??
+      'system' //Backend is inconsistent in its use of pupID vs PupID vs pupId
 
     if (this.activityIndex[id]) {
       // Prior acitivity exists for id, add more.
@@ -519,7 +613,8 @@ class PkgController {
     }
     // Notify observers with an 'activity' type
     const activityType = id === 'system' ? 'system-activity' : 'activity'
-    this.notify(null, { type: activityType });
+    // Notify only the relevant pup page when possible to avoid cross-pup flicker.
+    this.notify(id === 'system' ? null : id, { type: activityType });
   }
 }
 
@@ -589,13 +684,25 @@ function determineInstallationId(state) {
   return { id: "unknown", label: "unknown" };
 }
 
-function determineStatusId(state, stats) {
+function determineStatusId(state, stats, activeActions = [], activeJobs = []) {
   const installation = state?.installation;
   const status = stats?.status;
   const flags = {
     needs_deps: state?.needsDeps,
     needs_config: state?.needsConf,
   };
+
+  if (installation === "installing") {
+    return { id: "installing", label: "Installing" };
+  }
+
+  if (installation === "upgrading") {
+    return { id: "upgrading", label: "Updating" };
+  }
+
+  if (installation === "purging") {
+    return { id: "purging", label: "Cleaning" };
+  }
 
   if (installation === "uninstalling") {
     return { id: "uninstalling", label: "Uninstalling" };
@@ -611,6 +718,31 @@ function determineStatusId(state, stats) {
 
   if (flags.needs_config) {
     return { id: "needs_config", label: "Needs Config" };
+  }
+
+  // Check for active enable/disable actions (from pkgController.actions)
+  const hasActiveDisableAction = activeActions.some(a => a.action === 'disable');
+  const hasActiveEnableAction = activeActions.some(a => a.action === 'enable');
+
+  // Check for active enable/disable jobs (from jobsContext, survives refresh)
+  const hasActiveDisableJob = activeJobs.some(j => 
+    j.action === 'disable' || j.displayName?.toLowerCase().includes('disabl')
+  );
+  const hasActiveEnableJob = activeJobs.some(j => 
+    j.action === 'enable' || j.displayName?.toLowerCase().includes('enabl')
+  );
+
+  const hasActiveDisable = hasActiveDisableAction || hasActiveDisableJob;
+  const hasActiveEnable = hasActiveEnableAction || hasActiveEnableJob;
+
+  // If disable is active and status shows stopped, show "stopping" until job completes
+  if (hasActiveDisable && (status === "stopped" || status === "stopping")) {
+    return { id: "stopping", label: "stopping" };
+  }
+
+  // If enable is active and status shows stopped, show "starting" until job completes
+  if (hasActiveEnable && (status === "stopped" || status === "starting")) {
+    return { id: "starting", label: "starting" };
   }
 
   if (status === "starting") {
@@ -633,6 +765,5 @@ function determineStatusId(state, stats) {
 }
 
 function toEnrichedDef(input) {
-  console.debug({ input });
   return input;
 }

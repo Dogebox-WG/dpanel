@@ -94,12 +94,21 @@ class SocketChannel {
       }
 
       switch (data.type) {
+        case "bootstrap":
+          // Initial websocket bootstrap snapshot.
+          // The app also fetches bootstrap over HTTP on load; this is mainly useful for debugging.
+          if (store.networkContext.logBootstrapUpdates) {
+            console.log("[MainChannel] ws bootstrap received", { seq: data.seq, ts: data.ts });
+          }
+          // Optionally apply; keep it off by default to avoid surprising resets.
+          // If you want to use it, toggle networkContext.logBootstrapUpdates and call pkgController.setData here.
+          break;
         case "pup":
           // emitted on state change (eg: installing, ready)
           if (store.networkContext.logStateUpdates) {
-                console.log(`##-STATE-## installation: ${data.update.installation}`, { payload: data.update });
-              }
-          pkgController.updatePupModel(data.update.id, data.update)
+            console.log(`##-STATE-## installation: ${data.update.installation}`, { seq: data.seq, ts: data.ts, payload: data.update });
+          }
+          pkgController.updatePupModel(data.update.id, data.update, { seq: data.seq, ts: data.ts })
           
           // Clear update info when pup is upgrading (version has changed, no longer "update available")
           if (data.update.installation === 'upgrading') {
@@ -107,14 +116,21 @@ class SocketChannel {
           }
           break;
 
+        case "pup_purged":
+          if (store.networkContext.logStateUpdates) {
+            console.log("[MainChannel] pup_purged", { seq: data.seq, ts: data.ts, payload: data.update });
+          }
+          pkgController.removePupById(data?.update?.pupId, { seq: data.seq, ts: data.ts });
+          break;
+
         case "stats":
           // emitted on an interval (contains current status and vitals)
           if (data && data.update && Array.isArray(data.update)) {
             data.update.forEach((statsUpdatePayload) => {
               if (store.networkContext.logStatsUpdates) {
-                console.log('--STATS--', statsUpdatePayload.status, { payload: statsUpdatePayload });
+                console.log('--STATS--', statsUpdatePayload.status, { seq: data.seq, ts: data.ts, payload: statsUpdatePayload });
               }
-              pkgController.updatePupStatsModel(statsUpdatePayload.id, statsUpdatePayload)
+              pkgController.updatePupStatsModel(statsUpdatePayload.id, statsUpdatePayload, { seq: data.seq, ts: data.ts })
             });
           }
           break;
@@ -136,7 +152,7 @@ class SocketChannel {
             }
           } else {
             // Regular pup-specific action
-            pkgController.resolveAction(data.id, data);
+            pkgController.resolveAction(data.id, data, { seq: data.seq, ts: data.ts });
           }
           break;
 
@@ -151,7 +167,7 @@ class SocketChannel {
 
         case "progress":
           if (store.networkContext.logProgressUpdates) {
-            console.log("--PROGRESS", data);
+            console.log("--PROGRESS", { seq: data.seq, ts: data.ts, data });
           }
           pkgController.ingestProgressUpdate(data);
           break;
@@ -204,9 +220,6 @@ class SocketChannel {
                 pupUpdates.clearUpdateInfo(data.update.state.id);
               }
             }
-            
-            // Note: Update cache refresh happens via pup-updates-checked event
-            // No need for timer-based refresh here
           }
           break;
 

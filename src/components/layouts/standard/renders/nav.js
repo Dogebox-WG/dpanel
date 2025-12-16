@@ -39,7 +39,7 @@ export function renderNav(CURPATH) {
 
             <a href="/monitoring" class="menu-item ${CURPATH.startsWith("/monitoring") ? "active" : ""}">
               <sl-icon name="speedometer2"></sl-icon>
-              Monitoring
+              Monitor
             </a>
 
             <a href="/settings" class="menu-item ${CURPATH.startsWith("/settings") ? "active" : ""}">

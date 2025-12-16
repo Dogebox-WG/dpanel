@@ -45,6 +45,8 @@ export function renderDialog() {
           this.handleUninstall();
         }
       }}
+      autofocus
+      autocomplete="off"
     ></sl-input>
     <sl-button slot="footer" variant="danger" @click=${this.handleUninstall} ?loading=${this.inflight_uninstall} ?disabled=${this.inflight_uninstall || this._confirmedName !== pkg.state.manifest.meta.name}>Uninstall</sl-button>
     <style>p:first-of-type { margin-top: 0px; }</style>

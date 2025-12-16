@@ -34,12 +34,45 @@ class LogViewer extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     // Clean up WebSocket connection
-    this.wsClient.disconnect();
+    if (this.wsClient) {
+      this.wsClient.disconnect();
+      this.wsClient = null;
+    }
   }
 
   updated(changedProperties) {
     if (changedProperties.has('autostart') && this.autostart) {
       this.wsClient && this.wsClient.connect();
+    }
+    
+    // If jobId or pupId changes, reconnect to the new log stream
+    if (changedProperties.has('jobId') || changedProperties.has('pupId')) {
+      const oldJobId = changedProperties.get('jobId');
+      const oldPupId = changedProperties.get('pupId');
+      const newJobId = this.jobId;
+      const newPupId = this.pupId;
+      
+      // Only reconnect if the ID actually changed (not just initial render)
+      if (oldJobId !== undefined || oldPupId !== undefined) {
+        if (oldJobId !== newJobId || oldPupId !== newPupId) {
+          // Disconnect old connection
+          if (this.wsClient) {
+            this.wsClient.disconnect();
+            this.wsClient = null;
+            this.isConnected = false;
+          }
+          
+          // Clear old logs
+          this.logs = [];
+          
+          // Setup new connection
+          this.setupSocketConnection();
+          
+          if (this.autostart && this.wsClient) {
+            this.wsClient.connect();
+          }
+        }
+      }
     }
   }
 
@@ -84,7 +117,8 @@ class LogViewer extends LitElement {
   }
 
   setupSocketConnection() {
-    if (this.isConnected) {
+    // Prevent duplicate connections
+    if (this.isConnected || this.wsClient) {
       return;
     }
 
@@ -124,6 +158,11 @@ class LogViewer extends LitElement {
         }
       } else if (typeof event.data === 'object') {
         logMessage = event.data.message || event.data.data || JSON.stringify(event.data);
+      }
+      
+      // Deduplicate: skip if this exact message was just added
+      if (this.logs.length > 0 && this.logs[this.logs.length - 1] === logMessage) {
+        return;
       }
       
       this.logs = [...this.logs, logMessage];

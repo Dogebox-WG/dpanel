@@ -756,20 +756,28 @@ function determineStatusId(state, stats, activeActions = [], activeJobs = []) {
     return { id: "needs_config", label: "Needs Config" };
   }
 
-  // Check for active enable/disable actions (from pkgController.actions)
+  // Check for active enable/disable/rollback actions (from pkgController.actions)
   const hasActiveDisableAction = activeActions.some(a => a.action === 'disable');
   const hasActiveEnableAction = activeActions.some(a => a.action === 'enable');
 
-  // Check for active enable/disable jobs (from jobsContext, survives refresh)
+  // Check for active enable/disable/rollback jobs (from jobsContext, survives refresh)
   const hasActiveDisableJob = activeJobs.some(j => 
     j.action === 'disable' || j.displayName?.toLowerCase().includes('disabl')
   );
   const hasActiveEnableJob = activeJobs.some(j => 
     j.action === 'enable' || j.displayName?.toLowerCase().includes('enabl')
   );
+  const hasActiveRollbackJob = activeJobs.some(j => 
+    j.action === 'rollback' || j.displayName?.toLowerCase().includes('rollback')
+  );
 
   const hasActiveDisable = hasActiveDisableAction || hasActiveDisableJob;
   const hasActiveEnable = hasActiveEnableAction || hasActiveEnableJob;
+
+  // If rollback is active, show "Rolling back" status
+  if (hasActiveRollbackJob) {
+    return { id: "rollback", label: "Rolling back" };
+  }
 
   // If disable is active and status shows stopped, show "stopping" until job completes
   if (hasActiveDisable && (status === "stopped" || status === "stopping")) {

@@ -108,25 +108,16 @@ class PupPage extends LitElement {
   renderLogViewer(pkg) {
     if (!pkg?.state?.id) return nothing;
     
-    // Check if there's an active job for this pup
-    const activeJobs = this.pkgController.getJobsForPup(pkg.state.id);
-    const activeJob = activeJobs.length > 0 ? activeJobs[0] : null;
+    // Check if there's a recent job (active or recently completed) for this pup
+    const recentJob = this.pkgController.getRecentJobForPup(pkg.state.id);
     
-    // If there's an active job, use x-log-viewer to show full log history from backend
-    // Otherwise, use x-activity-log to show in-memory logs
-    if (activeJob) {
+    // Always use x-log-viewer when there's a job - provides consistent, detailed logs
+    if (recentJob) {
       return html`
         <x-log-viewer 
-          .jobId=${activeJob.id}
+          .jobId=${recentJob.id}
           autostart
         ></x-log-viewer>
-      `;
-    } else if (this.activityLogs.length > 0) {
-      return html`
-        <x-activity-log
-          .logs=${this.activityLogs}
-          name="${pkg.state.manifest.meta.name}"
-        ></x-activity-log>
       `;
     }
     

@@ -546,6 +546,42 @@ class PkgController {
     return activeJobs;
   }
 
+  getRecentJobForPup(pupId) {
+    // Get the most recent job (active or recently completed) for this pup
+    // This keeps the detailed log viewer open even after operations complete
+    const jobs = store?.jobsContext?.jobs || [];
+    const relevantJobs = jobs.filter(j => j.pupID === pupId);
+    
+    if (relevantJobs.length === 0) return null;
+    
+    // Sort by finished time (for completed) or started time (for active), most recent first
+    const sorted = relevantJobs.sort((a, b) => {
+      const timeA = new Date(a.finished || a.started).getTime();
+      const timeB = new Date(b.finished || b.started).getTime();
+      return timeB - timeA;
+    });
+    
+    const mostRecent = sorted[0];
+    
+    // Return the most recent job if:
+    // 1. It's still active (not completed/failed/cancelled)
+    // 2. OR it completed recently (within 10 minutes)
+    if (mostRecent.status === 'queued' || mostRecent.status === 'in_progress') {
+      return mostRecent;
+    }
+    
+    // For completed/failed jobs, keep showing for 10 minutes
+    const now = Date.now();
+    const recentJobCutoff = now - (10 * 60 * 1000);
+    const jobTime = new Date(mostRecent.finished || mostRecent.started).getTime();
+    
+    if (jobTime > recentJobCutoff) {
+      return mostRecent;
+    }
+    
+    return null;
+  }
+
   recomputeAllDerivedValues() {
     // Re-derive computed values for all pups (called when jobs are loaded after page refresh)
     for (const pup of this.pups) {

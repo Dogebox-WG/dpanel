@@ -113,9 +113,19 @@ class LogViewer extends LitElement {
     this.wsClient.onMessage = async (event) => {
       // Handle different message formats
       let logMessage = event.data;
-      if (typeof event.data === 'object') {
+      
+      // If it's a string, try to parse as JSON first (backend sends JSON-encoded strings)
+      if (typeof event.data === 'string') {
+        try {
+          logMessage = JSON.parse(event.data);
+        } catch (e) {
+          // If parsing fails, use as-is
+          logMessage = event.data;
+        }
+      } else if (typeof event.data === 'object') {
         logMessage = event.data.message || event.data.data || JSON.stringify(event.data);
       }
+      
       this.logs = [...this.logs, logMessage];
       await this.requestUpdate();
       if (this.follow) {
@@ -179,9 +189,6 @@ class LogViewer extends LitElement {
             </div>
           </div>
         <div id="LogContainer">
-          <ul>
-            ${this.logs.map(log => html`<li>${log}</li>`)}
-          </ul>
           ${this.logs.length > 0 ? html`
             <ul>
               ${this.logs.map(log => html`<li>${log}</li>`)}

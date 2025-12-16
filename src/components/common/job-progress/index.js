@@ -40,8 +40,8 @@ class JobProgress extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.5em;
-      flex: 0 0 200px;
-      min-width: 200px;
+      flex: 0 0 250px;
+      min-width: 250px;
     }
     
     .task-name {
@@ -92,7 +92,7 @@ class JobProgress extends LitElement {
     
     .progress-bar-container {
       flex: 1;
-      height: 24px;
+      height: 8px;
       background: #333;
       border-radius: 4px;
       overflow: hidden;
@@ -305,7 +305,7 @@ class JobProgress extends LitElement {
         <div class="job-row">
           <div class="task-label">
             <sl-icon name="${this.getStatusIcon(status)}" class="job-icon ${status}"></sl-icon>
-            <span class="task-name">
+            <span class="task-name" title="${displayName}">
               ${displayName}
             </span>
           </div>

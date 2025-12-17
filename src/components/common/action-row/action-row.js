@@ -211,9 +211,6 @@ class ActionRow extends LitElement {
   `;
 
   handleClick = (e) => {
-    if (this.dot) {
-      this.dot = false;
-    }
     if (this.expandable) {
       this.expand = !this.expand;
       this.dispatchEvent(

@@ -65,53 +65,103 @@ export function generateManifestsV2(input) {
 
   const names = Array.isArray(input) ? input : Array.from({ length: input }, (_, index) => `Package_${index + 1}`);
 
-  const produce = (array) => array.map(name => ({
-    config: generateRandomConfig(),
-    container: {
-      build: {
-        nixFile: `${name.toLowerCase()}.nix`,
-        nixFileSha256: "",
+  const coreMetrics = [
+    {
+      name: "chain",
+      label: "Chain",
+      type: "string",
+      history: 1
+    },
+    {
+      name: "blocks",
+      label: "Block Height",
+      type: "int",
+      history: 30
+    },
+    {
+      name: "headers",
+      label: "Headers",
+      type: "int",
+      history: 30
+    },
+    {
+      name: "difficulty",
+      label: "Difficulty",
+      type: "float",
+      history: 30
+    },
+    {
+      name: "verification_progress",
+      label: "Verification progress",
+      type: "string",
+      history: 1
+    },
+    {
+      name: "initial_block_download",
+      label: "Initial Download",
+      type: "string",
+      history: 1
+    },
+    {
+      name: "chain_size_human",
+      label: "Blockchain Size",
+      type: "string",
+      history: 1
+    }
+  ];
+
+  const produce = (array) => array.map(name => {
+    const isCoreVariant = name === 'Core' || name === 'Core green' || name === 'Sakura';
+    
+    return {
+      config: generateRandomConfig(),
+      container: {
+        build: {
+          nixFile: `${name.toLowerCase()}.nix`,
+          nixFileSha256: "",
+        },
+        exposes: [
+          {
+            port: 80,
+            trafficType: "http",
+            type: "admin",
+          },
+          {
+            port: 81,
+            trafficType: "http",
+            type: "admin",
+          },
+        ],
+        services: [
+          {
+            command: {
+              cwd: "/bin/",
+              env: {},
+              exec: `/bin/start-${name.toLowerCase()}1`,
+            },
+            name: `${name.toLowerCase()}1`,
+          },
+          {
+            command: {
+              cwd: "/bin/",
+              env: {},
+              exec: `/bin/start-${name.toLowerCase()}2`,
+            },
+            name: `${name.toLowerCase()}2`,
+          },
+        ],
       },
-      exposes: [
-        {
-          port: 80,
-          trafficType: "http",
-          type: "admin",
-        },
-        {
-          port: 81,
-          trafficType: "http",
-          type: "admin",
-        },
-      ],
-      services: [
-        {
-          command: {
-            cwd: "/bin/",
-            env: {},
-            exec: `/bin/start-${name.toLowerCase()}1`,
-          },
-          name: `${name.toLowerCase()}1`,
-        },
-        {
-          command: {
-            cwd: "/bin/",
-            env: {},
-            exec: `/bin/start-${name.toLowerCase()}2`,
-          },
-          name: `${name.toLowerCase()}2`,
-        },
-      ],
-    },
-    dependencies: [],
-    manifestVersion: 1,
-    meta: {
-      logoPath: "",
-      name: name,
-      version: randomSemver(),
-    },
-    permissionGroups: [],
-  }));
+      dependencies: [],
+      manifestVersion: 1,
+      meta: {
+        logoPath: "",
+        name: name,
+        version: randomSemver(),
+      },
+      permissionGroups: [],
+      metrics: isCoreVariant ? coreMetrics : []
+    };
+  });
 
   // 'Mock a hardcoded set'
   if (!input) {

@@ -123,11 +123,7 @@ export class LanguageSettings extends LitElement {
   }
   
   handleDialogClose() {
-
-  }
-  
-  handleCloseClick() {
-    this.dispatchEvent(new CustomEvent('request-close', {
+    this.dispatchEvent(new CustomEvent('sl-request-close', {
       bubbles: true,
       composed: true,
     }));
@@ -173,7 +169,6 @@ export class LanguageSettings extends LitElement {
     } finally {
       this._inflight = false;
       if (didSucceed) {
-        //await this.onSuccess();
         this.handleDialogClose(); 
       }
     }      

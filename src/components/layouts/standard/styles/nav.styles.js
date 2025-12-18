@@ -204,4 +204,16 @@ export const navStyles = css`
       font-size: 1.2rem;
     }
   }
+
+  .nav-update-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+  }
+
+  .nav-update-badge::part(base) {
+    padding: 0.2em 0.5em;
+    min-width: 1.2em;
+    height: 1.2em;
+    font-weight: bold;
+  }
 `;

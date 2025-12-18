@@ -1,4 +1,4 @@
-import { html, classMap } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
 import "/components/common/job-indicator/index.js";
 
@@ -12,6 +12,9 @@ export function renderNav(CURPATH) {
   });
   const menu_open = this.context.store.appContext.menuVisible;
   const showSettingsDot = this.context.store.sysContext.updateAvailable;
+  const pupUpdatesCount = this.context.store.pupUpdatesContext?.totalUpdatesAvailable || 0;
+  const showPupUpdatesBadge = pupUpdatesCount > 0;
+  
   return html`
     <nav id="Nav" ?open=${menu_open} ?animating=${this.menuAnimating}>
       <div id="Side">
@@ -30,6 +33,7 @@ export function renderNav(CURPATH) {
             <a href="/pups" class="menu-item ${CURPATH.startsWith("/pups") ? "active" : ""}">
               <sl-icon name="box-seam"></sl-icon>
               Pups
+              <x-dot ?open=${showPupUpdatesBadge} style="--left: -8px;"></x-dot>
             </a>
 
             <a href="/explore" class="menu-item ${CURPATH.startsWith("/explore") ? "active" : ""}">

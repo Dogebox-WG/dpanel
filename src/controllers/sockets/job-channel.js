@@ -126,6 +126,12 @@ class JobWebSocketService {
         loading: false 
       }
     });
+    
+    // Trigger pkgController to re-derive status for all pups now that jobs are loaded
+    // This ensures pups with active jobs show correct "stopping"/"starting" status
+    import('/controllers/package/index.js').then(m => {
+      m.pkgController.recomputeAllDerivedValues();
+    });
   }
 
   handleJobCreated(job) {

@@ -1,8 +1,21 @@
-import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
-import { StoreSubscriber } from '/state/subscribe.js';
-import { store } from '/state/store.js';
+import { LitElement, html, css } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { StoreSubscriber } from '../../../state/subscribe.js';
+import { store } from '../../../state/store.js';
 
-class JobIndicator extends LitElement {
+interface Job {
+  status: string;
+  [key: string]: any;
+}
+
+interface JobsContext {
+  jobs: Job[];
+  loading: boolean;
+  error: string | null;
+}
+
+@customElement('job-indicator')
+export class JobIndicator extends LitElement {
   static styles = css`
     :host {
       display: block;
@@ -92,17 +105,20 @@ class JobIndicator extends LitElement {
     }
   `;
   
+  private context: StoreSubscriber;
+  
   constructor() {
     super();
     this.context = new StoreSubscriber(this, store);
   }
   
-  handleClick() {
+  private handleClick(): void {
     window.location.href = '/activity';
   }
   
   render() {
-    const { jobs } = this.context.store.jobsContext;
+    const jobsContext = this.context.store.jobsContext as JobsContext; // TS-TODO : Remove 'as' when we have a better type for jobsContext
+    const { jobs } = jobsContext;
     const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
     const isActive = window.location.pathname.startsWith('/activity');
     
@@ -122,6 +138,4 @@ class JobIndicator extends LitElement {
     `;
   }
 }
-
-customElements.define('job-indicator', JobIndicator);
 

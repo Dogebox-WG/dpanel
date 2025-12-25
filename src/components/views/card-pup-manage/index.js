@@ -44,7 +44,8 @@
 
       const statusClassMap = classMap({
         status: true,
-        running: status === "running"
+        running: status === "running",
+        needs_attention: status === "Unmet Dependencies" || status === "Needs Config"
       });
       return html`
         <a class="anchor" href=${href} target="_self">
@@ -179,6 +180,11 @@
       span.status.running {
         color: #07ffae;
       }
+
+      span.status.needs_attention {
+        color: var(--sl-color-amber-600);
+      }
+
     `;
   }
 

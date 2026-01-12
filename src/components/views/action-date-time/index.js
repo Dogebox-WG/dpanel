@@ -2,68 +2,20 @@ import {
   LitElement,
   html,
   css,
-  nothing,
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
-import "/components/common/action-row/action-row.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { getTimezone, getTimezones, setTimezone } from "/api/system/timezones.js";
+import { formatTimezoneWithOffset, sortTimezonesByCity } from "/utils/timezone-formatter.js";
 
 export class DateTimeSettings extends LitElement {
-  static get properties() {
-    return {
-    }
-  }
-
   static styles = css`
     h1 {
       display: block;
       font-family: "Comic Neue", sans-serif;
       text-align: center;
       margin-bottom: .4rem;
-    }
-
-    p {
-      text-align: center;
-      line-height: 1.4;
-    }
-
-    .helper-text {
-      font-size: 0.8rem;
-      color: #555555;
-      font-family: 'Comic Neue';
-      margin-bottom: 0.5em;
-      text-align: center;
-    }
-
-    .actions {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 1em;
-
-      sl-button {
-        margin-right: -1em;
-      }
-    }
-
-    .key-reveal-dropdown {
-      font-size: 0.8rem;
-      background: rgba(0,0,0,0.2);
-      word-break: break-all;
-      margin-left: 48px;
-      padding: 1em;
-      border-radius: 8px;
-    }
-
-    .key-actions {
-      margin-left: 48px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-end;
     }
 
     .form-control {
@@ -77,7 +29,7 @@ export class DateTimeSettings extends LitElement {
       align-self: flex-end;
     }
 
-    .loading-list, .empty-list {
+    .loading-list {
       height: 180px;
       display: flex;
       flex-direction: row;
@@ -86,15 +38,6 @@ export class DateTimeSettings extends LitElement {
       color: #555555;
       font-family: 'Comic Neue';
     }
-
-    .confirmation-container {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: 1em;
-    }
-
   `;
 
   static get properties() {
@@ -102,7 +45,7 @@ export class DateTimeSettings extends LitElement {
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
       _timezones: { type: Array },
-      _timezone: { type: String },
+      _current_timezone: { type: String },
       _changes: { type: Object },
     };
   }
@@ -132,7 +75,12 @@ export class DateTimeSettings extends LitElement {
   async _fetch() {
     try {
       this._loading = true;
-      this._timezones = await getTimezones();
+      const rawTimezones = await getTimezones();
+      
+      // Transform and sort timezones
+      const formattedTimezones = rawTimezones.map(tz => formatTimezoneWithOffset(tz));
+      this._timezones = sortTimezonesByCity(formattedTimezones);
+      
       this._current_timezone = await getTimezone();
 
     } catch (e) {
@@ -160,7 +108,6 @@ export class DateTimeSettings extends LitElement {
     let didSucceed = false
 
     try {
-      console.log(this._changes.timezone);
       await setTimezone({ timezone: this._changes.timezone });
       didSucceed = true;
     } catch (err) {
@@ -174,37 +121,43 @@ export class DateTimeSettings extends LitElement {
     }
   }
 
-  _handleTimezoneInputChange(e) {
-    const field = e.target.getAttribute('data-field');
-    this._changes[field] = e.target.value;
+  _handleTimezoneChange(e) {
+    this._changes.timezone = e.target.value;
   }
 
   render() {
-    console.log(JSON.stringify(this._current_timezone))
+    if (this._loading) {
+      return html`
+        <div class="loading-list">
+          <sl-spinner></sl-spinner>
+        </div>
+      `;
+    }
+    
     return html`
       <h1>Date and Time</h1>
 
       <div class="form-control">
-            <sl-select
-              name="timezone"
-              
-              required
-              label="Timezone" 
-              ?disabled=${this._inflight}
-              data-field="timezone"
-              value=${this._current_timezone}
-              help-text="Where in the world should your clock be set to"
-              hoist
-              @sl-change=${this._handleTimezoneInputChange}
-            >
-              ${this._timezones.map(
-                (timezone) =>
-                  html`<sl-option value=${timezone.label}>${timezone.label}</sl-option>`,
-              )}
-            </sl-select>
-        <div slot="footer" class="align-end">
-          <sl-button variant="primary" ?disabled=${this._inflight} ?loading=${this._inflight} @click=${this._attemptSubmit}>Submit</sl-button>
-        </div>
+        <sl-select
+          label="Timezone"
+          required
+          help-text="Where in the world should your clock be set to"
+          name="timezone"
+          value=${this._changes.timezone || this._current_timezone || ''}
+          ?disabled=${this._inflight}
+          @sl-change=${this._handleTimezoneChange}
+          hoist
+        >
+          ${this._timezones.map(
+            (timezone) =>
+              html`<sl-option value=${timezone.id}>
+                ${timezone.displayLabel}
+              </sl-option>`
+          )}
+        </sl-select>
+      </div>
+      <div slot="footer" class="align-end">
+        <sl-button variant="primary" ?disabled=${this._inflight} ?loading=${this._inflight} @click=${this._attemptSubmit}>Submit</sl-button>
       </div>
     `
   }

@@ -149,6 +149,14 @@ class DPanelApp extends LitElement {
       if (res?.version?.release) {
         store.updateState({ appContext: { dbxVersion: res?.version?.release }})
       }
+      
+      // Set git commit info on appContext
+      if (res?.version?.git) {
+        store.updateState({ appContext: { 
+          gitCommit: res.version.git.commit,
+          gitDirty: res.version.git.dirty 
+        }})
+      }
 
       // Process pups
       if (res) {

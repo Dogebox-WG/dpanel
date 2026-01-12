@@ -58,6 +58,9 @@ import { mainChannel } from "/controllers/sockets/main-channel.js";
 // Pkg controller
 import { pkgController } from "/controllers/package/index.js"
 
+// Job WebSocket
+import { jobWebSocket } from "/controllers/sockets/job-channel.js";
+
 class DPanelApp extends LitElement {
   static properties = {
     ready: { type: Boolean },
@@ -99,12 +102,16 @@ class DPanelApp extends LitElement {
 
     // Menu animating event handler
     this.addEventListener("menu-toggle-request", this._handleMenuToggleRequest);
+
+    // Connect to job WebSocket (works in both mock and real mode)
+    jobWebSocket.connect();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._debouncedHandleResize);
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
+    jobWebSocket.disconnect();
     super.disconnectedCallback();
   }
 
@@ -142,6 +149,14 @@ class DPanelApp extends LitElement {
       if (res?.version?.release) {
         store.updateState({ appContext: { dbxVersion: res?.version?.release }})
       }
+      
+      // Set git commit info on appContext
+      if (res?.version?.git) {
+        store.updateState({ appContext: { 
+          gitCommit: res.version.git.commit,
+          gitDirty: res.version.git.dirty 
+        }})
+      }
 
       // Process pups
       if (res) {
@@ -152,6 +167,8 @@ class DPanelApp extends LitElement {
       if (res?.flags && !res.flags.isFirstTimeWelcomeComplete) {
         showWelcomeModal();
       }
+
+      // Activities loaded via WebSocket (no HTTP fetch needed)
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

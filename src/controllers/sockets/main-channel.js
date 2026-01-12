@@ -135,13 +135,48 @@ class SocketChannel {
           pkgController.ingestProgressUpdate(data);
           break;
 
-        case "system-state":
-          sysController.ingestSystemStateUpdate(data)
+        case "system-update-available":
+          sysController.ingestSystemUpdateAvailableEvent(data)
           break;
 
         case "recovery":
           console.log("--RECOVERY", data.update);
           this.recoveryLogs = [...this.recoveryLogs, data.update];
+          break;
+
+        case "job_created":
+          if (data.update) {
+            const existingJob = store.jobsContext.jobs.find(j => j.id === data.update.id);
+            if (!existingJob) {
+              store.updateState({
+                jobsContext: {
+                  activities: [...store.jobsContext.jobs, data.update]
+                }
+              });
+            }
+          }
+          break;
+
+        case "job_progress":
+          if (data.update) {
+            const activities = store.jobsContext.jobs.map(job =>
+              job.id === data.update.id ? data.update : job
+            );
+            store.updateState({
+              jobsContext: { activities }
+            });
+          }
+          break;
+
+        case "job_completed":
+          if (data.update) {
+            const activities = store.jobsContext.jobs.map(job =>
+              job.id === data.update.id ? data.update : job
+            );
+            store.updateState({
+              jobsContext: { activities }
+            });
+          }
           break;
       }
       this.notify();

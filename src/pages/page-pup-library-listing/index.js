@@ -25,7 +25,7 @@ import { StoreSubscriber } from "/state/subscribe.js";
 import { pkgController } from "/controllers/package/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
-import { doBootstrap } from '/api/bootstrap/bootstrap.js';
+import { doBootstrap } from "/api/bootstrap/bootstrap.js";
 import { renderDialog } from "./renders/dialog.js";
 import { renderActions } from "./renders/actions.js";
 import { renderStatus } from "./renders/status.js";
@@ -129,7 +129,7 @@ class PupPage extends LitElement {
 
   submitConfig = async (stagedChanges, formNode, dynamicForm) => {
     // Define callbacks
-    const pupId = this.context.store.pupContext.id
+    const pupId = this.context.store.pupContext.state.id
     const callbacks = {
       onSuccess: () => dynamicForm.commitChanges(formNode),
       onError: (errorPayload) => {
@@ -294,15 +294,27 @@ class PupPage extends LitElement {
         `;
       }
 
+      const manifestList = pkg.state.manifest?.metrics ?? [];
+
+      const defsByName = new Map(
+        manifestList
+          .filter((m) => m.name?.trim())
+          .map((m) => [String(m.name).trim().toLowerCase(), m])
+      );
+
+      const enriched = (pkg.stats.metrics || []).map((m) => {
+        const matchedDef = defsByName.get(String(m.name || '').trim().toLowerCase());
+        const desc = (matchedDef?.description?.trim?.() || "");
+        return { ...m, description: desc };
+      });
+
       return html`
         <div class="metrics-wrap">
-          ${pkg.stats.metrics.map((metric) => {
-            return html`
-              <div class="metric-container">
-                <x-metric .metric=${metric}></x-metric>
-              </div>
-            `;
-          })}
+          ${enriched.map((metric) => html`
+            <div class="metric-container">
+              <x-metric .metric=${metric}></x-metric>
+            </div>
+          `)}
         </div>
       `;
     };
@@ -320,7 +332,7 @@ class PupPage extends LitElement {
         <div class="metrics-wrap">
           ${pkg.stats.systemMetrics.map((metric) => html`
             <div class="metric-container">
-              <x-metric .metric="${metric}"></sparkline-chart-v2>
+              <x-metric .metric=${metric}></x-metric>
             </div>
           `)}
         </div>
@@ -333,11 +345,9 @@ class PupPage extends LitElement {
         <sl-switch slot="suffix" ?checked=${!disableActions && pkg.state.enabled} @sl-input=${this.handleStartStop} ?disabled=${this.inflight_startstop || labels.installationId !== "ready"}></sl-switch>
       </action-row>
 
-      ${nothing || html`
-        <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
-          Customize ${pkg.state.manifest.meta.name}
-        </action-row>
-      `}
+      <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
+        Customise ${pkg.state.manifest.meta.name}
+      </action-row>
 
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
         Ea sint dolor commodo.
@@ -545,13 +555,31 @@ class PupPage extends LitElement {
 
     .metrics-wrap {
       margin-top: .5em;
-      display: flex;
-      flex-direction: row;
-      gap: 1em;
-      overflow-x: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5em;
+      width: 100%;
+      align-items: stretch;
+      grid-auto-rows: minmax(var(--sparkline-height, 160px), auto);
     }
 
-    .metric-container {}
+    .metric-container {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-radius: 8px;
+      padding: 1em;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+
+    .metric-container > x-metric {
+      display: block;
+      height: 100%;
+      width: 100%;
+    }
+
   `;
 }
 

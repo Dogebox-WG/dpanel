@@ -17,6 +17,7 @@ import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { getRouter } from "/router/index.js";
 import { pkgController } from "/controllers/package/index.js";
+import { jobsController } from "/controllers/jobs/index.js";
 import { promptPowerOff, promptReboot } from "./power-helpers.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
 import { importBlockchain } from '/api/system/import-blockchain-data.js';
@@ -61,6 +62,8 @@ class SettingsPage extends LitElement {
       showImportLogs: { type: Boolean },
       systemLogs: { type: Array },
       showImportLogsModal: { type: Boolean },
+      isSystemUpdateLocked: { type: Boolean },
+      systemUpdateStatus: { type: String },
     };
   }
 
@@ -68,6 +71,9 @@ class SettingsPage extends LitElement {
     super();
     this.context = new StoreSubscriber(this, store);
     this.pkgController = pkgController;
+    this.isSystemUpdateLocked = jobsController.isSystemUpdateLocked();
+    this.systemUpdateStatus = jobsController.getActiveSystemUpdateStatus();
+    this.updatesRowDescription = this.buildUpdatesRowDescription();
     this.inflight_import_blockchain = false;
     this.showImportLogs = false;
     this.systemLogs = [];
@@ -78,6 +84,7 @@ class SettingsPage extends LitElement {
     super.connectedCallback();
     // Subscribe to pkgController for system activity updates
     this.pkgController.addObserver(this);
+    jobsController.addObserver(this);
     console.log('Settings page subscribed to pkgController for system activity updates');
   }
 
@@ -85,12 +92,27 @@ class SettingsPage extends LitElement {
     super.disconnectedCallback();
     // Unsubscribe from pkgController
     this.pkgController.removeObserver(this);
+    jobsController.removeObserver(this);
     
     // Reset import state when leaving the page
     this.inflight_import_blockchain = false;
     this.showImportLogs = false;
     this.systemLogs = [];
     this.showImportLogsModal = false;
+  }x
+
+  onJobsUpdate(state) {
+    if (
+      state?.isSystemUpdateLocked === this.isSystemUpdateLocked &&
+      state?.systemUpdateStatus === this.systemUpdateStatus
+    ) {
+      return;
+    }
+
+    this.isSystemUpdateLocked = state?.isSystemUpdateLocked;
+    this.systemUpdateStatus = state?.systemUpdateStatus;
+    this.updatesRowDescription = this.buildUpdatesRowDescription();
+    this.requestUpdate();
   }
 
   handleDialogClose() {
@@ -156,10 +178,18 @@ class SettingsPage extends LitElement {
       this.systemLogs = allSystemLogs.filter(log => 
         log.step === "import-blockchain-data"
       );
-      
+
       console.log('Filtered blockchain logs:', this.systemLogs);
     }
     super.requestUpdate();
+  }
+
+  buildUpdatesRowDescription() {
+    if (this.isSystemUpdateLocked) {
+      const status = this.systemUpdateStatus || "active";
+      return `Disabled while a system update is ${status}.`;
+    }
+    return "Check for updates";
   }
 
   render() {
@@ -174,11 +204,11 @@ class SettingsPage extends LitElement {
             <h3>Menu</h3>
           </div>
           <div class="list-wrap">
-            <action-row prefix="info-circle" label="Version" href="/settings/versions" @click=${notYet}>
+            <action-row prefix="info-circle" label="Version" href="/settings/versions" .trigger=${this.handleMenuClick}>
               View version details
             </action-row>
-            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" @click=${notYet}>
-              Check for updates
+            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" ?disabled=${this.isSystemUpdateLocked}>
+              ${this.updatesRowDescription}
             </action-row>
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>
               Add or remove Wifi networks
@@ -195,7 +225,10 @@ class SettingsPage extends LitElement {
 	          <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
 	            Where are we?  What time is it?
 	          </action-row>
-          <div class="list-wrap">
+            <action-row prefix="code-slash" label="Customise OS" href="/settings/customise-os">
+              Add custom NixOS configuration (Tailscale, VPN, etc)
+            </action-row>
+          </div>
         </section>
 
 
@@ -291,16 +324,17 @@ class SettingsPage extends LitElement {
 customElements.define("x-page-settings", SettingsPage);
 
 function renderVersionsDialog(store, closeFn) {
-  const { dbxVersion } = store.getContext('app')
+  const { dbxVersion, gitCommit, gitDirty } = store.getContext('app')
+  const displayVersion = dbxVersion || 'Unknown'
+  
   return html`
     <div style="text-align: center;">
       <h1>Versions</h1>
 
-      <div style="text-align: left; margin-bottom: 1em;">
-        <action-row prefix="box" expandable label="Dogebox ${dbxVersion}">
-          Bundles Dogeboxd, DKM & dPanel
-          <div slot="hidden"><small style="line-height: 1.1; display: block;">Lorem ad ex nostrud magna nisi ea enim magna exercitation aliquip enim amet ad deserunt sit irure aute proident.</div>
-        </action-row>
+      <div style="text-align: left; margin: 1em 0;">
+        <h2 style="margin: 0 0 0.5em 0;">Dogebox</h2>
+        <p style="margin: 0 0 0.5em 0;"><strong>Version:</strong> ${displayVersion}</p>
+        ${gitCommit ? html`<p style="margin: 0;"><strong>Git commit:</strong> ${gitCommit}${gitDirty ? ' (dirty)' : ''}</p>` : ''}
       </div>
 
       <sl-button variant="text" @click=${closeFn}>Dismiss</sl-button>

@@ -11,8 +11,12 @@ import '/components/common/page-banner.js';
 import '/components/views/action-manage-sources/index.js';
 
 const initialSort = (a, b) => {
-  if (a?.def?.versions[a?.def?.versionLatest]?.meta?.name < b?.def?.versions[b?.def?.versionLatest]?.meta?.name) { return -1; }
-  if (a?.def?.versions[a?.def?.versionLatest] > b?.def?.versions[b?.def?.versionLatest]?.meta?.name) { return 1; }
+  const nameA = a?.def?.versions?.[a?.def?.latestVersion]?.meta?.name || '';
+  const nameB = b?.def?.versions?.[b?.def?.latestVersion]?.meta?.name || '';
+  
+  // Default alphabetical sort
+  if (nameA < nameB) return -1;
+  if (nameA > nameB) return 1;
   return 0;
 }
 

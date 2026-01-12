@@ -55,6 +55,9 @@ import {
   getSSHStateResponse,
 } from "./sshkeys/sshkeys.mocks.js";
 
+// Activity mocks removed - activities managed via WebSocket
+// Mock HTTP endpoints available in jobs.mocks.js via mockJobApi
+
 export const mocks = [
   storeListingMock,
   bootstrapV2Mocks,
@@ -91,4 +94,6 @@ export const mocks = [
   addSSHPublicKeyResponse,
   updateSSHStateResponse,
   getSSHStateResponse,
+  // Job HTTP mocks handled by mockJobApi in jobs.mocks.js
+  // Real-time updates via WebSocket (no HTTP mocks needed)
 ];

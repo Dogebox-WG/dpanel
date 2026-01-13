@@ -345,7 +345,7 @@ class PupPage extends LitElement {
         <sl-switch slot="suffix" ?checked=${!disableActions && pkg.state.enabled} @sl-input=${this.handleStartStop} ?disabled=${this.inflight_startstop || labels.installationId !== "ready"}></sl-switch>
       </action-row>
 
-      <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
+      <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions} ?dot=${labels.statusId === 'needs_config'}>
         Customise ${pkg.state.manifest.meta.name}
       </action-row>
 
@@ -369,7 +369,7 @@ class PupPage extends LitElement {
         </action-row>
       `}
 
-      <action-row prefix="boxes" name="deps" label="Dependencies" .trigger=${this.handleMenuClick}>
+      <action-row prefix="boxes" name="deps" label="Dependencies" .trigger=${this.handleMenuClick} ?dot=${labels.statusId === 'needs_deps'}>
         Functionality this pup depends on from other pups.
       </action-row>
 

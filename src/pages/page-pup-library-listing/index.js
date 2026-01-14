@@ -23,6 +23,7 @@ import * as renderMethods from "./renders/index.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { pkgController } from "/controllers/package/index.js";
+import { pupUpdates } from "/state/pup-updates.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { doBootstrap } from "/api/bootstrap/bootstrap.js";
@@ -43,8 +44,8 @@ class PupPage extends LitElement {
       inflight_startstop: { type: Boolean },
       inflight_uninstall: { type: Boolean },
       inflight_purge: { type: Boolean },
-      _HARDCODED_UNINSTALL_WAIT_TIME: { type: Number },
       activityLogs: { type: Array },
+      rollbackAvailable: { type: Boolean },
     };
   }
 
@@ -60,11 +61,12 @@ class PupPage extends LitElement {
     this.checks = [];
     this.pupEnabled = false;
     this._confirmedName = "";
-    this._HARDCODED_UNINSTALL_WAIT_TIME = 0;
     this.activityLogs = [];
+    this.rollbackAvailable = false;
     this.renderDialog = renderDialog.bind(this);
     this.renderActions = renderActions.bind(this);
     this.renderStatus = renderStatus.bind(this);
+    this._missingPupRedirectTimer = null;
   }
 
   getPup() {
@@ -81,6 +83,10 @@ class PupPage extends LitElement {
 
   disconnectedCallback() {
     this.pkgController.removeObserver(this);
+    if (this._missingPupRedirectTimer) {
+      clearTimeout(this._missingPupRedirectTimer);
+      this._missingPupRedirectTimer = null;
+    }
     super.disconnectedCallback();
   }
 
@@ -95,22 +101,31 @@ class PupPage extends LitElement {
 
   updateActivityLogs() {
     const pupId = this.context.store.pupContext?.state?.id
-    this.activityLogs = [...this.pkgController.activityIndex[pupId]];
+    const logs = this.pkgController.activityIndex[pupId];
+    this.activityLogs = Array.isArray(logs) ? [...logs] : [];
+  }
+
+  renderLogViewer(pkg) {
+    if (!pkg?.state?.id) return nothing;
+    
+    // Check if there's a recent job (active or recently completed) for this pup
+    const recentJob = this.pkgController.getRecentJobForPup(pkg.state.id);
+    
+    // Always use x-log-viewer when there's a job - provides consistent, detailed logs
+    if (recentJob) {
+      return html`
+        <x-log-viewer 
+          .jobId=${recentJob.id}
+          autostart
+        ></x-log-viewer>
+      `;
+    }
+    
+    return nothing;
   }
 
   async firstUpdated() {
     this.addEventListener("sl-hide", this.handleDialogClose);
-    // this.checks = this.context.store.pupContext?.manifest?.checks;
-
-    // if (this.pupId === "Core") {
-    //   await asyncTimeout(1200);
-    //   this.checks[1].status = "success";
-    //   this.requestUpdate();
-
-    //   await asyncTimeout(800);
-    //   this.checks[2].status = "success";
-    //   this.requestUpdate();
-    // }
   }
 
   handleDialogClose() {
@@ -190,11 +205,17 @@ class PupPage extends LitElement {
     this.inflight_uninstall = true;
     this.requestUpdate();
 
+    // Clear update info immediately to prevent stale cache on page refresh
+    pupUpdates.clearUpdateInfo(pupId);
+
     const actionName = 'uninstall'
     const callbacks = {
       onSuccess: async () => {
         await doBootstrap();
         this.inflight_uninstall = false;
+        // After uninstall, the current /pups/:id/:name route may no longer be meaningful.
+        // Navigate to the library page to avoid a blank page.
+        window.location.href = window.location.origin + "/pups";
       },
       onError: async () => {
         await doBootstrap();
@@ -206,13 +227,75 @@ class PupPage extends LitElement {
       }
     }
     await this.pkgController.requestPupAction(pupId, actionName, callbacks);
-    // TODO
-    // Backend reports uninstalled state too soon, needs backend fix
-    // Workaround: frontend enforces delay of 15 seconds.
-    this._HARDCODED_UNINSTALL_WAIT_TIME = 15000;
 
     this._confirmedName = "";
     this.clearDialog();
+  }
+
+  handleUpgradeStarted(e) {
+    // Close the dialog and show a message
+    this.clearDialog();
+    createAlert('neutral', `Upgrading ${this.context.store.pupContext.state.manifest.meta.name}...`, 'arrow-up-circle', 3000);
+  }
+
+  handleUpdateSkipped(e) {
+    // Close the dialog
+    this.clearDialog();
+  }
+
+  get hasUpdate() {
+    const pupId = this.context.store.pupContext?.state?.id;
+    if (!pupId) return false;
+    return pupUpdates.hasUpdate(pupId);
+  }
+
+  async updated(changedProperties) {
+    super.updated(changedProperties);
+    
+    // Check for rollback availability when pup becomes broken
+    const pkg = this.getPup();
+    if (pkg && pkg.state.installation === 'broken') {
+      await this.checkRollbackAvailability();
+    }
+
+    // If we're still on a pup route but the pup disappeared (purged),
+    // avoid returning a blank page by redirecting back to the library listing.
+    const pupContext = this.context.store?.pupContext;
+    // Allow pkgController.notify(pupId, ...) to target this page.
+    if (pupContext?.state?.id && this.pupId !== pupContext.state.id) {
+      this.pupId = pupContext.state.id;
+    }
+    // Only redirect if:
+    // 1. Bootstrap succeeded (result === 200)
+    // 2. We have a valid pup ID in the route
+    // 3. The pup is genuinely missing from memory
+    if (pupContext?.ready && pupContext?.result === 200 && pupContext?.state?.id && !pkg) {
+      if (!this._missingPupRedirectTimer) {
+        console.warn("[PupPage] pup missing for current route; redirecting to /pups", {
+          routePupId: pupContext.state.id,
+        });
+        this._missingPupRedirectTimer = setTimeout(() => {
+          window.location.href = window.location.origin + "/pups";
+        }, 750);
+      }
+    } else if (pkg && this._missingPupRedirectTimer) {
+      clearTimeout(this._missingPupRedirectTimer);
+      this._missingPupRedirectTimer = null;
+    }
+  }
+
+  async checkRollbackAvailability() {
+    const pupId = this.context.store.pupContext?.state?.id;
+    if (!pupId) return;
+    
+    try {
+      const { getPreviousVersion } = await import('/api/pup-updates/pup-updates.js');
+      const result = await getPreviousVersion(pupId);
+      this.rollbackAvailable = result.rollbackPossible || false;
+    } catch (error) {
+      console.error('Failed to check rollback availability:', error);
+      this.rollbackAvailable = false;
+    }
   }
 
   render() {
@@ -246,12 +329,25 @@ class PupPage extends LitElement {
     const path = this.context.store?.appContext?.path || [];
     const pkg = this.getPup();
 
-    if (!pkg) return;
+    if (!pkg) {
+      // This can happen after purge/uninstall if the backend has removed the pup
+      // but the user is still on the old route.
+      return html`
+        <div id="PageWrapper" class="wrapper">
+          <section>
+            <div class="section-title">
+              <h3>Such Empty</h3>
+              <p>This pup no longer exists. Redirecting…</p>
+            </div>
+          </section>
+        </div>
+      `;
+    }
 
     const hasChecks = (pkg.state.manifest?.checks || []).length > 0;
 
-    let labels = pkg?.computed || {}
-    let isInstallationLoadingStatus =  ["uninstalling", "purging"].includes(labels.installationId);
+    let labels = { ...(pkg?.computed || {}) }
+    let isInstallationLoadingStatus =  ["installing", "upgrading", "uninstalling", "purging"].includes(labels.installationId);
     let statusInstallationId = labels.installationId === "ready" ? labels.statusId : labels.installationId
     const isLoadingStatus =  ["starting", "stopping"].includes(labels.statusId);
     const disableActions = labels.installationId === "uninstalled";
@@ -262,20 +358,6 @@ class PupPage extends LitElement {
     const long = pkg?.state?.manifest?.meta?.longDescription || ''
 
     const logo = pkg?.assets?.logos?.mainLogoBase64
-
-    // Exagerate the uninstallation time until reported correctly by dogeboxd.
-    if (this._HARDCODED_UNINSTALL_WAIT_TIME) {
-      // Temporarily force label to be uninstalling.
-      isInstallationLoadingStatus = true;
-      labels.installationId = "uninstalling";
-      labels.installationLabel = "uninstalling";
-      statusInstallationId = "uninstalling";
-      setTimeout(() => {
-        this._HARDCODED_UNINSTALL_WAIT_TIME = 0;
-        // After allotted wait time, call bootstrap to retreive and render true state.
-        doBootstrap();
-      }, this._HARDCODED_UNINSTALL_WAIT_TIME)
-    }
 
     const renderHealthChecks = () => {
       return this.checks.map(
@@ -349,6 +431,13 @@ class PupPage extends LitElement {
         Customise ${pkg.state.manifest.meta.name}
       </action-row>
 
+      <action-row prefix="arrow-up-circle" name="update" label="Updates" .trigger=${this.handleMenuClick} ?dot=${this.hasUpdate}>
+        ${this.hasUpdate 
+          ? html`A new version of ${pkg.state.manifest.meta.name} is available`
+          : html`<small>No updates available.</small>`
+        }
+      </action-row>
+
       <!--action-row prefix="archive-fill" name="properties" label="Properties" .trigger=${this.handleMenuClick} ?disabled=${disableActions}>
         Ea sint dolor commodo.
       </action-row-->
@@ -391,6 +480,27 @@ class PupPage extends LitElement {
 
     const hasLogs = this.activityLogs.length
 
+    if (this.context.store?.networkContext?.logPupDerivations) {
+      // eslint-disable-next-line no-console
+      console.log("[PupPage] derive", {
+        routePupId: pupContext?.state?.id,
+        pkgId: pkg?.state?.id,
+        pkgFound: !!pkg,
+        installation: pkg?.state?.installation,
+        enabled: pkg?.state?.enabled,
+        statsStatus: pkg?.stats?.status,
+        computed: {
+          installationId: labels.installationId,
+          statusId: labels.statusId,
+        },
+        ui: {
+          inflight_startstop: this.inflight_startstop,
+          inflight_uninstall: this.inflight_uninstall,
+          inflight_purge: this.inflight_purge,
+        },
+      });
+    }
+
     return html`
       <div id="PageWrapper" class="wrapper">
         <section>
@@ -400,14 +510,11 @@ class PupPage extends LitElement {
               <div class="section-title">
                 <h3>Status</h3>
               </div>
-              ${this.renderStatus(labels, pkg)}
+              ${this.renderStatus(labels, pkg, this.rollbackAvailable)}
               <sl-progress-bar value="0" ?indeterminate=${isLoadingStatus || isInstallationLoadingStatus} class="loading-bar ${statusInstallationId}"></sl-progress-bar>
             </div>
           </div>
-          <x-activity-log
-            .logs=${this.activityLogs}
-            name="${pkg.state.manifest.meta.name}"
-          ></x-activity-log>
+          ${this.renderLogViewer(pkg)}
           ${this.renderActions(labels, hasLogs)}
         </section>
 
@@ -519,6 +626,9 @@ class PupPage extends LitElement {
 
     section .section-title {
       margin-bottom: 0em;
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
     }
 
     section .section-title.disabled {
@@ -528,6 +638,11 @@ class PupPage extends LitElement {
     section .section-title h3 {
       text-transform: uppercase;
       font-family: "Comic Neue";
+    }
+
+    .update-badge {
+      font-family: 'Comic Neue';
+      font-weight: bold;
     }
 
     section div.underscored {
@@ -543,12 +658,15 @@ class PupPage extends LitElement {
       background: rgb(24, 24, 24);
     }
 
+
     .loading-bar {
       --height: 1px;
       --track-color: #444;
       --indicator-color: #999;
+      &.installing { --indicator-color: var(--sl-color-primary-600); }
       &.starting { --indicator-color: var(--sl-color-primary-600); }
       &.stopping { --indicator-color: var(--sl-color-danger-600); }
+      &.upgrading { --indicator-color: var(--sl-color-primary-600); }
       &.uninstalling { --indicator-color: var(--sl-color-danger-600); }
       &.purging { --indicator-color: var(--sl-color-danger-600); }
     }

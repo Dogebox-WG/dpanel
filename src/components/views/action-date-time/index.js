@@ -82,6 +82,7 @@ export class DateTimeSettings extends LitElement {
       this._timezones = sortTimezonesByCity(formattedTimezones);
       
       this._current_timezone = await getTimezone();
+      this._changes.timezone = this._current_timezone;
 
     } catch (e) {
       console.error(e.toString());
@@ -91,6 +92,11 @@ export class DateTimeSettings extends LitElement {
   }
 
   async _attemptSubmit() {
+    if (this._changes.timezone === this._current_timezone) {
+      this.handleDialogClose();
+      return;
+    }
+
     this._inflight = true;
 
     // Only input elements that have a name attribute are sent to backend.

@@ -76,6 +76,7 @@ export class LanguageSettings extends LitElement {
       this._loading = true;
       this._keymaps = await getKeymaps();
       this._current_keymap = await getKeymap();
+      this._changes.keymap = this._current_keymap;
 
     } catch (e) {
       console.error(e.toString());
@@ -85,6 +86,11 @@ export class LanguageSettings extends LitElement {
   }
 
   async _attemptSubmit() {
+    if (this._changes.keymap === this._current_keymap) {
+      this.handleDialogClose();
+      return;
+    }
+
     this._inflight = true;
 
     // Only input elements that have a name attribute are sent to backend.

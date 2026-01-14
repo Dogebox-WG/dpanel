@@ -160,6 +160,7 @@ export class SourceManagerView extends LitElement {
             label="Enter source URL"
             placeholder="Eg: https://github.com/dogeorg/pups.git"
             @sl-input=${(e) => this._addSourceInputURL = e.target.value }
+            autofocus
             >
           </sl-input>
 

@@ -2,68 +2,19 @@ import {
   LitElement,
   html,
   css,
-  nothing,
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
-import "/components/common/action-row/action-row.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { getKeymap, getKeymaps, setKeymap } from "/api/system/keymaps.js";
 
 export class LanguageSettings extends LitElement {
-  static get properties() {
-    return {
-    }
-  }
-
   static styles = css`
     h1 {
       display: block;
       font-family: "Comic Neue", sans-serif;
       text-align: center;
       margin-bottom: .4rem;
-    }
-
-    p {
-      text-align: center;
-      line-height: 1.4;
-    }
-
-    .helper-text {
-      font-size: 0.8rem;
-      color: #555555;
-      font-family: 'Comic Neue';
-      margin-bottom: 0.5em;
-      text-align: center;
-    }
-
-    .actions {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 1em;
-
-      sl-button {
-        margin-right: -1em;
-      }
-    }
-
-    .key-reveal-dropdown {
-      font-size: 0.8rem;
-      background: rgba(0,0,0,0.2);
-      word-break: break-all;
-      margin-left: 48px;
-      padding: 1em;
-      border-radius: 8px;
-    }
-
-    .key-actions {
-      margin-left: 48px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-end;
     }
 
     .form-control {
@@ -77,7 +28,7 @@ export class LanguageSettings extends LitElement {
       align-self: flex-end;
     }
 
-    .loading-list, .empty-list {
+    .loading-list {
       height: 180px;
       display: flex;
       flex-direction: row;
@@ -86,15 +37,6 @@ export class LanguageSettings extends LitElement {
       color: #555555;
       font-family: 'Comic Neue';
     }
-
-    .confirmation-container {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: 1em;
-    }
-
   `;
 
   static get properties() {
@@ -102,7 +44,7 @@ export class LanguageSettings extends LitElement {
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
       _keymaps: { type: Array },
-      _keymap: { type: String },
+      _current_keymap: { type: String },
       _changes: { type: Object },
     };
   }
@@ -134,6 +76,7 @@ export class LanguageSettings extends LitElement {
       this._loading = true;
       this._keymaps = await getKeymaps();
       this._current_keymap = await getKeymap();
+      this._changes.keymap = this._current_keymap;
 
     } catch (e) {
       console.error(e.toString());
@@ -143,6 +86,11 @@ export class LanguageSettings extends LitElement {
   }
 
   async _attemptSubmit() {
+    if (this._changes.keymap === this._current_keymap) {
+      this.handleDialogClose();
+      return;
+    }
+
     this._inflight = true;
 
     // Only input elements that have a name attribute are sent to backend.
@@ -160,7 +108,6 @@ export class LanguageSettings extends LitElement {
     let didSucceed = false
 
     try {
-      console.log(this._changes.keymap);
       await setKeymap({ keymap: this._changes.keymap });
       didSucceed = true;
     } catch (err) {
@@ -180,7 +127,14 @@ export class LanguageSettings extends LitElement {
   }
 
   render() {
-    console.log(JSON.stringify(this._current_keymap))
+    if (this._loading) {
+      return html`
+        <div class="loading-list">
+          <sl-spinner></sl-spinner>
+        </div>
+      `;
+    }
+    
     return html`
       <h1>Language</h1>
 

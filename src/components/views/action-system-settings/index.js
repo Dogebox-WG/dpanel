@@ -6,6 +6,7 @@ import { getKeymaps, setKeymap } from "/api/system/keymaps.js";
 import { getTimezones, setTimezone } from "/api/system/timezones.js";
 import { getDisks, setStorageDisk } from "/api/disks/disks.js";
 import { setHostname } from "/api/system/hostname.js";
+import { formatTimezoneWithOffset, sortTimezonesByCity } from "/utils/timezone-formatter.js";
 
 // Render chunks
 import { renderBanner } from "./banner.js";
@@ -109,7 +110,12 @@ class SystemSettings extends LitElement {
     try {
       this._loading = true;
       this._keymaps = await getKeymaps();
-      this._timezones = await getTimezones();
+      const rawTimezones = await getTimezones();
+      
+      // Transform and sort timezones
+      const formattedTimezones = rawTimezones.map(tz => formatTimezoneWithOffset(tz));
+      this._timezones = sortTimezonesByCity(formattedTimezones);
+      
       this._disks = await getDisks();
 
       // Set default disk as the "bootMedia" disk.
@@ -185,22 +191,15 @@ class SystemSettings extends LitElement {
   _handleInputChange(e) {
     const field = e.target.getAttribute("data-field");
     this._changes[field] = e.target.value;
+    
+    // Disk selection requires additional validation
+    if (field === 'disk') {
+      this._checkDiskFlags({ diskName: e.target.value });
+    }
   }
 
-  _handleKeymapInputChange(e) {
-    const field = e.target.getAttribute('data-field');
-    this._changes[field] = e.target.value;
-  }
-
-  _handleTimezoneInputChange(e) {
-    const field = e.target.getAttribute('data-field');
-    this._changes[field] = e.target.value;
-  }
-
-  _handleDiskInputChange(e) {
-    const field = e.target.getAttribute('data-field');
-    this._changes[field] = e.target.value;
-    this._checkDiskFlags({ diskName: e.target.value });
+  _handleTimezoneChange(e) {
+    this._changes.timezone = e.target.value;
   }
 
   _checkDiskFlags({ diskName }) {
@@ -274,7 +273,7 @@ class SystemSettings extends LitElement {
               data-field="keymap"
               value=${this._changes.keymap}
               help-text="For if/when you plug in a physical keyboard"
-              @sl-change=${this._handleKeymapInputChange}
+              @sl-change=${this._handleInputChange}
             >
               ${this._keymaps.map(
                 (keymap) =>
@@ -287,20 +286,19 @@ class SystemSettings extends LitElement {
 
           <div class="form-control">
             <sl-select
-              name="timezone"
-              required
-              label="Select Timezone" 
-              ?disabled=${this._inflight}
-              data-field="timezone"
-              value=${this._changes.timezone}
+              label="Select Timezone"
               help-text="Where in the world should your clock be set to"
-              @sl-change=${this._handleTimezoneInputChange}
+              name="timezone"
+              value=${this._changes.timezone || ''}
+              ?disabled=${this._inflight}
+              @sl-change=${this._handleTimezoneChange}
+              hoist
             >
               ${this._timezones.map(
                 (timezone) =>
-                  html`<sl-option value=${timezone.id}
-                    >${timezone.label} ${!timezone.label.includes(timezone.id.toUpperCase()) ? `(${timezone.id.toUpperCase()})` : ''}</sl-option
-                  >`,
+                  html`<sl-option value=${timezone.id}>
+                    ${timezone.displayLabel}
+                  </sl-option>`
               )}
             </sl-select>
           </div>
@@ -314,7 +312,7 @@ class SystemSettings extends LitElement {
               help-text="To sync the Dogecoin Blockchain, a disk with >300GB capacity is required"
               data-field="disk"
               value=${this._changes.disk}
-              @sl-change=${this._handleDiskInputChange}
+              @sl-change=${this._handleInputChange}
             >
               ${this._disks
                 .filter((disk) => disk?.suitability?.storage?.usable)

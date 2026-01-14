@@ -5,6 +5,7 @@ import {
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
 import "/components/views/action-dependency-manage/dependency.js";
+import { buildPupConfig } from "/utils/pup-config.js";
 
 export function renderDialog() {
   const pkg = this.getPup();
@@ -33,22 +34,25 @@ export function renderDialog() {
           this.handleUninstall();
         }
       }}
+      autofocus
+      autocomplete="off"
     ></sl-input>
     <sl-button slot="footer" variant="danger" @click=${this.handleUninstall} ?loading=${this.inflight_uninstall} ?disabled=${this.inflight_uninstall || this._confirmedName !== pkg.state.manifest.meta.name}>Uninstall</sl-button>
     <style>p:first-of-type { margin-top: 0px; }</style>
   `;
 
-  const configEl = html`
+  const configSchema = buildPupConfig(pkg?.state?.manifest?.config, pkg?.state?.config);
+  const configEl = configSchema ? html`
     <dynamic-form
-      .values=${pkg?.state.config}
-      .fields=${pkg?.state.manifest?.config}
+      .values=${configSchema.values}
+      .fields=${configSchema.fields}
       .onSubmit=${this.submitConfig}
       requireCommit
       markModifiedFields
       allowDiscardChanges
     >
     </dynamic-form>
-  `;
+  ` : html`<div style="padding: 1em; text-align: center;">Such empty. This pup does not expose any configuration.</div>`;
 
   const isStopped = !this.pupEnabled && statusId !== "running";
 

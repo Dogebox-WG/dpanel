@@ -52,8 +52,18 @@ class PkgController {
   }
 
   setData(bootstrapResponseV2, meta = {}) {
-    const { states, stats, assets } = bootstrapResponseV2;
+    const { states, stats, assets, sidebarPreferences } = bootstrapResponseV2;
     this.handleBootstrapResponse(states, stats, assets, { ...meta, ts: bootstrapResponseV2?.ts });
+    
+    // Update store with sidebar preferences from backend
+    if (sidebarPreferences) {
+      store.updateState({
+        sidebarContext: {
+          pinned: sidebarPreferences.sidebarPups || [],
+        }
+      });
+    }
+    
     this.notify();
   }
 

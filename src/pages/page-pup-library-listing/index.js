@@ -30,6 +30,7 @@ import { doBootstrap } from "/api/bootstrap/bootstrap.js";
 import { renderDialog } from "./renders/dialog.js";
 import { renderActions } from "./renders/actions.js";
 import { renderStatus } from "./renders/status.js";
+import { addSidebarPup, removeSidebarPup } from "/api/system/sidebar-preferences.js";
 
 class PupPage extends LitElement {
   static get properties() {
@@ -197,6 +198,43 @@ class PupPage extends LitElement {
       onTimeout: () => { console.log('Slow txn, no repsonse within ~30 seconds (start/stop)', ); this.inflight_startstop = false; }
     }
     await this.pkgController.requestPupAction(pupId, actionName, callbacks);
+  }
+
+  async handleSidebarToggle(e) {
+    const pupId = this.context.store.pupContext.state.id;
+    const checked = e.target.checked;
+    const currentPinned = this.context.store.sidebarContext?.pinned || [];
+    
+    // Optimistically update store (which triggers re-render with new state)
+    if (checked) {
+      store.updateState({
+        sidebarContext: {
+          pinned: [...currentPinned, pupId],
+        }
+      });
+    } else {
+      store.updateState({
+        sidebarContext: {
+          pinned: currentPinned.filter(id => id !== pupId),
+        }
+      });
+    }
+    
+    try {
+      if (checked) {
+        await addSidebarPup(pupId);
+      } else {
+        await removeSidebarPup(pupId);
+      }
+    } catch (error) {
+      // Revert optimistic update on error by restoring original state
+      store.updateState({
+        sidebarContext: {
+          pinned: currentPinned,
+        }
+      });
+      console.error('Failed to update sidebar preferences:', error);
+    }
   }
 
   async handleUninstall(e) {
@@ -421,11 +459,22 @@ class PupPage extends LitElement {
       `;
     };
 
+    const hasWebUI = (pkg.state.webUIs || []).length > 0;
+    const pinnedPups = this.context.store.sidebarContext?.pinned || [];
+    const isInSidebar = pinnedPups.includes(pkg.state.id);
+
     const renderMenu = () => html`
       <action-row prefix="power" name="state" label="Enabled" ?disabled=${disableActions}>
         Enable or disable this Pup
         <sl-switch slot="suffix" ?checked=${!disableActions && pkg.state.enabled} @sl-input=${this.handleStartStop} ?disabled=${this.inflight_startstop || labels.installationId !== "ready"}></sl-switch>
       </action-row>
+
+      ${hasWebUI ? html`
+        <action-row prefix="pin-angle" name="sidebar" label="Show in sidebar" ?disabled=${disableActions}>
+          Pin this pup to the navigation sidebar
+          <sl-switch slot="suffix" ?checked=${isInSidebar} @sl-input=${this.handleSidebarToggle} ?disabled=${disableActions}></sl-switch>
+        </action-row>
+      ` : nothing}
 
       <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions} ?dot=${labels.statusId === 'needs_config'}>
         Customise ${pkg.state.manifest.meta.name}

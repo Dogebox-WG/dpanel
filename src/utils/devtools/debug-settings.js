@@ -8,8 +8,16 @@ import {
 import { StoreSubscriber } from "/state/subscribe.js";
 import { store } from "/state/store.js";
 import { mocks } from "/api/mocks.js";
+import { getMockConfig, saveMockConfig, resetMockConfig } from "/api/pup-updates/pup-updates.mocks.js";
+import { compareVersions } from "/utils/version.js";
 
 class DebugSettingsDialog extends LitElement {
+  static properties = {
+    isOpen: { type: Boolean },
+    _pupUpdateConfig: { type: Object },
+    _newVersionInput: { type: String },
+  };
+
   constructor() {
     super();
 
@@ -24,6 +32,8 @@ class DebugSettingsDialog extends LitElement {
     // ]
 
     this.mockOptions = mocks;
+    this._pupUpdateConfig = getMockConfig();
+    this._newVersionInput = '';
   }
 
   get groupedOptions() {
@@ -113,6 +123,41 @@ class DebugSettingsDialog extends LitElement {
     this.shadowRoot.querySelector('.expandable').classList.toggle('hidden');
   }
 
+  // Pup Updates Mock Config handlers
+  handlePupUpdateConfigChange(field, value) {
+    this._pupUpdateConfig = { ...this._pupUpdateConfig, [field]: value };
+    saveMockConfig(this._pupUpdateConfig);
+  }
+
+  handleAddVersion() {
+    if (!this._newVersionInput.trim()) return;
+    
+    const newVersion = {
+      version: this._newVersionInput.trim(),
+      releaseNotes: `## Version ${this._newVersionInput.trim()}\n\nRelease notes here...`,
+      releaseDate: new Date().toISOString().split('T')[0]
+    };
+    
+    const versions = [...(this._pupUpdateConfig.availableVersions || []), newVersion];
+    // Sort descending by version
+    versions.sort((a, b) => compareVersions(b.version, a.version));
+    
+    this._pupUpdateConfig = { ...this._pupUpdateConfig, availableVersions: versions };
+    saveMockConfig(this._pupUpdateConfig);
+    this._newVersionInput = '';
+  }
+
+  handleRemoveVersion(version) {
+    const versions = this._pupUpdateConfig.availableVersions.filter(v => v.version !== version);
+    this._pupUpdateConfig = { ...this._pupUpdateConfig, availableVersions: versions };
+    saveMockConfig(this._pupUpdateConfig);
+  }
+
+  handleResetPupUpdateConfig() {
+    resetMockConfig();
+    this._pupUpdateConfig = getMockConfig();
+  }
+
   render() {
     const { networkContext, appContext } = this.context.store;
     return html`
@@ -145,6 +190,75 @@ class DebugSettingsDialog extends LitElement {
                     `)}
                   </div>
                 `)}
+                
+                <!-- Pup Updates Mock Config -->
+                <div class="mock-group-wrap">
+                  <h4>Pup Updates</h4>
+                  <div style="padding: 0.5em 0;">
+                    <div style="margin-bottom: 0.75em;">
+                      <sl-input
+                        label="Current Version"
+                        size="small"
+                        value=${this._pupUpdateConfig.currentVersion}
+                        ?disabled=${!networkContext.useMocks}
+                        @sl-change=${(e) => this.handlePupUpdateConfigChange('currentVersion', e.target.value)}
+                      ></sl-input>
+                    </div>
+                    
+                    <div style="margin-bottom: 0.75em;">
+                      <sl-input
+                        label="Latest Version"
+                        size="small"
+                        value=${this._pupUpdateConfig.latestVersion}
+                        ?disabled=${!networkContext.useMocks}
+                        @sl-change=${(e) => this.handlePupUpdateConfigChange('latestVersion', e.target.value)}
+                      ></sl-input>
+                    </div>
+                    
+                    <div style="margin-bottom: 0.75em;">
+                      <sl-switch
+                        size="small"
+                        ?checked=${this._pupUpdateConfig.updateAvailable}
+                        ?disabled=${!networkContext.useMocks}
+                        @sl-change=${(e) => this.handlePupUpdateConfigChange('updateAvailable', e.target.checked)}
+                      >Update Available</sl-switch>
+                    </div>
+                    
+                    <div style="margin-bottom: 0.5em;">
+                      <strong style="font-size: 0.8rem; color: #888;">Available Versions:</strong>
+                    </div>
+                    
+                    <div style="margin-bottom: 0.75em; max-height: 100px; overflow-y: auto; background: #1a1a1a; padding: 0.5em; border-radius: 4px;">
+                      ${this._pupUpdateConfig.availableVersions?.length ? this._pupUpdateConfig.availableVersions.map(v => html`
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #333;">
+                          <span style="font-family: monospace; font-size: 0.8rem;">${v.version}</span>
+                          <sl-icon-button 
+                            name="x-lg" 
+                            label="Remove"
+                            style="font-size: 0.7rem;"
+                            ?disabled=${!networkContext.useMocks}
+                            @click=${() => this.handleRemoveVersion(v.version)}
+                          ></sl-icon-button>
+                        </div>
+                      `) : html`<em style="color: #555; font-size: 0.8rem;">No versions</em>`}
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5em; margin-bottom: 0.5em;">
+                      <sl-input 
+                        placeholder="e.g. 1.3.0" 
+                        size="small"
+                        style="flex: 1;"
+                        value=${this._newVersionInput}
+                        ?disabled=${!networkContext.useMocks}
+                        @sl-input=${(e) => this._newVersionInput = e.target.value}
+                        @keydown=${(e) => e.key === 'Enter' && this.handleAddVersion()}
+                      ></sl-input>
+                      <sl-button size="small" ?disabled=${!networkContext.useMocks} @click=${this.handleAddVersion}>Add</sl-button>
+                    </div>
+                    
+                    <sl-button variant="text" size="small" ?disabled=${!networkContext.useMocks} @click=${this.handleResetPupUpdateConfig}>Reset</sl-button>
+                  </div>
+                </div>
               </div>
               <small>Important: Changes require <a href="" @click=${(e) => { e.preventDefault(); window.location.reload()}}>refresh</a> to kick in</small>
             </div>

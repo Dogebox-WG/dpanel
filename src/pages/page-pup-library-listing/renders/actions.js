@@ -1,5 +1,6 @@
 import { html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { doBootstrap } from "/api/bootstrap/bootstrap.js";
+import { pupUpdates } from "/state/pup-updates.js";
 
 export function openConfig() {
   this.open_dialog = "configure";
@@ -15,6 +16,9 @@ export async function handlePurgeFunction() {
   this.inflight_purge = true;
   const pupId = this.getPup().state.id
   this.requestUpdate();
+
+  // Clear update info immediately to prevent stale cache on page refresh
+  pupUpdates.clearUpdateInfo(pupId);
 
   const callbacks = {
     onSuccess: async () => {

@@ -9,6 +9,9 @@ import { hookManager } from "/api/hooks.js";
 import { bindToClass } from "/utils/class-bind.js";
 import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
+import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
+import { pupUpdates } from '/state/pup-updates.js';
+import { store } from '/state/store.js';
 
 class DebugPanel extends LitElement {
   static properties = {
@@ -137,6 +140,79 @@ class DebugPanel extends LitElement {
     hookManager.set('bump-version', newState);
   }
 
+  async handleCheckPupUpdates() {
+    try {
+
+      const result = await checkPupUpdates('all');
+      
+      // In mock mode, we need to manually refresh the state
+      // (In real mode, the backend sends a websocket event that triggers refresh)
+      if (store.networkContext.useMocks) {
+        await pupUpdates.refresh();
+      }
+      
+      const alert = Object.assign(document.createElement('sl-alert'), {
+        variant: 'success',
+        duration: 3000,
+        closable: true
+      });
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="check-circle"></sl-icon>
+        Pup update check initiated
+      `;
+      document.body.appendChild(alert);
+      alert.toast();
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      const alert = Object.assign(document.createElement('sl-alert'), {
+        variant: 'danger',
+        duration: 5000,
+        closable: true
+      });
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+        Failed to check for updates: ${error.message}
+      `;
+      document.body.appendChild(alert);
+      alert.toast();
+    }
+  }
+
+  handleClearUpdateCache() {
+    // Clear the store's pupUpdatesContext
+    store.updateState({
+      pupUpdatesContext: {
+        updateInfo: {},
+        lastChecked: null,
+        totalUpdatesAvailable: 0,
+        isChecking: false,
+        error: null
+      }
+    });
+    
+    // Clear cached updates from localStorage (for fast page load)
+    pupUpdates.clearCachedUpdates();
+    
+    // Clear skipped updates from localStorage
+    localStorage.removeItem('dpanel:skippedUpdates');
+    
+    // Clear any legacy ignored updates
+    localStorage.removeItem('dpanel:ignoredUpdates');
+    
+    const alert = Object.assign(document.createElement('sl-alert'), {
+      variant: 'success',
+      duration: 3000,
+      closable: true
+    });
+    alert.innerHTML = `
+      <sl-icon slot="icon" name="trash"></sl-icon>
+      Update cache cleared
+    `;
+    document.body.appendChild(alert);
+    alert.toast();
+  }
+
+
   createMockJob() {
     const jobTypes = [
       { displayName: 'NixOS Rebuild' },
@@ -232,6 +308,10 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>
                     <sl-menu-item @click=${this.emitSyntheticUpdateAvailable}>Update Available</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Pup Upgrades</sl-menu-label>
+                    <sl-menu-item @click=${this.handleCheckPupUpdates}>Check for Updates</sl-menu-item>
+                    <sl-menu-item @click=${this.handleClearUpdateCache}>Clear Update Cache</sl-menu-item>
                   </sl-menu>
                 </sl-menu-item>
                 <sl-menu-item @click=${this.showSettingsDialog}>Open Config</sl-menu-item>

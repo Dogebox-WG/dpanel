@@ -1228,7 +1228,8 @@ class MonitoringPage extends LitElement {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 8px;
-      padding: 1.25rem;
+      padding: 1rem;
+      overflow: visible;
     }
 
     /* System Stat Cards */
@@ -1287,11 +1288,12 @@ class MonitoringPage extends LitElement {
 
     .stat-chart {
       margin-top: auto;
-      padding-top: 0.75rem;
-      height: 40px;
+      padding-top: 0.5rem;
+      padding-bottom: 2px;
+      height: 56px;
       width: 100%;
       box-sizing: border-box;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .stat-chart sparkline-chart-v2 {
@@ -1299,6 +1301,7 @@ class MonitoringPage extends LitElement {
       width: 100%;
       height: 100%;
       border-bottom: none;
+      --sparkline-height: 56px;
       --sparkline-width: 100%;
     }
 
@@ -1311,7 +1314,7 @@ class MonitoringPage extends LitElement {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
     }
 
     .pup-name {
@@ -1337,26 +1340,26 @@ class MonitoringPage extends LitElement {
       flex-wrap: wrap;
     }
 
+    .metrics-container x-metric {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 200px;
+      height: auto;
+      --metric-padding: 0.5em;
+      --metric-sparkline-height: 60px;
+      --metric-label-size: 0.8rem;
+      --metric-value-size: 0.8rem;
+      --metric-overflow: visible;
+    }
+
     .metrics-container.scrollable {
       flex-wrap: nowrap;
-      overflow-x: auto;
+      overflow-x: scroll;
+      overflow-y: visible;
       scroll-snap-type: x mandatory;
-      scrollbar-width: thin;
-      padding-bottom: 0.5rem;
-    }
-
-    .metrics-container.scrollable::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    .metrics-container.scrollable::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-
-    .metrics-container.scrollable::-webkit-scrollbar-thumb {
-      background: rgba(7, 255, 174, 0.3);
-      border-radius: 3px;
+      scrollbar-width: auto;
+      scrollbar-gutter: stable;
+      padding-bottom: 1.5rem;
     }
 
     .metrics-container.scrollable x-metric {

@@ -55,7 +55,7 @@ class MetricView extends LitElement {
 
     return html`
       <sparkline-chart-v2
-        style="width:100%; background:transparent; --sparkline-height: clamp(140px, 24vh, 220px);"
+        style="width:100%; background:transparent; --sparkline-height: var(--metric-sparkline-height, clamp(140px, 24vh, 220px));"
         .data=${values}
       </sparkline-chart-v2>
     `;
@@ -75,13 +75,12 @@ class MetricView extends LitElement {
       position: relative;
       flex-direction: column;
       align-items: start;
-      height: 100%;
       border-radius: 4px;
-      padding: 1em;
+      padding: var(--metric-padding, 1em);
       border: 1px solid #1d5145;
       width: 100%;
       box-sizing: border-box;
-      overflow: hidden;
+      overflow: var(--metric-overflow, hidden);
     }
     :host([expand]) {
       min-width: max-content;
@@ -96,7 +95,7 @@ class MetricView extends LitElement {
     }
 
     .label {
-      font-size: 0.9rem;
+      font-size: var(--metric-label-size, 0.9rem);
       font-weight: 500;
       max-height: 1.5rem;
       line-height: 1.5rem;
@@ -114,12 +113,12 @@ class MetricView extends LitElement {
       background: transparent;
       font-family: Monospace;
       font-weight: normal;
-      font-size: 0.9rem;
+      font-size: var(--metric-value-size, 0.9rem);
     }
     .value-container:has(sparkline-chart-v2) {
       align-items: stretch;
       flex: 1 1 auto;
-      min-height: var(--sparkline-height, 160px);
+      min-height: var(--metric-sparkline-height, 160px);
     }
     .value-container > sparkline-chart-v2 {
       flex: 1 1 auto;

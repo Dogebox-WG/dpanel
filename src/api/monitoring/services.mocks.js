@@ -14,7 +14,7 @@ export const mockTailscale = {
 
 function generateServicesResponse(path, { networkContext }) {
   // Check if Tailscale mock is enabled
-  const tailscaleEnabled = networkContext?.['mock::monitoring::Tailscale::get'] !== false;
+  const tailscaleEnabled = networkContext?.['mock::monitoring::Tailscale::get'] === true;
   
   console.log('[Services Mock] Tailscale enabled:', tailscaleEnabled);
   

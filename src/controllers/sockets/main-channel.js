@@ -2,6 +2,7 @@ import WebSocketClient from "/api/sockets.js";
 import { store } from "/state/store.js";
 import { pkgController } from "/controllers/package/index.js";
 import { sysController } from "/controllers/system/index.js";
+import { pupUpdates } from "/state/pup-updates.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { performMockCycle, c1, c4, c5, mockInstallEvent } from "/api/mocks/pup-state-cycle.js";
 import { isUnauthedRoute } from "/utils/url-utils.js";
@@ -93,12 +94,33 @@ class SocketChannel {
       }
 
       switch (data.type) {
+        case "bootstrap":
+          // Initial websocket bootstrap snapshot.
+          // The app also fetches bootstrap over HTTP on load; this is mainly useful for debugging.
+          if (store.networkContext.logBootstrapUpdates) {
+            console.log("[MainChannel] ws bootstrap received", { seq: data.seq, ts: data.ts });
+          }
+          // Optionally apply; keep it off by default to avoid surprising resets.
+          // If you want to use it, toggle networkContext.logBootstrapUpdates and call pkgController.setData here.
+          break;
         case "pup":
           // emitted on state change (eg: installing, ready)
           if (store.networkContext.logStateUpdates) {
-                console.log(`##-STATE-## installation: ${data.update.installation}`, { payload: data.update });
-              }
-          pkgController.updatePupModel(data.update.id, data.update)
+            console.log(`##-STATE-## installation: ${data.update.installation}`, { seq: data.seq, ts: data.ts, payload: data.update });
+          }
+          pkgController.updatePupModel(data.update.id, data.update, { seq: data.seq, ts: data.ts })
+          
+          // Clear update info when pup is upgrading (version has changed, no longer "update available")
+          if (data.update.installation === 'upgrading') {
+            pupUpdates.clearUpdateInfo(data.update.id);
+          }
+          break;
+
+        case "pup_purged":
+          if (store.networkContext.logStateUpdates) {
+            console.log("[MainChannel] pup_purged", { seq: data.seq, ts: data.ts, payload: data.update });
+          }
+          pkgController.removePupById(data?.update?.pupId, { seq: data.seq, ts: data.ts });
           break;
 
         case "stats":
@@ -106,9 +128,9 @@ class SocketChannel {
           if (data && data.update && Array.isArray(data.update)) {
             data.update.forEach((statsUpdatePayload) => {
               if (store.networkContext.logStatsUpdates) {
-                console.log('--STATS--', statsUpdatePayload.status, { payload: statsUpdatePayload });
+                console.log('--STATS--', statsUpdatePayload.status, { seq: data.seq, ts: data.ts, payload: statsUpdatePayload });
               }
-              pkgController.updatePupStatsModel(statsUpdatePayload.id, statsUpdatePayload)
+              pkgController.updatePupStatsModel(statsUpdatePayload.id, statsUpdatePayload, { seq: data.seq, ts: data.ts })
             });
           }
           break;
@@ -116,7 +138,22 @@ class SocketChannel {
         case "action":
           // emitted in response to an action
           await asyncTimeout(500); // Why?
-          pkgController.resolveAction(data.id, data);
+          
+          // Check if this is a check-pup-updates action (system-wide action, not pup-specific)
+          const isCheckUpdatesAction = data.update && 
+            (data.update.pupsChecked !== undefined || 
+             data.update.updateInfo !== undefined);
+          
+          if (isCheckUpdatesAction) {
+            if (!data.error) {
+            await pupUpdates.refresh();
+            } else {
+              console.error('[MainChannel] CheckPupUpdates action failed:', data.error);
+            }
+          } else {
+            // Regular pup-specific action
+            pkgController.resolveAction(data.id, data, { seq: data.seq, ts: data.ts });
+          }
           break;
 
         case "prompt": // synthetic (client side only)
@@ -130,7 +167,7 @@ class SocketChannel {
 
         case "progress":
           if (store.networkContext.logProgressUpdates) {
-            console.log("--PROGRESS", data);
+            console.log("--PROGRESS", { seq: data.seq, ts: data.ts, data });
           }
           pkgController.ingestProgressUpdate(data);
           break;
@@ -176,7 +213,20 @@ class SocketChannel {
             store.updateState({
               jobsContext: { activities }
             });
+            
+            // Clear update info when a pup is uninstalled or purged
+            if (data.update.action && (data.update.action === 'uninstall' || data.update.action === 'purge')) {
+              if (data.update.state && data.update.state.id) {
+                pupUpdates.clearUpdateInfo(data.update.state.id);
+              }
+            }
           }
+          break;
+
+        case "pup-updates-checked":
+          // Backend has completed checking for updates, refresh our cache
+          console.log('[MainChannel] Received pup-updates-checked event, refreshing cache');
+          pupUpdates.refresh();
           break;
       }
       this.notify();
@@ -217,7 +267,6 @@ class SocketChannel {
   addObserver(observer) {
     if (!this.observers.includes(observer)) {
       this.observers.push(observer);
-      console.log("OBSERVER ADDED", observer);
     }
   }
 

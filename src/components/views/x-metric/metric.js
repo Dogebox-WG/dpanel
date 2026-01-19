@@ -2,152 +2,154 @@ import { LitElement, html, css, choose } from '/vendor/@lit/all@3.1.2/lit-all.mi
 import "/components/common/sparkline-chart/sparkline-chart-v2.js";
 
 class MetricView extends LitElement {
-  static get properties() {
-    return {
-      metric: { type: Object },
-      expand: { type: Boolean, reflect: true }
-    }
+  static properties = {
+    metric: { type: Object, reflect: true },
+    expand: { type: Boolean, reflect: true }
   }
 
   constructor() {
     super();
-    this.metric = {}
+    this.metric = { values: [] };
     this.expand = false;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.addEventListener('click', this.handleClick)
+  set metric(val) {
+    let old = this._metric;
+    this._metric = val;
+    this.requestUpdate("metric", old);
   }
 
-  disconnectedCallback() {
-    this.removeEventListener('click', this.handleClick)
-    super.disconnectedCallback();
-  }
-
-  handleClick() {
-    this.expand = !this.expand
+  get metric() {
+    return this._metric;
   }
 
   render () {
-    const type = this.metric.type || null
+    const type = this.metric.type || null;
+    const desc = (this.metric.description ?? '').trim();
+    const tip = desc || String(this.metric.label || this.metric.name || '');
 
     return html`
-      <sl-tooltip content="${this.metric.label}" placement="top-start" hoist>
-        <span class="label">
-          ${this.metric.label}
-          </span>
+      <sl-tooltip .content=${tip} placement="top-start" hoist>
+        <span class="label">${this.metric.label}</span>
       </sl-tooltip>
 
-      <sl-copy-button class="copy" value="${this.metric.values}" @click=${(e) => e.stopPropagation()}></sl-copy-button>
+      <sl-copy-button
+        class="copy"
+        value="${this.metric.values}"
+        @click=${(e) => e.stopPropagation()}>
+      </sl-copy-button>
 
       <div class="value-container">
-      ${choose(type, [
-        ['int',   this.renderChart],
-        ['float', this.renderChart],
-        ['string', this.renderText]
-        ], () => html`not supported`)
-      }
+        ${choose(type, [
+          ['int',   this.renderChart],
+          ['float', this.renderChart],
+          ['string', this.renderText]
+        ], () => html`not supported`)}
       </div>
-
     `
   }
 
   renderChart = () => {
-    const values = this.metric.values.filter(Boolean)
-
-    // Make sure we have at least 2 data points to make a line.
-    if (values.length < 2) {
-      return html`<span>-</span>`
-    }
+    const values = (this.metric.values || []).filter(Boolean);
+    if (values.length < 2) return html`<span>-</span>`;
 
     return html`
-      <sparkline-chart-v2 .data="${values}"></sparkline-chart-v2>
-    `
+      <sparkline-chart-v2
+        style="width:100%; background:transparent; --sparkline-height: clamp(140px, 24vh, 220px);"
+        .data=${values}
+      </sparkline-chart-v2>
+    `;
   }
 
   renderText = () => {
-    let value = this.metric.values[this.metric.values.length - 1]
-
-    if (!value) {
-      value = '-'
-    }
-
-    return html`<span class="string">${value}</span>`
+    const arr = this.metric.values || [];
+    let value = arr[arr.length - 1];
+    if (!value) value = '-';
+    return html`<span class="string">${value}</span>`;
   }
 
   static styles = css`
     :host {
+      position: relative;
       display: flex;
       position: relative;
       flex-direction: column;
       align-items: start;
+      height: 100%;
       border-radius: 4px;
-      padding: 6px 10px 10px 10px;
+      padding: 1em;
       border: 1px solid #1d5145;
-      min-width: 120px;
-      width: auto;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
     }
     :host([expand]) {
       min-width: max-content;
-      padding-right: 40px;
     }
-    :host(:hover) .copy {
-      visibility: visible;
+
+    .icon {
+      padding: 2px 4px;
+      border-radius: 4px;
+      position: relative;
+      top: 2px;
+      left: -2px;
     }
+
     .label {
-      font-size: 0.8rem;
-      color: #07ffae;
-      font-weight: bold;
-      text-transform: uppercase;
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 0.9rem;
+      font-weight: 500;
       max-height: 1.5rem;
       line-height: 1.5rem;
     }
-    .label:hover {
-      cursor: help;
-    }
+    .label:hover { cursor: help; }
+
     .value-container {
-      max-height: 40px;
-      min-height: 40px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex: 0 0 auto;
+      min-height: 0;
+      height: auto;
+      background: transparent;
       font-family: Monospace;
       font-weight: normal;
       font-size: 0.9rem;
     }
+    .value-container:has(sparkline-chart-v2) {
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-height: var(--sparkline-height, 160px);
+    }
+    .value-container > sparkline-chart-v2 {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+    }
+
     .string {
       position: relative;
-      display: inline-block;
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-height: 2.9rem;
-      line-height: 1.1rem;
-
-      &::after {
-        content: "";
-        display: inline-block;
-        position: absolute;
-        bottom: 0px;
-        left: 0px;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(to bottom, transparent, #23252a);
-      }
+      display: block;
+      max-width: 100%;
+      white-space: pre-wrap;
+      line-height: 1.2rem;
     }
+    .string::after {
+      content: "";
+      display: inline-block;
+      position: absolute;
+      bottom: 0px;
+      left: 0px;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(to bottom, transparent, #23252a);
+    }
+
     .copy {
       position: absolute;
-      visibility: hidden;
-      color: #555;
-      right: 3px;
-      top: 0px;
+      right: 10px;
+      top: 10px;
+      z-index: 2;
     }
   `
 }

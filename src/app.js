@@ -58,6 +58,9 @@ import { mainChannel } from "/controllers/sockets/main-channel.js";
 // Pkg controller
 import { pkgController } from "/controllers/package/index.js"
 
+// Pup update service
+import { pupUpdates } from "/state/pup-updates.js";
+
 // Job WebSocket
 import { jobWebSocket } from "/controllers/sockets/job-channel.js";
 
@@ -149,6 +152,14 @@ class DPanelApp extends LitElement {
       if (res?.version?.release) {
         store.updateState({ appContext: { dbxVersion: res?.version?.release }})
       }
+      
+      // Set git commit info on appContext
+      if (res?.version?.git) {
+        store.updateState({ appContext: { 
+          gitCommit: res.version.git.commit,
+          gitDirty: res.version.git.dirty 
+        }})
+      }
 
       // Process pups
       if (res) {
@@ -160,7 +171,8 @@ class DPanelApp extends LitElement {
         showWelcomeModal();
       }
 
-      // Activities loaded via WebSocket (no HTTP fetch needed)
+      // Initialize pup update service to check for updates
+      pupUpdates.init();
       
     } catch (err) {
       console.warn('Failed to fetch bootstrap')

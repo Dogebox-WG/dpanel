@@ -1,4 +1,6 @@
 import { html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import "/components/common/version-selector/index.js";
+import { sortVersionsDescending } from "/utils/version.js";
 
 export function openConfig() {
   this.open_dialog = "configure";
@@ -33,7 +35,23 @@ export function renderActions() {
     .install-container sl-button {
       width: 180px;
     }
+
+    .version-selector-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+      width: 180px;
+    }
+
+    .version-select {
+      width: 180px;
+    }
   `;
+
+  // Get all available versions and sort them descending (latest first)
+  const availableVersions = pkg.def.versions ? sortVersionsDescending(Object.keys(pkg.def.versions)) : [];
+  
+  const selectedVersion = this.selectedInstallVersion || pkg.def.latestVersion;
 
   return html`
     <div class="action-wrap">
@@ -49,6 +67,18 @@ export function renderActions() {
               >
                 Such Install
               </sl-button>
+              ${availableVersions.length > 1 ? html`
+                <version-selector
+                  .versions=${availableVersions}
+                  .selectedVersion=${selectedVersion}
+                  .latestVersion=${pkg.def.latestVersion}
+                  @version-change=${(e) => this.selectedInstallVersion = e.detail.version}
+                  size="small"
+                  class="version-select"
+                  placeholder="Select version"
+                  ?disabled=${this.inflight}
+                ></version-selector>
+              ` : nothing}
             </div>
           `
         : nothing}
@@ -109,10 +139,13 @@ export async function handleInstall() {
     },
   };
 
+  // Use selected version, or fall back to latest
+  const versionToInstall = this.selectedInstallVersion || pkg.def.latestVersion;
+
   const body = {
     sourceId: pkg.def.source.id,
-    pupName: pkg.def.versions[pkg.def.latestVersion].meta.name,
-    pupVersion: pkg.def.latestVersion,
+    pupName: pkg.def.versions[versionToInstall].meta.name,
+    pupVersion: versionToInstall,
     autoInstallDependencies: Boolean(this.autoInstallDependencies),
     installWithDevModeEnabled: Boolean(this.installWithDevModeEnabled)
   };

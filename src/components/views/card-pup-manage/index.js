@@ -7,6 +7,9 @@
   } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
   import "/components/common/tag-set/tag-set.js";
+  import { store } from "/state/store.js";
+  import { StoreSubscriber } from "/state/subscribe.js";
+  import { pupUpdates } from "/state/pup-updates.js";
 
   class PupCard extends LitElement {
     static get properties() {
@@ -27,6 +30,17 @@
 
     constructor() {
       super();
+      this.context = new StoreSubscriber(this, store);
+    }
+
+    get updateInfo() {
+      const { pupUpdatesContext } = this.context.store;
+      return pupUpdatesContext.updateInfo[this.pupId] || null;
+    }
+
+    get hasUpdate() {
+      // Use the pupUpdates singleton which respects skipped updates
+      return pupUpdates.hasUpdate(this.pupId);
     }
 
     get status() {
@@ -44,7 +58,8 @@
 
       const statusClassMap = classMap({
         status: true,
-        running: status === "running"
+        running: status === "running",
+        needs_attention: status === "Unmet Dependencies" || status === "Needs Config"
       });
       return html`
         <a class="anchor" href=${href} target="_self">
@@ -55,7 +70,13 @@
 
             <div class="details-wrap">
               <div class="inner">
-                <span class="name">${pupName} <small style="color: #777">v${version}</small></span>
+                <span class="name">
+                  ${pupName} 
+                  <small style="color: #777">v${version}</small>
+                  ${this.hasUpdate ? html`
+                    <sl-badge variant="primary" pill pulse>Update Available</sl-badge>
+                  ` : nothing}
+                </span>
                 <x-tag-set .tags=${upstreamVersions} highlight max=1></x-tag-set>
                 <span class=${statusClassMap}>${status}</span>
               </div>
@@ -179,6 +200,11 @@
       span.status.running {
         color: #07ffae;
       }
+
+      span.status.needs_attention {
+        color: var(--sl-color-amber-600);
+      }
+
     `;
   }
 

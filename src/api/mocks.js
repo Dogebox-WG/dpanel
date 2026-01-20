@@ -34,6 +34,11 @@ import {
   getResponse as getKeymaps,
   postResponse as setKeymap,
 } from "./system/keymaps.mocks.js";
+import {
+  getTimezoneResponse as getTimezone,
+  getTimezonesResponse as getTimezones,
+  postResponse as setTimezones,
+} from "./system/timezones.mocks.js";
 
 import { postResponse as setHostname } from "./system/hostname.mocks.js";
 import {
@@ -49,6 +54,10 @@ import {
   updateSSHStateResponse,
   getSSHStateResponse,
 } from "./sshkeys/sshkeys.mocks.js";
+
+import { mock as systemStatsMock } from "./monitoring/system.mocks.js";
+import { mock as systemServicesMock, mockTailscale } from "./monitoring/services.mocks.js";
+import { mockCoreGreen, mockSakura } from "./monitoring/pup-variants.mocks.js";
 
 // Activity mocks removed - activities managed via WebSocket
 // Mock HTTP endpoints available in jobs.mocks.js via mockJobApi
@@ -89,6 +98,11 @@ export const mocks = [
   addSSHPublicKeyResponse,
   updateSSHStateResponse,
   getSSHStateResponse,
+  systemStatsMock,
+  systemServicesMock,
+  mockTailscale,
+  mockCoreGreen,
+  mockSakura,
   // Job HTTP mocks handled by mockJobApi in jobs.mocks.js
   // Real-time updates via WebSocket (no HTTP mocks needed)
 ];

@@ -286,9 +286,10 @@ class SystemSettings extends LitElement {
 
           <div class="form-control">
             <sl-select
+              name="timezone"
+              required
               label="Select Timezone"
               help-text="Where in the world should your clock be set to"
-              name="timezone"
               value=${this._changes.timezone || ''}
               ?disabled=${this._inflight}
               @sl-change=${this._handleTimezoneChange}

@@ -34,6 +34,11 @@ import {
   getResponse as getKeymaps,
   postResponse as setKeymap,
 } from "./system/keymaps.mocks.js";
+import {
+  getTimezoneResponse as getTimezone,
+  getTimezonesResponse as getTimezones,
+  postResponse as setTimezones,
+} from "./system/timezones.mocks.js";
 
 import { postResponse as setHostname } from "./system/hostname.mocks.js";
 import {

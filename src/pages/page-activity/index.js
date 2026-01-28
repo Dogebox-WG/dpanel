@@ -160,33 +160,25 @@ class JobActivityPage extends LitElement {
     this.dateFilter = 'all';
     this.targetJobId = new URLSearchParams(window.location.search).get('jobId') || '';
     this._didScrollToTarget = false;
-    this._scrollTimer = null;
-    this._scrollDelayMs = 150;
   }
 
   updated() {
     if (!this.targetJobId || this._didScrollToTarget) return;
     const target = this.renderRoot?.querySelector(`#job-${this.targetJobId}`);
     if (target) {
-      this.queueScrollAlignment(target);
-    }
-  }
-
-  queueScrollAlignment(target) {
-    if (this._scrollTimer) {
-      clearTimeout(this._scrollTimer);
-    }
-    this._scrollTimer = setTimeout(() => {
-      this.alignTargetToHeader(target);
       this._didScrollToTarget = true;
-    }, this._scrollDelayMs);
+      setTimeout(() => {
+        this.scrollToTarget(target);
+      }, 150);
+    }
   }
 
-  alignTargetToHeader(target) {
+  scrollToTarget(target) {
     if (!target) return;
     const container = this.getScrollContainer(target);
-    const nextTop = this.getDesiredScrollTop(target, container);
-    container.scrollTo({ top: nextTop, behavior: 'smooth' });
+    const headerOffset = this.getPageHeaderOffset();
+    const targetTop = this.getOffsetTop(target, container);
+    container.scrollTo({ top: Math.max(0, targetTop - headerOffset), behavior: 'smooth' });
   }
 
   getScrollContainer(target) {
@@ -212,12 +204,6 @@ class JobActivityPage extends LitElement {
       current = parent;
     }
     return null;
-  }
-
-  getDesiredScrollTop(target, container) {
-    const headerOffset = this.getPageHeaderOffset();
-    const targetTop = this.getOffsetTop(target, container);
-    return Math.max(0, targetTop - headerOffset);
   }
 
   getOffsetTop(element, container) {
@@ -325,10 +311,14 @@ class JobActivityPage extends LitElement {
   }
   
   renderSection(title, jobs, limit, showMoreHandler, targetJobId) {
-    const targetIndex = targetJobId ? jobs.findIndex(job => job.id === targetJobId) : -1;
-    const effectiveLimit = targetIndex >= 0 ? Math.max(limit, targetIndex + 1) : limit;
-    const displayJobs = jobs.slice(0, effectiveLimit);
-    const hasMore = jobs.length > effectiveLimit;
+    const displayJobs = jobs.slice(0, limit);
+    if (targetJobId) {
+      const targetJob = jobs.find(job => job.id === targetJobId);
+      if (targetJob && !displayJobs.some(job => job.id === targetJob.id)) {
+        displayJobs.push(targetJob);
+      }
+    }
+    const hasMore = jobs.length > limit;
     const isEmpty = jobs.length === 0;
     
     return html`

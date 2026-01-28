@@ -10,7 +10,6 @@ class LogViewer extends LitElement {
       logs: { type: Array },
       isConnected: { type: Boolean },
       follow: { type: Boolean },
-      minimal: { type: Boolean },
       pupId: { type: String },
       jobId: { type: String },
     };
@@ -25,7 +24,6 @@ class LogViewer extends LitElement {
     this.wsClient = null;
     this.autostart = true;
     this.follow = true; // Default to true, user can disable temporarily
-    this.minimal = false;
   }
 
   connectedCallback() {
@@ -221,16 +219,14 @@ class LogViewer extends LitElement {
   render() {
     return html`
       <div>
-        ${this.minimal ? '' : html`
-          <div id="LogHUD">
-            <div class="status">
-              ${this.isConnected
-                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
-              }
-            </div>
+        <div id="LogHUD">
+          <div class="status">
+            ${this.isConnected
+              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+            }
           </div>
-        `}
+        </div>
         <div id="LogContainer">
           ${this.logs.length > 0 ? html`
             <ul>
@@ -242,26 +238,24 @@ class LogViewer extends LitElement {
             </div>
           `}
         </div>
-        ${this.minimal ? '' : html`
-          <div id="LogFooter">
-            <div class="options">
-              <sl-checkbox
-                size="medium"
-                ?checked=${this.follow}
-                @sl-change=${this.handleFollowChange}
-                @click=${this.handleCheckboxClick}
-              >Auto scroll</sl-checkbox>
-            </div>
-            <sl-button 
-              variant="text"
-              size="large"
-              target="_blank"
-              @click=${this.handleDownloadClick}
-              >Download
-              <sl-icon name="download" slot="suffix"></sl-icon>
-            </sl-button>
+        <div id="LogFooter">
+          <div class="options">
+            <sl-checkbox
+              size="medium"
+              ?checked=${this.follow}
+              @sl-change=${this.handleFollowChange}
+              @click=${this.handleCheckboxClick}
+            >Auto scroll</sl-checkbox>
           </div>
-        `}
+          <sl-button 
+            variant="text"
+            size="large"
+            target="_blank"
+            @click=${this.handleDownloadClick}
+            >Download
+            <sl-icon name="download" slot="suffix"></sl-icon>
+          </sl-button>
+        </div>
       </div>
     `;
   }

@@ -418,9 +418,6 @@ export class CheckUpdatesView extends LitElement {
     this._systemJobId = "";
     this._update_outcome = null;
 
-    // TODO: remove mocked activity logs.
-    // this.mockUpdateLogs();
-
     let didErr = false;
 
     try {

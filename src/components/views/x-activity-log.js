@@ -86,27 +86,12 @@ class ActivityLog extends LitElement {
 
   }
 
-  formatLogEntry(log) {
-    if (typeof log === "string") {
-      return log;
-    }
-
-    const message =
-      log?.msg ??
-      log?.message ??
-      log?.summaryMessage ??
-      log?.errorMessage ??
-      "";
-
-    return message || JSON.stringify(log);
-  }
-
   render() {
     return html`
       <div>
         <div id="LogContainer">
           <ul>
-            ${(this.logs || []).map(log => html`<li>${this.formatLogEntry(log)}</li>`)}
+            ${(this.logs || []).map(log => html`<li>${log.msg}</li>`)}
           </ul>
         </div>
         <div id="LogFooter">

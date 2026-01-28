@@ -27,6 +27,7 @@ export const postResponse = {
   group: "updates",
   res: {
     success: true,
+    id: "mock-system-update",
   }
 };
 

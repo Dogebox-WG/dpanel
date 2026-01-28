@@ -11,7 +11,8 @@ class JobActivityPage extends LitElement {
     showCompletedLimit: { type: Number },
     searchQuery: { type: String },
     statusFilter: { type: String },
-    dateFilter: { type: String }
+    dateFilter: { type: String },
+    targetJobId: { type: String }
   };
   
   static styles = css`
@@ -157,6 +158,76 @@ class JobActivityPage extends LitElement {
     this.searchQuery = '';
     this.statusFilter = 'all';
     this.dateFilter = 'all';
+    this.targetJobId = new URLSearchParams(window.location.search).get('jobId') || '';
+    this._didScrollToTarget = false;
+    this._scrollTimer = null;
+    this._scrollDelayMs = 150;
+  }
+
+  updated() {
+    if (!this.targetJobId || this._didScrollToTarget) return;
+    const target = this.renderRoot?.querySelector(`#job-${this.targetJobId}`);
+    if (target) {
+      this.queueScrollAlignment(target);
+    }
+  }
+
+  queueScrollAlignment(target) {
+    if (this._scrollTimer) {
+      clearTimeout(this._scrollTimer);
+    }
+    this._scrollTimer = setTimeout(() => {
+      this.alignTargetToHeader(target);
+      this._didScrollToTarget = true;
+    }, this._scrollDelayMs);
+  }
+
+  alignTargetToHeader(target) {
+    if (!target) return;
+    const container = this.getScrollContainer(target);
+    const nextTop = this.getDesiredScrollTop(target, container);
+    container.scrollTo({ top: nextTop, behavior: 'smooth' });
+  }
+
+  getScrollContainer(target) {
+    return this.getScrollParent(target) || document.scrollingElement || document.documentElement;
+  }
+
+  getPageHeaderOffset() {
+    const pageContainer = this.parentElement?.closest?.('page-container');
+    const header = pageContainer?.shadowRoot?.querySelector?.('.page-header');
+    return header?.getBoundingClientRect?.().height || 0;
+  }
+
+  getScrollParent(element) {
+    let current = element;
+    while (current) {
+      const parent = current.parentElement || current.getRootNode?.().host;
+      if (!parent || parent === current) break;
+      const style = getComputedStyle(parent);
+      const overflowY = style.overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+        return parent;
+      }
+      current = parent;
+    }
+    return null;
+  }
+
+  getDesiredScrollTop(target, container) {
+    const headerOffset = this.getPageHeaderOffset();
+    const targetTop = this.getOffsetTop(target, container);
+    return Math.max(0, targetTop - headerOffset);
+  }
+
+  getOffsetTop(element, container) {
+    let offsetTop = 0;
+    let current = element;
+    while (current && current !== container) {
+      offsetTop += current.offsetTop || 0;
+      current = current.offsetParent;
+    }
+    return offsetTop;
   }
   
   showMoreActive() {
@@ -253,9 +324,11 @@ class JobActivityPage extends LitElement {
     return filtered;
   }
   
-  renderSection(title, jobs, limit, showMoreHandler) {
-    const displayJobs = jobs.slice(0, limit);
-    const hasMore = jobs.length > limit;
+  renderSection(title, jobs, limit, showMoreHandler, targetJobId) {
+    const targetIndex = targetJobId ? jobs.findIndex(job => job.id === targetJobId) : -1;
+    const effectiveLimit = targetIndex >= 0 ? Math.max(limit, targetIndex + 1) : limit;
+    const displayJobs = jobs.slice(0, effectiveLimit);
+    const hasMore = jobs.length > effectiveLimit;
     const isEmpty = jobs.length === 0;
     
     return html`
@@ -269,7 +342,11 @@ class JobActivityPage extends LitElement {
           <div class="empty-state">No ${title.toLowerCase()}</div>
         ` : html`
           ${displayJobs.map(job => html`
-            <job-progress .job=${job}></job-progress>
+            <job-progress
+              id="job-${job.id}"
+              .job=${job}
+              ?initiallyExpanded=${job.id === targetJobId}
+            ></job-progress>
           `)}
           
           ${hasMore ? html`
@@ -347,21 +424,24 @@ class JobActivityPage extends LitElement {
           'Active Jobs',
           activeJobs,
           this.showActiveLimit,
-          () => this.showMoreActive()
+          () => this.showMoreActive(),
+          this.targetJobId
         )}
         
         ${this.renderSection(
           'Pending Jobs',
           pendingJobs,
           this.showPendingLimit,
-          () => this.showMorePending()
+          () => this.showMorePending(),
+          this.targetJobId
         )}
         
         ${this.renderSection(
           'Recently Completed Jobs',
           completedJobs,
           this.showCompletedLimit,
-          () => this.showMoreCompleted()
+          () => this.showMoreCompleted(),
+          this.targetJobId
         )}
       </div>
     `;

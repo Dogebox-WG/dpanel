@@ -86,12 +86,27 @@ class ActivityLog extends LitElement {
 
   }
 
+  formatLogEntry(log) {
+    if (typeof log === "string") {
+      return log;
+    }
+
+    const message =
+      log?.msg ??
+      log?.message ??
+      log?.summaryMessage ??
+      log?.errorMessage ??
+      "";
+
+    return message || JSON.stringify(log);
+  }
+
   render() {
     return html`
       <div>
         <div id="LogContainer">
           <ul>
-            ${(this.logs || []).map(log => html`<li>${log.msg}</li>`)}
+            ${(this.logs || []).map(log => html`<li>${this.formatLogEntry(log)}</li>`)}
           </ul>
         </div>
         <div id="LogFooter">
@@ -190,6 +205,10 @@ class ActivityLog extends LitElement {
         padding: 0px;
         text-align: left;
         max-width: 100%;
+      }
+      li {
+        white-space: pre-wrap;
+        word-break: break-word;
       }
     `;
   }

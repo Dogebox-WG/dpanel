@@ -29,10 +29,6 @@ class MetricView extends LitElement {
     const tip = desc || String(this.metric.label || this.metric.name || '');
 
     return html`
-      <sl-tooltip .content=${tip} placement="top-start" hoist>
-        <span class="label">${this.metric.label}</span>
-      </sl-tooltip>
-
       <sl-copy-button
         class="copy"
         value="${this.metric.values}"
@@ -93,14 +89,6 @@ class MetricView extends LitElement {
       top: 2px;
       left: -2px;
     }
-
-    .label {
-      font-size: var(--metric-label-size, 0.9rem);
-      font-weight: 500;
-      max-height: 1.5rem;
-      line-height: 1.5rem;
-    }
-    .label:hover { cursor: help; }
 
     .value-container {
       width: 100%;

@@ -2,6 +2,8 @@ import { html, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { LitElement, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postWelcomeComplete } from "/api/system/post-welcome-complete.js";
 import { postInstallPupCollection } from "/api/system/post-install-pup-collection.js";
+import { store } from "/state/store.js";
+import { getRouter } from "/router/index.js";
 
 class WelcomeModal extends LitElement {
   static styles = css`
@@ -170,7 +172,13 @@ class WelcomeModal extends LitElement {
   async handleNext() {
     try {
       await postWelcomeComplete();
-      
+
+      if (this.selectedOption === 'restore') {
+        this.openBackupRestore();
+        this.onClose();
+        return;
+      }
+
       if (this.selectedOption !== 'custom') {
         await postInstallPupCollection(this.selectedOption);
       }
@@ -183,6 +191,12 @@ class WelcomeModal extends LitElement {
 
   handleOptionSelect(option) {
     this.selectedOption = option;
+  }
+
+  openBackupRestore() {
+    store.updateState({ dialogContext: { name: "backup-restore", step: "restore" }});
+    const router = getRouter();
+    router.go("/settings/backup-restore", { replace: true });
   }
 
   render() {
@@ -223,6 +237,7 @@ class WelcomeModal extends LitElement {
           <div class="intro-text">
             <p>Since this may be your first time here, we can offer some help to get you setup quickly.</p>
             <p>Please select one of the following Pup Collections you'd like to have automatically installed on your Dogebox.</p>
+            <p>You can also restore from a backup instead.</p>
           </div>
 
             <div class="card ${this.selectedOption === 'essentials' ? 'selected' : ''}"
@@ -262,6 +277,19 @@ class WelcomeModal extends LitElement {
                 <div class="card-content">
                   <div class="card-title">Custom</div>
                   <div class="card-subtitle">Choose your own adventure.  No preinstalled pups</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card ${this.selectedOption === 'restore' ? 'selected' : ''}"
+                 @click=${() => this.handleOptionSelect('restore')}>
+              <div class="card-header">
+                <div class="card-image">
+                  <img src="/static/img/pup-collection-custom.png" alt="Restore from Backup">
+                </div>
+                <div class="card-content">
+                  <div class="card-title">Restore from Backup</div>
+                  <div class="card-subtitle">Bring back a saved Dogebox configuration</div>
                 </div>
               </div>
             </div>

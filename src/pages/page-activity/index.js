@@ -292,7 +292,16 @@ class JobActivityPage extends LitElement {
     const pendingJobs = filteredJobs.filter(j => j.status === 'queued');
     const completedJobs = filteredJobs
       .filter(j => ['completed', 'failed', 'cancelled'].includes(j.status))
-      .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started));
+      .sort((a, b) => {
+        const statusRank = (status = '') => {
+          if (status === 'completed') return 0;
+          if (status === 'cancelled') return 1;
+          return 2;
+        };
+        const rankDiff = statusRank(a.status) - statusRank(b.status);
+        if (rankDiff !== 0) return rankDiff;
+        return new Date(b.finished || b.started) - new Date(a.finished || a.started);
+      });
     
     return html`
       <div class="padded">

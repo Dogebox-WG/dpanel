@@ -100,6 +100,12 @@ class LibraryView extends LitElement {
     this.inspectedPup = event.detail.pupId
   }
 
+  updatePups() {
+    if (!this.fetchLoading && !this.fetchError) {
+      this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    }
+  }
+
   async fetchBootstrap() {
     this.reset();
     // Emit busy start event which adds this action to a busy-queue.

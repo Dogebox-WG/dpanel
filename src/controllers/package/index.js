@@ -723,6 +723,9 @@ function determineInstallationId(state) {
 function determineStatusId(state, stats, activeActions = [], activeJobs = []) {
   const installation = state?.installation;
   const status = stats?.status;
+  const inferredStatus = (!status && installation === "ready")
+    ? (state?.enabled ? "running" : "stopped")
+    : status;
   const flags = {
     needs_deps: state?.needsDeps,
     needs_config: state?.needsConf,
@@ -780,28 +783,28 @@ function determineStatusId(state, stats, activeActions = [], activeJobs = []) {
   }
 
   // If disable is active and status shows stopped, show "stopping" until job completes
-  if (hasActiveDisable && (status === "stopped" || status === "stopping")) {
+  if (hasActiveDisable && (inferredStatus === "stopped" || inferredStatus === "stopping")) {
     return { id: "stopping", label: "stopping" };
   }
 
   // If enable is active and status shows stopped, show "starting" until job completes
-  if (hasActiveEnable && (status === "stopped" || status === "starting")) {
+  if (hasActiveEnable && (inferredStatus === "stopped" || inferredStatus === "starting")) {
     return { id: "starting", label: "starting" };
   }
 
-  if (status === "starting") {
+  if (inferredStatus === "starting") {
     return { id: "starting", label: "starting" };
   }
 
-  if (status === "running") {
+  if (inferredStatus === "running") {
     return { id: "running", label: "running" };
   }
 
-  if (status === "stopping") {
+  if (inferredStatus === "stopping") {
     return { id: "stopping", label: "stopping" };
   }
 
-  if (status === "stopped") {
+  if (inferredStatus === "stopped") {
     return { id: "stopped", label: "stopped" };
   }
 

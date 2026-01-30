@@ -4,6 +4,7 @@ const ifd = ifDefined
 
 export function _render_select(field, options) {
   const { currentKey, isDirtyKey } = this.propKeys(field.name);
+  const optionList = Array.isArray(field.options) ? field.options : [];
   return html`
     <sl-select
       name=${field.name}
@@ -21,7 +22,7 @@ export function _render_select(field, options) {
       @sl-hide=${(e) => e.stopPropagation()}
       >
       ${options.labelEl}
-      ${field.options.map(option => html`
+      ${optionList.map(option => html`
         <sl-option value=${option.value}>${option.label}</sl-option>
       `)}
     </sl-select>

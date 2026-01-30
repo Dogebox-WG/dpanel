@@ -191,6 +191,10 @@ class ActivityLog extends LitElement {
         text-align: left;
         max-width: 100%;
       }
+      li {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
     `;
   }
 

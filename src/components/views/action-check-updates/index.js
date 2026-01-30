@@ -125,22 +125,17 @@ export class CheckUpdatesView extends LitElement {
 
   extractSystemJobId(logs) {
     if (!Array.isArray(logs)) return "";
-    for (let i = logs.length - 1; i >= 0; i--) {
-      const log = logs[i];
-      const actionId = log?.actionID ?? log?.actionId ?? log?.action_id;
-      if (actionId) return actionId;
-    }
-    return "";
+    return logs.findLast((log) => log?.actionID)?.actionID ?? ""
   }
 
   isSystemJobErrorLog(log) {
-    const actionId = log?.actionID ?? log?.actionId ?? log?.action_id;
-    if (!actionId) return false;
+    const actionID = log?.actionID;
+    if (!actionID) return false;
     if (!this._systemJobId) {
-      this._systemJobId = actionId;
+      this._systemJobId = actionID;
     }
     const isError = log?.error === true || Boolean(log?.errorMessage);
-    return isError && actionId === this._systemJobId;
+    return isError && actionID === this._systemJobId;
   }
 
   checkProgressFailure(logs) {

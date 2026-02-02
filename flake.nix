@@ -27,6 +27,27 @@
           '';
         };
 
+        packages.default = pkgs.buildNpmPackage {
+          name = "dpanel";
+          src = ./.;
+
+          npmDepsHash = "sha256-HXf64hDIOSiHIDFX1jT7bCMUNqcN12KzQQ9ccY5ostA=";
+
+          buildPhase = ''
+            npm run build
+          '';
+
+          installPhase = ''
+            cp -r dist $out
+          '';
+
+          meta = with pkgs.lib; {
+            description = "Dogebox control panel web interface";
+            homepage = "https://github.com/dogeorg/dpanel";
+            license = licenses.mit;
+          };
+        };
+
         dbxSessionName = "dpanel";
         dbxStartCommand = "npm start";
         dbxCWD = "dev";

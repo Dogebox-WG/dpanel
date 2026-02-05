@@ -35,21 +35,23 @@ class SparklineChart extends LitElement {
       overflow: hidden;
     }
     .tooltip {
-      position: absolute;
+      position: fixed;
       background: rgba(0, 0, 0, 0.85);
       color: white;
       font-family: monospace;
       font-size: 12px;
       padding: 6px 8px;
       border-radius: 4px;
-      white-space: normal;        /* allow wrapping for longer descriptions */
-      max-width: 320px;           /* prevent very wide tooltips */
+      white-space: nowrap;
+      width: max-content;
+      max-width: 360px;
       line-height: 1.4;
-      z-index: 9999;
+      z-index: 99999;
       display: none;
       pointer-events: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
+      word-break: normal;
       user-select: text;
     }
     .sparkline--cursor {
@@ -92,10 +94,30 @@ class SparklineChart extends LitElement {
 
         tooltip.style.display = 'block';
 
+        // Avoid wrapping the first line
         tooltip.innerHTML =
-          `Value: ${val}<br><span style="opacity:0.8; font-size:11px;">${tsLabel}</span>`;
-        tooltip.style.top = `${event.offsetY}px`;
-        tooltip.style.left = `${event.offsetX + 20}px`;
+          `Value: ${val}<br><span style="opacity:0.8; font-size:11px; white-space:nowrap;">${tsLabel}</span>`;
+
+        // Position relative to viewport so it is not clipped by the metric card
+        const pad = 12;
+        let x = (event.clientX || 0) + pad;
+        let y = (event.clientY || 0) + pad;
+
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y}px`;
+
+        // Clamp to viewport (measure after display)
+        const r = tooltip.getBoundingClientRect();
+        const maxX = window.innerWidth - r.width - pad;
+        const maxY = window.innerHeight - r.height - pad;
+
+        if (x > maxX) x = maxX;
+        if (y > maxY) y = maxY;
+        if (x < pad) x = pad;
+        if (y < pad) y = pad;
+
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y}px`;
       },
       onmouseout: () => {
         if (this.disabled) return;

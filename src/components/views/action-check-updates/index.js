@@ -9,12 +9,13 @@ import { createAlert } from "/components/common/alert.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import "/components/common/action-row/action-row.js";
 import "/components/common/reveal-row/reveal-row.js";
-import "/components/views/x-activity-log.js";
 import "/components/views/x-version-card.js";
 import { checkForUpdates, commenceUpdate } from "/api/system/updates.js";
 import { store } from "/state/store.js";
+import { StoreSubscriber } from "/state/subscribe.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { pkgController } from "/controllers/package/index.js";
+import { getRouter } from "/router/index.js";
 
 const PAGE_ONE = "checking";
 const PAGE_TWO = "confirmation";
@@ -35,17 +36,21 @@ export class CheckUpdatesView extends LitElement {
       _update_outcome: { type: Boolean },
       _page: { type: String },
       _logs: { type: Array },
+      _systemJobId: { type: String },
     };
   }
 
   constructor() {
     super();
+    this.context = new StoreSubscriber(this, store);
     this.pkgController = pkgController;
     this.mode = "";
     this._ready = false;
     this._page = PAGE_ONE;
     this._logs = [];
     this._updates = [];
+    this._systemJobId = "";
+    this._updatePollId = null;
   }
 
   connectedCallback() {
@@ -57,11 +62,17 @@ export class CheckUpdatesView extends LitElement {
 
   disconnectedCallback() {
     this.pkgController.removeObserver(this);
+    this.stopUpdatePolling();
     super.disconnectedCallback();
   }
 
   firstUpdated() {
     this.fetchUpdates();
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    this.checkJobFailure();
   }
 
   async fetchUpdates() {
@@ -104,8 +115,74 @@ export class CheckUpdatesView extends LitElement {
       // activityId relating to this update are shown.
 
       this._logs = [...this.pkgController.activityIndex['system']];
+      if (!this._systemJobId) {
+        this._systemJobId = this.extractSystemJobId(this._logs);
+      }
+      this.checkProgressFailure(this._logs);
     }
     super.requestUpdate();
+  }
+
+  extractSystemJobId(logs) {
+    if (!Array.isArray(logs)) return "";
+    return logs.findLast((log) => log?.actionID)?.actionID ?? ""
+  }
+
+  isSystemJobErrorLog(log) {
+    const actionID = log?.actionID;
+    if (!actionID) return false;
+    if (!this._systemJobId) {
+      this._systemJobId = actionID;
+    }
+    const isError = log?.error === true || Boolean(log?.errorMessage);
+    return isError && actionID === this._systemJobId;
+  }
+
+  checkProgressFailure(logs) {
+    if (!this._inflight_update || !Array.isArray(logs)) return;
+    const errorLog = logs.find(log => this.isSystemJobErrorLog(log));
+    if (errorLog) {
+      this.markUpdateFailed();
+    }
+  }
+
+  checkJobFailure() {
+    if (!this._inflight_update || !this._systemJobId) return;
+    const jobs = this.context?.store?.jobsContext?.jobs || [];
+    const job = jobs.find(item => item.id === this._systemJobId);
+    if (!job) return;
+    if (job.status === "failed" || job.status === "cancelled") {
+      this.markUpdateFailed();
+    }
+  }
+
+  markUpdateFailed() {
+    if (!this._inflight_update || this._update_outcome === "success") return;
+    this._inflight_update = false;
+    this._update_outcome = "error";
+    this.stopUpdatePolling();
+  }
+
+  handleViewSystemActivity() {
+    if (!this._systemJobId) return;
+    const targetPath = "/activity";
+    const targetUrl = `${targetPath}?jobId=${this._systemJobId}`;
+    store.updateState({ dialogContext: { name: null } });
+    const router = getRouter();
+    router.go(targetPath, { replace: true });
+    window.history.replaceState({}, "", targetUrl);
+    setTimeout(() => {
+      if (window.location.pathname !== targetPath) {
+        window.location.assign(targetUrl);
+      }
+    }, 0);
+  }
+
+  stopUpdatePolling() {
+    if (this._updatePollId) {
+      clearInterval(this._updatePollId);
+      this._updatePollId = null;
+    }
   }
 
   async mockUpdateLogs() {
@@ -299,10 +376,6 @@ export class CheckUpdatesView extends LitElement {
         </sl-alert>
         `: nothing }
 
-        <div class="activity-log-wrap">
-          <x-activity-log .logs=${this._logs}></x-activity-log>
-        </div>
-
         ${this._inflight_update ? html`
           <p style="line-height: 1.1"><small>This may take up to 2 minutes.<br>Do not refresh or power off your Dogebox while update is in progress.</small></p>`
         : nothing }
@@ -317,6 +390,9 @@ export class CheckUpdatesView extends LitElement {
           `: nothing}
           ${!this._inflight_update && this._update_outcome === "success" ? html`
             <small>Much update! Such wow.</small>
+          `: nothing}
+          ${!this._inflight_update && this._update_outcome === "error" && this._systemJobId ? html`
+            <sl-button size="small" variant="text" @click=${this.handleViewSystemActivity}>View system activity</sl-button>
           `: nothing}
             <sl-button size="small" variant="text" @click=${() => window.location.replace('/settings')}>Dismiss</sl-button>
           </p>
@@ -333,9 +409,9 @@ export class CheckUpdatesView extends LitElement {
     this._page = PAGE_THREE;
     this._update_commenced = false;
     this._inflight_update = true;
-
-    // TODO: remove mocked activity logs.
-    // this.mockUpdateLogs();
+    this._logs = [];
+    this._systemJobId = "";
+    this._update_outcome = null;
 
     let didErr = false;
 
@@ -345,10 +421,7 @@ export class CheckUpdatesView extends LitElement {
       // We only support "dogebox" for now, when we want to support multiple packages,
       // this, and the UI around all our upgrades will have to be updated slightly.
       const res = await commenceUpdate("dogebox", this._updatablePackages[0].latestUpdate.version);
-
-      // TODO.  Obtain "acitivityId" from response
-      // Use this ID to display acitivty logs filtered
-      // to that ID.
+      this._systemJobId = res?.id || "";
 
       this._update_commenced = true;
     } catch (err) {
@@ -371,10 +444,15 @@ export class CheckUpdatesView extends LitElement {
     const pollEveryMs = 5000
     const maxAttempts = 120 // 120*0500ms/1000ms/60 = 10 minutes of waiting;
 
-    const intervalId = setInterval(async () => {
+    this.stopUpdatePolling();
+    this._updatePollId = setInterval(async () => {
       try {
+        if (!this._inflight_update) {
+          this.stopUpdatePolling();
+          return;
+        }
         if (attempts >= maxAttempts) {
-          clearInterval(intervalId);
+          this.stopUpdatePolling();
           this._inflight_update = false;
           this._update_outcome = "timeout";
           return;
@@ -384,7 +462,7 @@ export class CheckUpdatesView extends LitElement {
         const { version } = await getBootstrapV2();
 
         if (version?.release && version.release !== dbxVersion) {
-          clearInterval(intervalId);
+          this.stopUpdatePolling();
           console.debug('New version found:', version.release);
 
           // Stop spinner
@@ -406,7 +484,7 @@ export class CheckUpdatesView extends LitElement {
       }
     }, pollEveryMs);
 
-    return () => clearInterval(intervalId);
+    return () => this.stopUpdatePolling();
   }
 
   static styles = css`
@@ -448,10 +526,6 @@ export class CheckUpdatesView extends LitElement {
       padding-bottom: 30px;
     }
 
-    .activity-log-wrap {
-      text-align: left;
-      margin-top: 12px;
-    }
   `;
 }
 

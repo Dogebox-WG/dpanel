@@ -220,13 +220,13 @@ class LogViewer extends LitElement {
     return html`
       <div>
         <div id="LogHUD">
-            <div class="status">
-              ${this.isConnected
-                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
-              }
-            </div>
+          <div class="status">
+            ${this.isConnected
+              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+            }
           </div>
+        </div>
         <div id="LogContainer">
           ${this.logs.length > 0 ? html`
             <ul>

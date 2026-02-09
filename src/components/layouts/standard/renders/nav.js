@@ -1,6 +1,6 @@
 import { html, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
-import "/components/common/job-indicator/index.js";
+import "/components/common/job-indicator/index.ts";
 
 export function renderNav(CURPATH) {
   const gutterNavClasses = classMap({

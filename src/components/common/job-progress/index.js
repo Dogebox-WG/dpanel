@@ -6,7 +6,8 @@ import '/components/views/x-log-viewer/index.js';
 class JobProgress extends LitElement {
   static properties = {
     job: { type: Object },
-    expanded: { type: Boolean }
+    expanded: { type: Boolean },
+    initiallyExpanded: { type: Boolean }
   };
   
   static styles = css`
@@ -20,7 +21,6 @@ class JobProgress extends LitElement {
       border: 1px solid #333;
       border-radius: 6px;
       padding: 0.75em 1em;
-      cursor: pointer;
       transition: background 200ms ease;
     }
     
@@ -34,6 +34,10 @@ class JobProgress extends LitElement {
       align-items: center;
       gap: 1em;
       flex-wrap: wrap;
+    }
+
+    .job-row.job-header {
+      cursor: pointer;
     }
     
     .task-label {
@@ -273,6 +277,18 @@ class JobProgress extends LitElement {
   constructor() {
     super();
     this.expanded = false;
+    this.initiallyExpanded = false;
+    this._didAutoExpand = false;
+  }
+
+  updated(changedProperties) {
+    if (changedProperties.has('job')) {
+      this._didAutoExpand = false;
+    }
+    if (this.initiallyExpanded && !this._didAutoExpand) {
+      this.expanded = true;
+      this._didAutoExpand = true;
+    }
   }
   
   toggleExpanded(e) {
@@ -301,8 +317,8 @@ class JobProgress extends LitElement {
     const isIndeterminate = status === 'in_progress' && progress === 0;
     
     return html`
-      <div class="job-card" @click=${this.toggleExpanded}>
-        <div class="job-row">
+      <div class="job-card">
+        <div class="job-row job-header" @click=${this.toggleExpanded}>
           <div class="task-label">
             <sl-icon name="${this.getStatusIcon(status)}" class="job-icon ${status}"></sl-icon>
             <span class="task-name" title="${displayName}">

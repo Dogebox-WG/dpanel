@@ -78,6 +78,7 @@ export function renderNav(CURPATH) {
                   const pupId = pup.state.id;
                   const name = pup.state.manifest?.meta?.name || 'Unknown';
                   const logo = pup.assets?.logos?.mainLogoBase64;
+                  const iconColor = pup.assets?.iconColor || "hsl(220 10% 65%)";
                   const isActive = CURPATH.includes(`/pups/${pupId}`);
                   
                   return html`
@@ -85,7 +86,7 @@ export function renderNav(CURPATH) {
                        class="menu-item pup-shortcut ${isActive ? "active" : ""}">
                       ${logo 
                         ? html`<img class="pup-icon" src="${logo}" />` 
-                        : html`<sl-icon name="box"></sl-icon>`
+                        : html`<sl-icon name="box" style="color: ${iconColor};"></sl-icon>`
                       }
                       <span class="pup-name">${name}</span>
                     </a>

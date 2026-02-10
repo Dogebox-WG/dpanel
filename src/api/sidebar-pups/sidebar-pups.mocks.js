@@ -46,6 +46,12 @@ const NOUNS = [
   "Beacon",
 ];
 
+const LONG_SUFFIXES = [
+  "Integration Dashboard Service",
+  "Companion Interface Extension",
+  "Long Name Overflow Validation",
+];
+
 const defaultMockConfig = {
   pups: [],
 };
@@ -55,13 +61,21 @@ function randomFrom(list) {
 }
 
 export function generateRandomPupName() {
-  return `${randomFrom(ADJECTIVES)} ${randomFrom(NOUNS)}`;
+  const base = `${randomFrom(ADJECTIVES)} ${randomFrom(NOUNS)}`;
+  const makeLong = Math.random() < 0.2;
+  return makeLong ? `${base} ${randomFrom(LONG_SUFFIXES)}` : base;
+}
+
+function generateRandomIconColor() {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue} 80% 60%)`;
 }
 
 function createSidebarPup(name = generateRandomPupName()) {
   return {
     id: `mock-sidebar-pup-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name,
+    iconColor: generateRandomIconColor(),
   };
 }
 
@@ -69,8 +83,11 @@ function normalizePup(pup) {
   if (!pup || typeof pup !== "object") return null;
   const id = typeof pup.id === "string" ? pup.id.trim() : "";
   const name = typeof pup.name === "string" ? pup.name.trim() : "";
+  const iconColor = typeof pup.iconColor === "string" && pup.iconColor.trim()
+    ? pup.iconColor.trim()
+    : generateRandomIconColor();
   if (!id || !name) return null;
-  return { id, name };
+  return { id, name, iconColor };
 }
 
 function normalizeConfig(config) {
@@ -111,6 +128,11 @@ export function addMockPups(count = 1) {
   const nextPups = [...config.pups];
 
   for (let i = 0; i < safeCount; i += 1) {
+    if (i < 2 && safeCount >= 5) {
+      const longName = `${randomFrom(ADJECTIVES)} ${randomFrom(NOUNS)} ${randomFrom(LONG_SUFFIXES)}`;
+      nextPups.push(createSidebarPup(longName));
+      continue;
+    }
     nextPups.push(createSidebarPup());
   }
 

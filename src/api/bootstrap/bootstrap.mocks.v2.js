@@ -37,6 +37,7 @@ function generateBootstrapV2(path, options) {
   const sidebarPupDefinitions = (sidebarPupConfig.pups || []).map((pup) => ({
     id: pup.id,
     name: pup.name,
+    iconColor: pup.iconColor,
     isSidebarMock: true,
   }));
   pupDefinitions.push(...sidebarPupDefinitions);
@@ -51,7 +52,7 @@ function generateBootstrapV2(path, options) {
   const states = generateStatesV2(manifests, pupDefinitions);
   const setupFacts = generateSetupFacts();
   const stats = generateRandomStatsV2(states, manifests);
-  const assets = generateAssetsV2(states);
+  const assets = generateAssetsV2(states, pupDefinitions);
   const sidebarPupIds = sidebarPupDefinitions.map((pup) => pup.id);
 
   return {
@@ -66,13 +67,26 @@ function generateBootstrapV2(path, options) {
   }
 }
 
-function generateAssetsV2(states) {
+function generateRandomIconColor() {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue} 80% 60%)`;
+}
+
+function generateAssetsV2(states, pupDefinitions = []) {
+  const pupById = new Map(
+    (Array.isArray(pupDefinitions) ? pupDefinitions : [])
+      .filter((pup) => pup?.id)
+      .map((pup) => [pup.id, pup]),
+  );
+
   // Generate empty assets for each pup state
   return Object.keys(states).reduce((assets, stateId) => {
+    const pupDefinition = pupById.get(stateId);
     assets[stateId] = {
       logos: {
         mainLogoBase64: null
-      }
+      },
+      iconColor: pupDefinition?.iconColor || generateRandomIconColor(),
     };
     return assets;
   }, {});

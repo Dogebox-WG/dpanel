@@ -99,7 +99,7 @@ export const navStyles = css`
 
     width: 100%;
     height: 100vh;
-    overflow-y: auto;
+    overflow: hidden;
 
     background: #181818;
     box-shadow: 0;
@@ -123,6 +123,15 @@ export const navStyles = css`
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .nav-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   #Side .menu-item {
@@ -183,10 +192,9 @@ export const navStyles = css`
   }
 
   .nav-footer {
-    position: absolute;
-    bottom: 0px;
-    left: 0px;
-    width: var(--sidebar-width);
+    position: static;
+    width: 100%;
+    flex-shrink: 0;
   }
 
   .nav-footer .connection {
@@ -226,7 +234,9 @@ export const navStyles = css`
 
   /* Scrollable container for pinned pups */
   .pinned-pups-container {
-    max-height: calc(100vh - 400px);
+    flex: 1;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
     overflow-x: hidden;
   }

@@ -204,21 +204,10 @@ class SettingsPage extends LitElement {
             <h3>General</h3>
           </div>
           <div class="list-wrap">
-            <action-row
-              prefix="info-circle"
-              label="Version"
-              href="/settings/versions"
-              .trigger=${this.handleMenuClick}
-            >
+            <action-row prefix="info-circle" label="Version" href="/settings/versions" .trigger=${this.handleMenuClick}>
               View version details
             </action-row>
-            <action-row
-              prefix="arrow-repeat"
-              ?dot=${updateAvailable}
-              label="Updates"
-              href="/settings/updates"
-              ?disabled=${this.isSystemUpdateLocked}
-            >
+            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" ?disabled=${this.isSystemUpdateLocked}>
               ${this.updatesRowDescription}
             </action-row>
           </div>
@@ -235,12 +224,7 @@ class SettingsPage extends LitElement {
             <action-row prefix="key" label="Remote Access" href="/settings/remote-access">
               Manage SSH settings and keys
             </action-row>
-            <action-row
-              prefix="usb-drive-fill"
-              name="import-blockchain"
-              label="Import Blockchain"
-              .trigger=${this.handleMenuClick}
-            >
+            <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
             <action-row prefix="keyboard" name="language" label="Language" href="/settings/language">

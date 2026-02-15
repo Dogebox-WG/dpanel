@@ -239,8 +239,6 @@ class SettingsPage extends LitElement {
           </div>
         </section>
 
-
-
         <section>
           <div class="section-title">
             <h3>Power</h3>
@@ -256,7 +254,7 @@ class SettingsPage extends LitElement {
 
         <section>
           <div class="section-title">
-            <h3>Logout</h3>
+            <h3>Security</h3>
           </div>
           <action-row prefix="box-arrow-right" label="Logout" href="/logout">
             Sign out and return to login

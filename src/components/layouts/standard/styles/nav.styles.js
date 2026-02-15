@@ -99,7 +99,7 @@ export const navStyles = css`
 
     width: 100%;
     height: 100vh;
-    overflow-y: auto;
+    overflow: hidden;
 
     background: #181818;
     box-shadow: 0;
@@ -123,6 +123,15 @@ export const navStyles = css`
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .nav-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   #Side .menu-item {
@@ -183,10 +192,9 @@ export const navStyles = css`
   }
 
   .nav-footer {
-    position: absolute;
-    bottom: 0px;
-    left: 0px;
-    width: var(--sidebar-width);
+    position: static;
+    width: 100%;
+    flex-shrink: 0;
   }
 
   .nav-footer .connection {
@@ -215,5 +223,61 @@ export const navStyles = css`
     min-width: 1.2em;
     height: 1.2em;
     font-weight: bold;
+  }
+
+  /* Separator between fixed items and pinned pups */
+  .pinned-pups-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0.5em 1em;
+  }
+
+  /* Scrollable container for pinned pups */
+  .pinned-pups-container {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Pinned pup menu items */
+  .menu-item.pup-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+  }
+
+  .menu-item.pup-shortcut .pup-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .menu-item.pup-shortcut .pup-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Scrollbar styling for pinned pups container */
+  .pinned-pups-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .pinned-pups-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .pinned-pups-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+
+  .pinned-pups-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
   }
 `;

@@ -68,6 +68,9 @@ class Store {
       loading: false,
       error: null,
     };
+    this.sidebarContext = {
+      pinned: [],
+    };
 
     // Hydrate state from localStorage unless flush parameter is present.
     if (!isUnauthedRoute() && !hasFlushParam()) {
@@ -108,6 +111,9 @@ class Store {
         const savedState = JSON.parse(localStorage.getItem("storeState"));
         if (savedState) {
           this.networkContext = savedState.networkContext;
+          if (savedState.sidebarContext) {
+            this.sidebarContext = savedState.sidebarContext;
+          }
         }
       } catch (error) {
         console.warn(
@@ -122,6 +128,7 @@ class Store {
       try {
         const stateToPersist = {
           networkContext: this.networkContext,
+          sidebarContext: this.sidebarContext,
           // Include other slices of state as needed
         };
         localStorage.setItem("storeState", JSON.stringify(stateToPersist));
@@ -199,6 +206,12 @@ class Store {
       this.jobsContext = {
         ...this.jobsContext,
         ...partialState.jobsContext,
+      };
+    }
+    if (partialState.sidebarContext) {
+      this.sidebarContext = {
+        ...this.sidebarContext,
+        ...partialState.sidebarContext,
       };
     }
     // Other slices..

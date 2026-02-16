@@ -4,7 +4,7 @@
   "description": "Dogebox Panel",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && rm -rf dist/vendor && cp -R src/vendor dist/vendor",
     "preview": "vite preview",
     "clean": "rm -rf dist"
   },

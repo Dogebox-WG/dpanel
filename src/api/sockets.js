@@ -24,7 +24,11 @@ export default class WebSocketClient extends ReactiveClass {
   }
 
   connect() {
-    if (this._isConnected) {
+    if (
+      this._isConnected ||
+      this.socket?.readyState === WebSocket.CONNECTING ||
+      this.socket?.readyState === WebSocket.OPEN
+    ) {
       console.log('Connection or mock is already running.');
       return;
     }

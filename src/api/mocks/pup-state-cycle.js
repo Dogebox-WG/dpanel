@@ -70,7 +70,7 @@ export const mockInstallEvent = {
       "id": "b215d6a7bcf215ca00e02f9cb6a41d12",
       "name": "s1w test pup",
       "description": "",
-      "location": "https://github.com/dogeorg/pups.git",
+      "location": "https://github.com/Dogebox-WG/pups.git",
       "type": "git"
     },
     "manifest": {

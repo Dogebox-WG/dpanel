@@ -38,23 +38,21 @@ export default class WebSocketClient extends ReactiveClass {
     } else {
       this.startWebSocketConnection();
     }
+    this._isConnecting = false;
   }
 
   startWebSocketConnection() {
     const urlWithAuth = this.url + `?token=${this.token}`
     this.socket = new WebSocket(urlWithAuth);
     this.socket.onopen = () => {
-      this._isConnecting = false;
       this._isConnected = true;
       this.onOpen();
     };
     this.socket.onmessage = this.onMessage.bind(this);
     this.socket.onerror = (error) => {
-      this._isConnecting = false;
       this.onError(error);
     };
     this.socket.onclose = () => {
-      this._isConnecting = false;
       this._isConnected = false;
       this.onClose();
     };
@@ -66,7 +64,6 @@ export default class WebSocketClient extends ReactiveClass {
       return;
     }
     this.stopMocking = this.mockEventGenerator(this.onMessage.bind(this));
-    this._isConnecting = false;
     this._isConnected = true;
     this.onOpen();  // Simulate open event for mocks
   }
@@ -77,7 +74,6 @@ export default class WebSocketClient extends ReactiveClass {
     }
     if (this.useMocks) {
       this.stopMocking();
-      this._isConnecting = false;
       this._isConnected = false;
       this.onClose();  // Simulate close event for mocks
     }

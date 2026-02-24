@@ -1,7 +1,7 @@
 import { ConnectError, Code, createClient } from "@connectrpc/connect";
-import type { AuthenticateResponse } from "/gen/authenticate/v1/authenticate_pb.ts";
-import { AuthenticateService } from "/gen/authenticate/v1/authenticate_pb.ts";
-import { getTransport } from "/api/transport.ts";
+import type { AuthenticateResponse } from "/gen/authenticate/v1/authenticate_pb.js";
+import { AuthenticateService } from "/gen/authenticate/v1/authenticate_pb.js";
+import { getTransport } from "/api/transport.js";
 import { store } from "/state/store.js";
 
 type LoginRequest = {

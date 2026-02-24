@@ -31,7 +31,7 @@
           name = "dpanel";
           src = ./.;
 
-          npmDepsHash = "sha256-HXf64hDIOSiHIDFX1jT7bCMUNqcN12KzQQ9ccY5ostA=";
+          npmDepsHash = "sha256-YP43a4VnimwKibfXwAoQBSu9CtEaCujlcGhxuyM/wLs=";
 
           buildPhase = ''
             npm run build

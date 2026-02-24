@@ -10,5 +10,4 @@ dev/package-lock.json
 
 # Build artifacts
 dist/
-src/gen/
 result

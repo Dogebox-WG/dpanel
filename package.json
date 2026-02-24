@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "Dogebox Panel",
   "scripts": {
-    "predev": "npm run generate",
     "dev": "vite",
-    "prebuild": "npm run generate",
     "build": "vite build && rm -rf dist/vendor && cp -R src/vendor dist/vendor",
     "preview": "vite preview",
     "clean": "rm -rf dist",

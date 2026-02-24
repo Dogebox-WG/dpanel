@@ -9,12 +9,20 @@ import { StoreSubscriber } from "/state/subscribe.js";
 import { store } from "/state/store.js";
 import { mocks } from "/api/mocks.js";
 import { getMockConfig, saveMockConfig, resetMockConfig } from "/api/pup-updates/pup-updates.mocks.js";
+import {
+  getMockConfig as getSidebarPupsMockConfig,
+  addMockPups,
+  removeMockPup,
+  renameMockPup,
+  clearMockPups,
+} from "/api/sidebar-pups/sidebar-pups.mocks.js";
 import { compareVersions } from "/utils/version.js";
 
 class DebugSettingsDialog extends LitElement {
   static properties = {
     isOpen: { type: Boolean },
     _pupUpdateConfig: { type: Object },
+    _sidebarPupsConfig: { type: Object },
     _newVersionInput: { type: String },
   };
 
@@ -33,6 +41,7 @@ class DebugSettingsDialog extends LitElement {
 
     this.mockOptions = mocks;
     this._pupUpdateConfig = getMockConfig();
+    this._sidebarPupsConfig = getSidebarPupsMockConfig();
     this._newVersionInput = '';
   }
 
@@ -158,6 +167,22 @@ class DebugSettingsDialog extends LitElement {
     this._pupUpdateConfig = getMockConfig();
   }
 
+  handleAddSidebarPups(count) {
+    this._sidebarPupsConfig = addMockPups(count);
+  }
+
+  handleRenameSidebarPup(id, name) {
+    this._sidebarPupsConfig = renameMockPup(id, name);
+  }
+
+  handleRemoveSidebarPup(id) {
+    this._sidebarPupsConfig = removeMockPup(id);
+  }
+
+  handleClearSidebarPups() {
+    this._sidebarPupsConfig = clearMockPups();
+  }
+
   render() {
     const { networkContext, appContext } = this.context.store;
     return html`
@@ -190,6 +215,43 @@ class DebugSettingsDialog extends LitElement {
                     `)}
                   </div>
                 `)}
+
+                <div class="mock-group-wrap">
+                  <h4>Sidebar Pups</h4>
+                  <div style="padding: 0.5em 0;">
+                    <div style="display: flex; gap: 0.5em; margin-bottom: 0.75em;">
+                      <sl-button size="small" ?disabled=${!networkContext.useMocks} @click=${() => this.handleAddSidebarPups(1)}>+1</sl-button>
+                      <sl-button size="small" ?disabled=${!networkContext.useMocks} @click=${() => this.handleAddSidebarPups(5)}>+5</sl-button>
+                      <sl-button variant="danger" size="small" ?disabled=${!networkContext.useMocks || !(this._sidebarPupsConfig.pups || []).length} @click=${() => this.handleClearSidebarPups()}>Remove All</sl-button>
+                    </div>
+
+                    <div style="margin-bottom: 0.5em;">
+                      <strong style="font-size: 0.8rem; color: #888;">Sidebar Mock Pup List (${(this._sidebarPupsConfig.pups || []).length})</strong>
+                    </div>
+
+                    <div style="max-height: 180px; overflow-y: auto; background: #1a1a1a; padding: 0.5em; border-radius: 4px;">
+                      ${(this._sidebarPupsConfig.pups || []).length
+                        ? this._sidebarPupsConfig.pups.map((pup) => html`
+                            <div style="display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.4em;">
+                              <sl-input
+                                size="small"
+                                style="flex: 1;"
+                                value=${pup.name}
+                                ?disabled=${!networkContext.useMocks}
+                                @sl-change=${(e) => this.handleRenameSidebarPup(pup.id, e.target.value)}
+                              ></sl-input>
+                              <sl-icon-button
+                                name="x-lg"
+                                label="Delete Pup"
+                                ?disabled=${!networkContext.useMocks}
+                                @click=${() => this.handleRemoveSidebarPup(pup.id)}
+                              ></sl-icon-button>
+                            </div>
+                          `)
+                        : html`<em style="color: #555; font-size: 0.8rem;">No sidebar pups configured</em>`}
+                    </div>
+                  </div>
+                </div>
                 
                 <!-- Pup Updates Mock Config -->
                 <div class="mock-group-wrap">

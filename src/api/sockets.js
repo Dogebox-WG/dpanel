@@ -16,6 +16,7 @@ export default class WebSocketClient extends ReactiveClass {
     this.stopMocking = () => console.log('Stop function not provided.');
     this.socket = null;
     this._isConnected = false;
+    this._isConnecting = false;
   }
 
   requestUpdate() {
@@ -24,15 +25,20 @@ export default class WebSocketClient extends ReactiveClass {
   }
 
   connect() {
-    if (this._isConnected) {
+    if (
+      this._isConnected ||
+      this._isConnecting
+    ) {
       console.log('Connection or mock is already running.');
       return;
     }
+    this._isConnecting = true;
     if (this.useMocks && this.mockEventGenerator) {
       this.startMocking();
     } else {
       this.startWebSocketConnection();
     }
+    this._isConnecting = false;
   }
 
   startWebSocketConnection() {
@@ -43,7 +49,9 @@ export default class WebSocketClient extends ReactiveClass {
       this.onOpen();
     };
     this.socket.onmessage = this.onMessage.bind(this);
-    this.socket.onerror = this.onError.bind(this);
+    this.socket.onerror = (error) => {
+      this.onError(error);
+    };
     this.socket.onclose = () => {
       this._isConnected = false;
       this.onClose();

@@ -201,7 +201,7 @@ class SettingsPage extends LitElement {
       <div class="padded">
         <section>
           <div class="section-title">
-            <h3>Menu</h3>
+            <h3>General</h3>
           </div>
           <div class="list-wrap">
             <action-row prefix="info-circle" label="Version" href="/settings/versions" .trigger=${this.handleMenuClick}>
@@ -210,6 +210,14 @@ class SettingsPage extends LitElement {
             <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" ?disabled=${this.isSystemUpdateLocked}>
               ${this.updatesRowDescription}
             </action-row>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h3>Configure</h3>
+          </div>
+          <div class="list-wrap">
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>
               Add or remove Wifi networks
             </action-row>
@@ -219,19 +227,17 @@ class SettingsPage extends LitElement {
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
-	          <action-row prefix="keyboard" name="language" label="Language" href="/settings/language">
-	            Hello? こんいちは？ Guten tag? Olá?
-	          </action-row>
-	          <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
-	            Where are we?  What time is it?
-	          </action-row>
+            <action-row prefix="keyboard" name="language" label="Language" href="/settings/language">
+              Hello? こんいちは？ Guten tag? Olá?
+            </action-row>
+            <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
+              Where are we?  What time is it?
+            </action-row>
             <action-row prefix="code-slash" label="Customise OS" href="/settings/customise-os">
               Add custom NixOS configuration (Tailscale, VPN, etc)
             </action-row>
           </div>
         </section>
-
-
 
         <section>
           <div class="section-title">
@@ -243,6 +249,15 @@ class SettingsPage extends LitElement {
 
           <action-row prefix="arrow-counterclockwise" label="Restart" @click=${promptReboot}>
             Gracefully restart your Dogebox
+          </action-row>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h3>Security</h3>
+          </div>
+          <action-row prefix="box-arrow-right" label="Logout" href="/logout">
+            Sign out and return to login
           </action-row>
         </section>
 

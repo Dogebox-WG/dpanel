@@ -1,6 +1,9 @@
-export function generateStatesV2(manifests) {
+export function generateStatesV2(manifests, pupDefinitions = []) {
   return manifests.reduce((out, manifest, i) => {
-    const id = `mock-pup-id-${i+1}`;
+    const pupDefinition = Array.isArray(pupDefinitions) ? pupDefinitions[i] : undefined;
+    const id = pupDefinition?.id || `mock-pup-id-${i+1}`;
+    const hasMockSidebarUI = Boolean(pupDefinition?.isSidebarMock);
+
     out[id] = {
       config: generateConfigValues(manifest.config),
       enabled: true,
@@ -9,6 +12,7 @@ export function generateStatesV2(manifests) {
       installation: "ready",
       ip: generateRandomIp(),
       manifest: manifest,
+      webUIs: hasMockSidebarUI ? [{ name: "Dashboard", port: 12000 + i }] : [],
       needsConf: false,
       needsDeps: false,
       source: {

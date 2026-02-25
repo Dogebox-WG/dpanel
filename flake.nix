@@ -5,7 +5,7 @@
     playwright.url  = "github:pietdevries94/playwright-web-flake";
 
     dogeboxd-src = {
-      url = "github:Dogebox-WG/dogeboxd";
+      url = "github:Dogebox-WG/dogeboxd/feat/proto";
       flake = false;
     };
 
@@ -47,17 +47,20 @@
 
           preBuild = ''
             export PATH="$PWD/node_modules/.bin:$PATH"
-            protoc \
-              --es_out=src/gen \
-              --es_opt=target=ts \
-              -I ${dogeboxd-src}/protocol \
-              -I ${protovalidate-src}/proto/protovalidate \
-              authenticate/v1/authenticate.proto \
-              buf/validate/validate.proto
+            mkdir -p src/gen
+            find ${dogeboxd-src}/protocol ${protovalidate-src}/proto/protovalidate \
+              -name '*.proto' -print0 \
+              | xargs -0 protoc \
+                --es_out=src/gen \
+                --es_opt=target=ts \
+                -I ${dogeboxd-src}/protocol \
+                -I ${protovalidate-src}/proto/protovalidate
           '';
 
           buildPhase = ''
+            runHook preBuild
             npm run build
+            runHook postBuild
           '';
 
           installPhase = ''

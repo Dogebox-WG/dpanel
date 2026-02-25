@@ -3,15 +3,16 @@
     "dogeboxd-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1771810395,
-        "narHash": "sha256-UJ/EZjsLzOxtwXUUp2hpDEXeM/wLDSCnxC1YgXL4yZ8=",
+        "lastModified": 1771907648,
+        "narHash": "sha256-o9r8Tg+nbOJHfV39VjKCpE0HE4uIKPqzGtnufXxK19o=",
         "owner": "Dogebox-WG",
         "repo": "dogeboxd",
-        "rev": "94c27147f39a54f07109bb09b33bfa2535b60490",
+        "rev": "6332fb6f29ea580584eef382b02a51630db3d382",
         "type": "github"
       },
       "original": {
         "owner": "Dogebox-WG",
+        "ref": "feat/proto",
         "repo": "dogeboxd",
         "type": "github"
       }

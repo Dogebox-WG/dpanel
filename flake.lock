@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "dogeboxd-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771810395,
+        "narHash": "sha256-UJ/EZjsLzOxtwXUUp2hpDEXeM/wLDSCnxC1YgXL4yZ8=",
+        "owner": "Dogebox-WG",
+        "repo": "dogeboxd",
+        "rev": "94c27147f39a54f07109bb09b33bfa2535b60490",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Dogebox-WG",
+        "repo": "dogeboxd",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -83,11 +99,29 @@
         "type": "github"
       }
     },
+    "protovalidate-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771426165,
+        "narHash": "sha256-YGqdbmIFcaIi5WX7j4ifnK6po3YJ6Wy0dAY14Eq5GOU=",
+        "owner": "bufbuild",
+        "repo": "protovalidate",
+        "rev": "cb78a6b7343910d526c355b792eaebeb4ce9bd48",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bufbuild",
+        "repo": "protovalidate",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
+        "dogeboxd-src": "dogeboxd-src",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "playwright": "playwright"
+        "playwright": "playwright",
+        "protovalidate-src": "protovalidate-src"
       }
     },
     "systems": {

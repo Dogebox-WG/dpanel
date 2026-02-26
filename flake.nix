@@ -43,7 +43,7 @@
 
           meta = with pkgs.lib; {
             description = "Dogebox control panel web interface";
-            homepage = "https://github.com/dogeorg/dpanel";
+            homepage = "https://github.com/Dogebox-WG/dpanel";
             license = licenses.mit;
           };
         };

@@ -22,8 +22,18 @@ Prerequisites
 
 - Expects to be running in a linux/unix environment (or WSL on Windows)
 - Latest `npm` & `node`
+- `dogeboxd` cloned alongside this repo (for protobuf definitions)
 
-Install dev dependencies and add 3x hostname entries.
+All commands below run from the repo root.
+
+Install dependencies and generate protobuf TypeScript bindings (requires `dogeboxd` at `../dogeboxd`):
+
+```
+npm install
+npm run generate
+```
+
+Install dev dependencies and add 3x hostname entries:
 
 ```
 cd dev

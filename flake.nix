@@ -3,9 +3,19 @@
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
     playwright.url  = "github:pietdevries94/playwright-web-flake";
-  };
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, playwright, ... }:
+    dogeboxd-src = {
+      url = "github:Dogebox-WG/dogeboxd/feat/proto";
+      flake = false;
+    };
+
+    protovalidate-src = {
+      url = "github:bufbuild/protovalidate";
+      flake = false;
+    };
+  };
+  
+  outputs = inputs@{ self, nixpkgs, flake-utils, playwright, dogeboxd-src, protovalidate-src, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlay = final: prev: {
@@ -31,10 +41,26 @@
           name = "dpanel";
           src = ./.;
 
-          npmDepsHash = "sha256-HXf64hDIOSiHIDFX1jT7bCMUNqcN12KzQQ9ccY5ostA=";
+          npmDepsHash = "sha256-YP43a4VnimwKibfXwAoQBSu9CtEaCujlcGhxuyM/wLs=";
+
+          nativeBuildInputs = [ pkgs.protobuf ];
+
+          preBuild = ''
+            export PATH="$PWD/node_modules/.bin:$PATH"
+            mkdir -p src/gen
+            find ${dogeboxd-src}/protocol ${protovalidate-src}/proto/protovalidate \
+              -name '*.proto' -print0 \
+              | xargs -0 protoc \
+                --es_out=src/gen \
+                --es_opt=target=ts \
+                -I ${dogeboxd-src}/protocol \
+                -I ${protovalidate-src}/proto/protovalidate
+          '';
 
           buildPhase = ''
+            runHook preBuild
             npm run build
+            runHook postBuild
           '';
 
           installPhase = ''
@@ -46,6 +72,18 @@
             homepage = "https://github.com/dogeorg/dpanel";
             license = licenses.mit;
           };
+        };
+
+        packages.build-with-dev-overrides = pkgs.writeShellApplication {
+          name = "build-with-dev-overrides";
+          runtimeInputs = [ pkgs.git ];
+          text = ''
+            nix build .#packages.${system}.default \
+              -L \
+              --print-out-paths \
+              --override-input dogeboxd-src "path:$(realpath ../dogeboxd)?rev=$(git -C ../dogeboxd log -1 --pretty=format:%H)" \
+              --no-write-lock-file
+          '';
         };
 
         dbxSessionName = "dpanel";

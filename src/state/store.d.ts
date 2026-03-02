@@ -18,6 +18,7 @@ export interface NetworkContext {
   wsApiBaseUrl: string;
   overrideBaseUrl: boolean;
   overrideSocketBaseUrl: boolean;
+  includePreReleaseSystemUpdates: boolean;
   useMocks: boolean;
   forceFailures: boolean;
   forceDelayInSeconds: number;

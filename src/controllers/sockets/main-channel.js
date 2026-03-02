@@ -7,6 +7,27 @@ import { asyncTimeout } from "/utils/timeout.js";
 import { performMockCycle, c1, c4, c5, mockInstallEvent } from "/api/mocks/pup-state-cycle.js";
 import { isUnauthedRoute } from "/utils/url-utils.js";
 
+/**
+ * @typedef {import("/gen/dogebox/v1/bootstrap_pb").BootstrapResponse} ProtoBootstrapResponse
+ * @typedef {import("/gen/dogebox/v1/types_pb").PupState} ProtoPupState
+ * @typedef {import("/gen/dogebox/v1/types_pb").PupStats} ProtoPupStats
+ * @typedef {import("/gen/dogebox/v1/types_pb").ActionProgress} ProtoActionProgress
+ * @typedef {import("/gen/dogebox/v1/types_pb").JobRecord} ProtoJobRecord
+ */
+
+/**
+ * Runtime JSON shape currently sent over websocket.
+ * Keep this aligned with dogeboxd Change payloads while we migrate to shared DTO transport.
+ *
+ * @typedef {Object} MainChannelMessage
+ * @property {string} [id]
+ * @property {number} [seq]
+ * @property {number} [ts]
+ * @property {string} [error]
+ * @property {string} type
+ * @property {ProtoBootstrapResponse|ProtoPupState|ProtoPupStats[]|ProtoActionProgress|ProtoJobRecord|Object} [update]
+ */
+
 async function mockedMainChannelRunner(onMessageCallback) {
   if (store.networkContext.demoSystemPrompt) {
     setTimeout(() => {
@@ -79,7 +100,9 @@ class SocketChannel {
 
       let err, data;
       try {
-        data = JSON.parse(event.data);
+        /** @type {MainChannelMessage} */
+        const parsed = JSON.parse(event.data);
+        data = parsed;
       } catch (err) {
         console.warn("failed to JSON.parse incoming event", event, err);
         err = true;

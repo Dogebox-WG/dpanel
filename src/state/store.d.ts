@@ -1,3 +1,50 @@
+import type { BootstrapResponse as ProtoBootstrapResponse } from "/gen/dogebox/v1/bootstrap_pb";
+import type {
+  JobRecord as ProtoJobRecord,
+  PupAsset as ProtoPupAsset,
+  PupManifest as ProtoPupManifest,
+  PupState as ProtoPupState,
+  PupStats as ProtoPupStats,
+} from "/gen/dogebox/v1/types_pb";
+
+export type PupInstallationState =
+  | "installing"
+  | "upgrading"
+  | "ready"
+  | "unready"
+  | "uninstalling"
+  | "uninstalled"
+  | "purging"
+  | "broken";
+
+export type PupRuntimeStatus = "stopped" | "starting" | "running" | "stopping";
+
+export type JobStatus = "queued" | "in_progress" | "completed" | "failed" | "cancelled";
+
+export type PupState = Omit<ProtoPupState, "installation"> & {
+  installation: PupInstallationState;
+};
+
+export type PupStats = Omit<ProtoPupStats, "status"> & {
+  status: PupRuntimeStatus;
+};
+
+export type PupAsset = ProtoPupAsset;
+export type PupManifest = ProtoPupManifest;
+
+export type Job = Omit<ProtoJobRecord, "status" | "started" | "finished"> & {
+  status: JobStatus;
+  started: string;
+  finished?: string | null;
+};
+
+export type BootstrapResponse = Omit<ProtoBootstrapResponse, "ts" | "states" | "stats" | "assets"> & {
+  ts: number;
+  states: Record<string, PupState>;
+  stats: Record<string, PupStats>;
+  assets: Record<string, PupAsset>;
+};
+
 export interface AppContext {
   orientation: string;
   menuVisible: boolean;
@@ -33,12 +80,12 @@ export interface NetworkContext {
 }
 
 export interface PupContext {
-  computed: any;
-  def: any;
-  state: any;
-  stats: any;
+  computed: Record<string, unknown> | null;
+  def: PupManifest | Record<string, unknown> | null;
+  state: PupState | null;
+  stats: PupStats | null;
   ready: boolean;
-  result: any;
+  result: Record<string, unknown> | null;
 }
 
 export interface PromptContext {
@@ -55,11 +102,6 @@ export interface SetupContext {
   view: string | null;
   useFoundationPupBinaryCache: boolean;
   useFoundationOSBinaryCache: boolean;
-}
-
-export interface Job {
-  status: string;
-  [key: string]: any;
 }
 
 export interface JobsContext {

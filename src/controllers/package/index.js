@@ -2,6 +2,13 @@ import { postConfig } from "/api/config/config.js";
 import { pickAndPerformPupAction } from "/api/action/action.js";
 import { store } from "/state/store.js";
 
+/**
+ * @typedef {import("/state/store.js").BootstrapResponse} BootstrapResponse
+ * @typedef {import("/state/store.js").PupState} PupState
+ * @typedef {import("/state/store.js").PupStats} PupStats
+ * @typedef {import("/state/store.js").PupAsset} PupAsset
+ */
+
 class PkgController {
   observers = [];
   actions = [];
@@ -51,6 +58,10 @@ class PkgController {
     }
   }
 
+  /**
+   * @param {BootstrapResponse} bootstrapResponseV2
+   * @param {{ts?: number}} [meta]
+   */
   setData(bootstrapResponseV2, meta = {}) {
     const { states, stats, assets, sidebarPreferences } = bootstrapResponseV2;
     this.handleBootstrapResponse(states, stats, assets, { ...meta, ts: bootstrapResponseV2?.ts });
@@ -72,6 +83,12 @@ class PkgController {
     this.notify();
   }
 
+  /**
+   * @param {Record<string, PupState>} states
+   * @param {Record<string, PupStats>} stats
+   * @param {Record<string, PupAsset>} assets
+   * @param {{ts?: number}} [meta]
+   */
   handleBootstrapResponse(states, stats, assets, meta = {}) {
     const incomingStates = states || {};
     const incomingStats = stats || {};

@@ -2,6 +2,17 @@ import { store } from '/state/store.js';
 import { createMockJobWebSocket } from '/api/jobs/jobs.mocks.js';
 
 /**
+ * @typedef {import("/gen/dogebox/v1/bootstrap_pb").JobsBootstrap} ProtoJobsBootstrap
+ * @typedef {import("/gen/dogebox/v1/types_pb").JobRecord} ProtoJobRecord
+ */
+
+/**
+ * @typedef {Object} JobChannelMessage
+ * @property {string} type
+ * @property {ProtoJobsBootstrap|ProtoJobRecord|Object} [update]
+ */
+
+/**
  * Job WebSocket Channel
  * Handles real-time job updates via WebSocket
  * Supports both mock and real backend modes
@@ -46,6 +57,7 @@ class JobWebSocketService {
     });
 
     this.ws.on('message', (event) => {
+      /** @type {JobChannelMessage} */
       const message = JSON.parse(event.data);
       this.handleMessage(message);
     });
@@ -65,6 +77,7 @@ class JobWebSocketService {
 
     this.ws.onmessage = (event) => {
       try {
+        /** @type {JobChannelMessage} */
         const message = JSON.parse(event.data);
         this.handleMessage(message);
       } catch (err) {

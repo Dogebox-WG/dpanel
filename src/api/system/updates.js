@@ -6,7 +6,8 @@ import { getResponse, postResponse } from "./updates.mocks.js";
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
 export async function checkForUpdates() {
-  const res = await client.get(`/system/updates`, {
+  const preRelease = store.networkContext?.includePreReleaseSystemUpdates;
+  const res = await client.get(`/system/updates${preRelease ? "?includePreReleases=true" : ""}`, {
     noLogoutRedirect: true,
     mock: getResponse,
   });

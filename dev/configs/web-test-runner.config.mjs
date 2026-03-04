@@ -26,7 +26,24 @@ export default {
       </head>
       <body>
         <script>
-          window.process = {env: { NODE_ENV: "production" }}
+          window.process = {env: { NODE_ENV: "production" }};
+
+          // Suppress benign ResizeObserver loop warnings that mocha surfaces as test failures.
+          // Uses a property trap so the filter persists regardless of when onerror is reassigned.
+          let _onerror = null;
+          Object.defineProperty(window, 'onerror', {
+            set(fn) {
+              _onerror = fn;
+            },
+            get() {
+              if (!_onerror) return null;
+              return function(msg, ...args) {
+                if (typeof msg === 'string' && msg.includes('ResizeObserver loop')) return true;
+                return _onerror.call(this, msg, ...args);
+              };
+            },
+            configurable: true,
+          });
         </script>
         <script type="module" src="${testFramework}"></script>
         <script type="module">

@@ -6,7 +6,7 @@ import {
   waitUntil,
 } from "../../../../dev/node_modules/@open-wc/testing";
 import { sendKeys } from "../../../../dev/node_modules/@web/test-runner-commands";
-import { spy } from "../../../../dev/node_modules/sinon";
+import { stub } from "../../../../dev/node_modules/sinon";
 
 // Component being tested.
 import "./index.js";
@@ -36,8 +36,8 @@ describe("LoginView", () => {
     // Initialise the component
     const el = await fixture(html`<x-action-login></x-action-login>`);
 
-    // Override components _attemptLogin function
-    const _attemptLoginSpy = spy(el, "_attemptLogin");
+    // Stub network path from _attemptLogin to keep test deterministic.
+    const _attemptLoginStub = stub(el, "_attemptLogin").resolves();
     await el.requestUpdate();
 
     // Elements
@@ -53,7 +53,9 @@ describe("LoginView", () => {
     // Submit data
     await sendKeys({ press: "Enter" });
 
-    expect(_attemptLoginSpy.calledOnce).to.be.true;
-    expect(_attemptLoginSpy.calledWith({ password: "pa$$w0rD" })).to.be.true;
+    expect(_attemptLoginStub.calledOnce).to.be.true;
+    expect(_attemptLoginStub.calledWith({ password: "pa$$w0rD" })).to.be.true;
+
+    _attemptLoginStub.restore();
   });
 });

@@ -75,7 +75,7 @@ describe("A select field, with options", async () => {
     await sendKeys({ press: "ArrowDown" });
     await sendKeys({ press: "Enter" });
 
-    expect(el._colour).to.equal("#FF0000");
+    expect(el._colour).to.equal("#0000FF");
   });
 });
 

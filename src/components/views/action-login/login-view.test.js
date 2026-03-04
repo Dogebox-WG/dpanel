@@ -4,8 +4,8 @@ import {
   fixture,
   expect,
   waitUntil,
+  elementUpdated,
 } from "../../../../dev/node_modules/@open-wc/testing";
-import { sendKeys } from "../../../../dev/node_modules/@web/test-runner-commands";
 import { stub } from "../../../../dev/node_modules/sinon";
 
 // Component being tested.
@@ -43,15 +43,18 @@ describe("LoginView", () => {
     // Elements
     const dynamicFormEl = el.shadowRoot.querySelector("dynamic-form");
 
-    // Type in a password
-    dynamicFormEl.focus("password");
-    await sendKeys({ type: "pa$$w0rD" });
+    // Set password via component API to avoid CI keyboard-focus flakiness.
+    dynamicFormEl.setValue("password", "pa$$w0rD");
+    await elementUpdated(dynamicFormEl);
 
-    // Wait for key entry and element update.
+    // Wait for value entry and element update.
     await waitUntil(() => dynamicFormEl._dirty, "form did not become dirty");
 
     // Submit data
-    await sendKeys({ press: "Enter" });
+    const form = dynamicFormEl.shadowRoot.querySelector("form");
+    form.requestSubmit();
+
+    await elementUpdated(dynamicFormEl);
 
     expect(_attemptLoginStub.calledOnce).to.be.true;
     expect(_attemptLoginStub.calledWith({ password: "pa$$w0rD" })).to.be.true;

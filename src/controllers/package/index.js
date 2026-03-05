@@ -557,38 +557,35 @@ class PkgController {
   }
 
   getRecentJobForPup(pupId) {
-    // Get the most recent job (active or recently completed) for this pup
-    // This keeps the detailed log viewer open even after operations complete
+    // Get the most recent job for this pup.
     const jobs = store?.jobsContext?.jobs || [];
     const relevantJobs = jobs.filter(j => j.pupID === pupId);
     
     if (relevantJobs.length === 0) return null;
     
-    // Sort by finished time (for completed) or started time (for active), most recent first
+    // Sort by finished time (for terminal jobs) or started time (for active jobs), most recent first.
     const sorted = relevantJobs.sort((a, b) => {
       const timeA = new Date(a.finished || a.started).getTime();
       const timeB = new Date(b.finished || b.started).getTime();
       return timeB - timeA;
     });
     
+
+    //Only show logs for jobs that are queued or in progress.
     const mostRecent = sorted[0];
-    
-    // Return the most recent job if:
-    // 1. It's still active (not completed/failed/cancelled)
-    // 2. OR it completed recently (within 10 minutes)
-    if (mostRecent.status === 'queued' || mostRecent.status === 'in_progress') {
+    const isActive = mostRecent.status === 'queued' || mostRecent.status === 'in_progress';
+    if (isActive) {
       return mostRecent;
     }
-    
-    // For completed/failed jobs, keep showing for 10 minutes
+
+    // Keep terminal jobs visible briefly so users can see final log lines.
     const now = Date.now();
-    const recentJobCutoff = now - (10 * 60 * 1000);
+    const recentJobCutoff = now - (5 * 1000);
     const jobTime = new Date(mostRecent.finished || mostRecent.started).getTime();
-    
     if (jobTime > recentJobCutoff) {
       return mostRecent;
     }
-    
+
     return null;
   }
 

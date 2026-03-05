@@ -13,6 +13,8 @@ class LogViewer extends LitElement {
       pupId: { type: String },
       jobId: { type: String },
       closing: { type: Boolean, reflect: true },
+      animateOpen: { type: Boolean },
+      opening: { type: Boolean, reflect: true },
     };
   }
 
@@ -26,6 +28,8 @@ class LogViewer extends LitElement {
     this.autostart = true;
     this.follow = true; // Default to true, user can disable temporarily
     this.closing = false;
+    this.animateOpen = false;
+    this.opening = false;
   }
 
   connectedCallback() {
@@ -33,9 +37,22 @@ class LogViewer extends LitElement {
     this.setupSocketConnection();
     this._boundTransitionEnd = this._onTransitionEnd.bind(this);
     this.addEventListener('transitionend', this._boundTransitionEnd);
+    if (this.animateOpen && (this.jobId || this.pupId)) {
+      this.opening = true;
+      this._openRaf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.opening = false;
+          this._openRaf = null;
+        });
+      });
+    }
   }
 
   disconnectedCallback() {
+    if (this._openRaf) {
+      cancelAnimationFrame(this._openRaf);
+      this._openRaf = null;
+    }
     this.removeEventListener('transitionend', this._boundTransitionEnd);
     super.disconnectedCallback();
     if (this.wsClient) {
@@ -285,6 +302,10 @@ class LogViewer extends LitElement {
       }
 
       :host([closing]) {
+        max-height: 0;
+      }
+
+      :host([opening]) {
         max-height: 0;
       }
       div#LogHUD {

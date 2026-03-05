@@ -129,6 +129,7 @@ class PupPage extends LitElement {
       <x-log-viewer
         .jobId=${recentJob?.id || this._renderedJobId}
         ?closing=${!recentJob}
+        ?animateOpen=${!!recentJob}
         autostart
         @log-viewer-closed=${this.handleLogViewerClosed}
       ></x-log-viewer>

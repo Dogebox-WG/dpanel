@@ -29,6 +29,7 @@ class PupInstallPage extends LitElement {
       autoInstallDependencies: { type: Boolean },
       installWithDevModeEnabled: { type: Boolean },
       selectedInstallVersion: { type: String },
+      _renderedJobId: { type: String },
     };
   }
 
@@ -37,6 +38,7 @@ class PupInstallPage extends LitElement {
     bindToClass(renderMethods, this);
     this.pupId = null;
     this.pkgController = pkgController;
+    this._renderedJobId = null;
     this.context = new StoreSubscriber(this, store);
     this.open_dialog = "";
     this.open_dialog_label = "";
@@ -89,17 +91,27 @@ class PupInstallPage extends LitElement {
     this.open_dialog_label = el.getAttribute("label");
   };
 
+  handleLogViewerClosed = () => {
+    this._renderedJobId = null;
+  };
+
   renderLogViewer() {
     const pupId = this.pupId || this.getPup()?.state?.id;
     if (!pupId) return nothing;
 
     const recentJob = this.pkgController.getRecentJobForPup(pupId);
-    if (!recentJob) return nothing;
+    if (recentJob) {
+      this._renderedJobId = recentJob.id;
+    }
+    if (!recentJob && !this._renderedJobId) return nothing;
 
     return html`
       <x-log-viewer
-        .jobId=${recentJob.id}
+        .jobId=${recentJob?.id || this._renderedJobId}
+        ?closing=${!recentJob}
+        ?animateOpen=${!!recentJob}
         autostart
+        @log-viewer-closed=${this.handleLogViewerClosed}
       ></x-log-viewer>
     `;
   }

@@ -17,7 +17,7 @@ import { asyncTimeout } from "/utils/timeout.js";
 import "/components/common/action-row/action-row.js";
 import "/components/common/reveal-row/reveal-row.js";
 import "/components/common/page-container.js";
-import "/components/views/x-activity-log.js";
+import "/components/views/x-log-viewer/index.js";
 
 class PupInstallPage extends LitElement {
   static get properties() {
@@ -26,7 +26,6 @@ class PupInstallPage extends LitElement {
       open_dialog_label: { type: String },
       busy: { type: Boolean },
       inflight: { type: Boolean },
-      activityLogs: { type: Array },
       autoInstallDependencies: { type: Boolean },
       installWithDevModeEnabled: { type: Boolean },
       selectedInstallVersion: { type: String },
@@ -45,7 +44,6 @@ class PupInstallPage extends LitElement {
     this.open_page_label = "";
     this.busy = false;
     this.inflight = false;
-    this.activityLogs = [];
     this.autoInstallDependencies = true;
     this.installWithDevModeEnabled = false;
     this.selectedInstallVersion = null; // null means use latest
@@ -77,18 +75,6 @@ class PupInstallPage extends LitElement {
     super.updated(changedProperties);
   }
 
-  requestUpdate(options = {}) {
-    if (this.pkgController && options.type === 'activity') {
-      if (!this.pupId) {
-        this.pupId = this.getPup()?.state?.id;
-      }
-      if (this.pupId) {
-        this.updateActivityLogs();
-      }
-    }
-    super.requestUpdate();
-  }
-
   handleDialogClose() {
     this.clearDialog();
   }
@@ -103,13 +89,23 @@ class PupInstallPage extends LitElement {
     this.open_dialog_label = el.getAttribute("label");
   };
 
-  updateActivityLogs() {
-    this.activityLogs = [...this.pkgController.activityIndex[this.pupId]];
+  renderLogViewer() {
+    const pupId = this.pupId || this.getPup()?.state?.id;
+    if (!pupId) return nothing;
+
+    const recentJob = this.pkgController.getRecentJobForPup(pupId);
+    if (!recentJob) return nothing;
+
+    return html`
+      <x-log-viewer
+        .jobId=${recentJob.id}
+        autostart
+      ></x-log-viewer>
+    `;
   }
 
   render() {
     const pupContext = this.context.store?.pupContext
-    const activityLogs = this.pupId ? pkgController.activityIndex[this.pupId] : []
 
     if (!pupContext.ready) {
       return html`
@@ -158,7 +154,6 @@ class PupInstallPage extends LitElement {
     }
 
     const long = pkg?.def?.versions[pkg?.def?.latestVersion]?.meta?.longDescription || ''
-    const hasLogs = this.activityLogs.length
     const hasDependencies = pkg?.def?.versions[pkg?.def?.latestVersion]?.dependencies?.length > 0;
     const isDevModeAvailable = pkg?.def?.devModeAvailable;
     const notInstalledOrBroken = !isInstalled && installationId !== "broken";
@@ -172,7 +167,7 @@ class PupInstallPage extends LitElement {
       <div id="PageWrapper" class="${wrapperClasses}" ?data-freeze=${popover_page}>
         <section class="status">
           ${this.renderStatus()}
-          <x-activity-log .logs=${this.activityLogs} name=${pkg.def.key} style="--margin-top:${hasLogs ? '20px' : 0}"></x-activity-log>
+          ${this.renderLogViewer()}
           ${this.renderActions()}
         </section>
 

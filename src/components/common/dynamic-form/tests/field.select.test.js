@@ -13,6 +13,7 @@ import { repeatKeys } from "../../../../../dev/utils/keyboard.js";
 // Component being tested.
 import "../dynamic-form.js";
 
+// NOTE: Ran locally but had issues on GitHub Actions, so this suite is skipped for now.
 describe.skip("A select field, with options", async () => {
   const fields = {
     sections: [
@@ -79,6 +80,7 @@ describe.skip("A select field, with options", async () => {
   });
 });
 
+// NOTE: Ran locally but had issues on GitHub Actions, so this suite is skipped for now.
 describe.skip("Methods: getState, getFormValues", async () => {
   const fields = {
     sections: [

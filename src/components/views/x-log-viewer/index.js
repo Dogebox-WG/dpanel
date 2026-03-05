@@ -12,6 +12,9 @@ class LogViewer extends LitElement {
       follow: { type: Boolean },
       pupId: { type: String },
       jobId: { type: String },
+      closing: { type: Boolean, reflect: true },
+      animateOpen: { type: Boolean },
+      opening: { type: Boolean, reflect: true },
     };
   }
 
@@ -24,16 +27,34 @@ class LogViewer extends LitElement {
     this.wsClient = null;
     this.autostart = true;
     this.follow = true; // Default to true, user can disable temporarily
+    this.closing = false;
+    this.animateOpen = false;
+    this.opening = false;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this.setupSocketConnection()
+    this.setupSocketConnection();
+    this._boundTransitionEnd = this._onTransitionEnd.bind(this);
+    this.addEventListener('transitionend', this._boundTransitionEnd);
+    if (this.animateOpen && (this.jobId || this.pupId)) {
+      this.opening = true;
+      this._openRaf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.opening = false;
+          this._openRaf = null;
+        });
+      });
+    }
   }
 
   disconnectedCallback() {
+    if (this._openRaf) {
+      cancelAnimationFrame(this._openRaf);
+      this._openRaf = null;
+    }
+    this.removeEventListener('transitionend', this._boundTransitionEnd);
     super.disconnectedCallback();
-    // Clean up WebSocket connection
     if (this.wsClient) {
       this.wsClient.disconnect();
       this.wsClient = null;
@@ -216,6 +237,14 @@ class LogViewer extends LitElement {
 
   }
 
+  _onTransitionEnd(e) {
+    if (e.target !== this || e.propertyName !== 'max-height' || !this.closing) return;
+    this.dispatchEvent(new CustomEvent('log-viewer-closed', {
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
   render() {
     return html`
       <div>
@@ -267,6 +296,17 @@ class LogViewer extends LitElement {
         --page-header-height: 80px;
         display: block;
         position: relative;
+        overflow: hidden;
+        transition: max-height 500ms ease-in-out;
+        max-height: calc(var(--log-viewer-height, 150px) + var(--log-footer-height));
+      }
+
+      :host([closing]) {
+        max-height: 0;
+      }
+
+      :host([opening]) {
+        max-height: 0;
       }
       div#LogHUD {
         position: absolute;

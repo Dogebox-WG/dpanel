@@ -47,6 +47,7 @@ class PupPage extends LitElement {
       inflight_purge: { type: Boolean },
       activityLogs: { type: Array },
       rollbackAvailable: { type: Boolean },
+      _renderedJobId: { type: String },
     };
   }
 
@@ -64,6 +65,7 @@ class PupPage extends LitElement {
     this._confirmedName = "";
     this.activityLogs = [];
     this.rollbackAvailable = false;
+    this._renderedJobId = null;
     this.renderDialog = renderDialog.bind(this);
     this.renderActions = renderActions.bind(this);
     this.renderStatus = renderStatus.bind(this);
@@ -106,23 +108,32 @@ class PupPage extends LitElement {
     this.activityLogs = Array.isArray(logs) ? [...logs] : [];
   }
 
+  handleLogViewerClosed = () => {
+    this._renderedJobId = null;
+  };
+
   renderLogViewer(pkg) {
     if (!pkg?.state?.id) return nothing;
     
     // Check if there's a recent job (active or recently completed) for this pup
     const recentJob = this.pkgController.getRecentJobForPup(pkg.state.id);
     
-    // Always use x-log-viewer when there's a job - provides consistent, detailed logs
     if (recentJob) {
-      return html`
-        <x-log-viewer 
-          .jobId=${recentJob.id}
-          autostart
-        ></x-log-viewer>
-      `;
+      this._renderedJobId = recentJob.id;
     }
-    
-    return nothing;
+
+    // If there's no recent job and no closing job, don't show the log viewer
+    if (!recentJob && !this._renderedJobId) return nothing;
+
+    return html`
+      <x-log-viewer
+        .jobId=${recentJob?.id || this._renderedJobId}
+        ?closing=${!recentJob}
+        ?animateOpen=${!!recentJob}
+        autostart
+        @log-viewer-closed=${this.handleLogViewerClosed}
+      ></x-log-viewer>
+    `;
   }
 
   async firstUpdated() {
@@ -699,6 +710,11 @@ class PupPage extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.75em;
+    }
+
+    section .section-title h3 {
+      text-transform: uppercase;
+      font-family: "Comic Neue";
     }
 
     section .section-title.disabled {

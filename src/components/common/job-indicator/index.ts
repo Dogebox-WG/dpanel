@@ -31,6 +31,7 @@ export class JobIndicator extends LitElement {
       background: rgba(255, 255, 255, 0.05);
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
       transition: background 200ms ease;
     }
     
@@ -112,28 +113,26 @@ export class JobIndicator extends LitElement {
     this.context = new StoreSubscriber(this, store);
   }
   
-  private handleClick(): void {
-    window.location.href = '/activity';
-  }
-  
   render() {
     const jobsContext = this.context.store.jobsContext as JobsContext; // TS-TODO : Remove 'as' when we have a better type for jobsContext
     const { jobs } = jobsContext;
-    const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
+    const activeCount = jobs.filter(j => j.status === 'in_progress').length;
+    const pendingCount = jobs.filter(j => j.status === 'queued' || j.status === 'pending').length;
+    const activeOrPendingCount = activeCount + pendingCount;
     const isActive = window.location.pathname.startsWith('/activity');
     
     return html`
       <sl-tooltip placement="top">
-        <div slot="content">${inProgressCount > 0 ? `${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}` : 'No active jobs'}</div>
-        <div class="indicator ${isActive ? 'active' : ''}" @click=${this.handleClick}>
-          <sl-icon name="gear" class="icon ${inProgressCount > 0 ? 'spinning' : ''}"></sl-icon>
+        <div slot="content">${activeOrPendingCount > 0 ? `${activeCount} Active ${pendingCount} Pending jobs` : 'No active or pending jobs'}</div>
+        <a class="indicator ${isActive ? 'active' : ''}" href="/activity">
+          <sl-icon name="gear" class="icon ${activeOrPendingCount > 0 ? 'spinning' : ''}"></sl-icon>
           <span class="text">
             <span>System Activity</span>
           </span>
-          ${inProgressCount > 0 ? html`
-            <span class="badge">${inProgressCount}</span>
+          ${activeOrPendingCount > 0 ? html`
+            <span class="badge">${activeOrPendingCount}</span>
           ` : ''}
-        </div>
+        </a>
       </sl-tooltip>
     `;
   }

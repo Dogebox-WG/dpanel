@@ -31,6 +31,7 @@ export class JobIndicator extends LitElement {
       background: rgba(255, 255, 255, 0.05);
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
       transition: background 200ms ease;
     }
     
@@ -112,10 +113,6 @@ export class JobIndicator extends LitElement {
     this.context = new StoreSubscriber(this, store);
   }
   
-  private handleClick(): void {
-    window.location.href = '/activity';
-  }
-  
   render() {
     const jobsContext = this.context.store.jobsContext as JobsContext; // TS-TODO : Remove 'as' when we have a better type for jobsContext
     const { jobs } = jobsContext;
@@ -125,7 +122,7 @@ export class JobIndicator extends LitElement {
     return html`
       <sl-tooltip placement="top">
         <div slot="content">${inProgressCount > 0 ? `${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}` : 'No active jobs'}</div>
-        <div class="indicator ${isActive ? 'active' : ''}" @click=${this.handleClick}>
+        <a class="indicator ${isActive ? 'active' : ''}" href="/activity">
           <sl-icon name="gear" class="icon ${inProgressCount > 0 ? 'spinning' : ''}"></sl-icon>
           <span class="text">
             <span>System Activity</span>
@@ -133,7 +130,7 @@ export class JobIndicator extends LitElement {
           ${inProgressCount > 0 ? html`
             <span class="badge">${inProgressCount}</span>
           ` : ''}
-        </div>
+        </a>
       </sl-tooltip>
     `;
   }

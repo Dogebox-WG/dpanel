@@ -9,7 +9,7 @@ class PageLogs extends LitElement {
 
     x-log-viewer {
       --log-viewer-height: calc(
-        100vh - var(--page-header-height, 80px) - var(--log-footer-height, 80px) - 80px
+        100vh - var(--page-header-height, 80px) - var(--log-footer-height, 80px)
       );
     }
   `;

@@ -580,7 +580,7 @@ class PkgController {
 
     // Keep terminal jobs visible briefly so users can see final log lines.
     const now = Date.now();
-    const recentJobCutoff = now - (5 * 1000);
+    const recentJobCutoff = now - (15 * 1000);
     const jobTime = new Date(mostRecent.finished || mostRecent.started).getTime();
     if (jobTime > recentJobCutoff) {
       return mostRecent;

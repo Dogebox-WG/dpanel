@@ -116,19 +116,21 @@ export class JobIndicator extends LitElement {
   render() {
     const jobsContext = this.context.store.jobsContext as JobsContext; // TS-TODO : Remove 'as' when we have a better type for jobsContext
     const { jobs } = jobsContext;
-    const inProgressCount = jobs.filter(j => j.status === 'in_progress').length;
+    const activeCount = jobs.filter(j => j.status === 'in_progress').length;
+    const pendingCount = jobs.filter(j => j.status === 'queued' || j.status === 'pending').length;
+    const activeOrPendingCount = activeCount + pendingCount;
     const isActive = window.location.pathname.startsWith('/activity');
     
     return html`
       <sl-tooltip placement="top">
-        <div slot="content">${inProgressCount > 0 ? `${inProgressCount} Active ${inProgressCount === 1 ? 'Job' : 'Jobs'}` : 'No active jobs'}</div>
+        <div slot="content">${activeOrPendingCount > 0 ? `${activeCount} Active ${pendingCount} Pending jobs` : 'No active or pending jobs'}</div>
         <a class="indicator ${isActive ? 'active' : ''}" href="/activity">
-          <sl-icon name="gear" class="icon ${inProgressCount > 0 ? 'spinning' : ''}"></sl-icon>
+          <sl-icon name="gear" class="icon ${activeOrPendingCount > 0 ? 'spinning' : ''}"></sl-icon>
           <span class="text">
             <span>System Activity</span>
           </span>
-          ${inProgressCount > 0 ? html`
-            <span class="badge">${inProgressCount}</span>
+          ${activeOrPendingCount > 0 ? html`
+            <span class="badge">${activeOrPendingCount}</span>
           ` : ''}
         </a>
       </sl-tooltip>

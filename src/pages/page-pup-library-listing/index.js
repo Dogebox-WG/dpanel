@@ -701,6 +701,11 @@ class PupPage extends LitElement {
       gap: 0.75em;
     }
 
+    section .section-title h3 {
+      text-transform: uppercase;
+      font-family: "Comic Neue";
+    }
+
     section .section-title.disabled {
       color: var(--sl-color-neutral-400);
     }

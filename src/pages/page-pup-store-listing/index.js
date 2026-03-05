@@ -214,17 +214,17 @@ class PupInstallPage extends LitElement {
         <section>
           <div class="section-title">
             <h3>About</h3>
-            <reveal-row">
-              ${long
-                ? html`<span style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-700);">${long}</span>`
-                : html`
-                  <span style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">
-                    Such empty, no description.
-                  </span>
-                `
-              }
-            </reveal-row>
           </div>
+          <reveal-row style="margin-top:-1em;">
+            ${long
+              ? html`<p>${long}</p>`
+              : html`
+                <small style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">
+                  Such empty, no description.
+                </small>
+              `
+            }
+          </reveal-row>
         </section>
 
         ${false && hasInterfaces ? html`

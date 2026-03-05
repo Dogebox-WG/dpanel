@@ -1,11 +1,13 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, unsafeCSS } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+
+const DEFAULT_COLLAPSED_HEIGHT = "7em";
 
 class RevealRow extends LitElement {
   static get properties() {
     return {
       label: { type: String },
       expanded: { type: Boolean },
-      contentLength: { type: Number }
+      hasOverflow: { type: Boolean }
     };
   }
 
@@ -28,7 +30,7 @@ class RevealRow extends LitElement {
     }
 
     .collapsed {
-      max-height: 7em;
+      max-height: var(--reveal-collapsed-max-height, ${unsafeCSS(DEFAULT_COLLAPSED_HEIGHT)});
     }
 
     .expanded {
@@ -70,18 +72,45 @@ class RevealRow extends LitElement {
     super();
     this.label = "";
     this.expanded = false;
-    this.contentLength = 0;
+    this.hasOverflow = false;
+    this.handleResize = this.handleResize.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("resize", this.handleResize);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("resize", this.handleResize);
+    super.disconnectedCallback();
   }
 
   firstUpdated() {
-    this.updateContentLength();
+    this.updateOverflowState();
   }
 
-  updateContentLength() {
-    const slot = this.shadowRoot.querySelector('slot');
-    const nodes = slot.assignedNodes();
-    this.contentLength = nodes.reduce((acc, node) => acc + (node.textContent || '').length, 0);
-    this.requestUpdate();
+  handleResize() {
+    this.updateOverflowState();
+  }
+
+  updateOverflowState() {
+    const bodyWrap = this.shadowRoot.querySelector(".body-wrap");
+    if (!bodyWrap) return;
+
+    // Read the CSS variable incase it's been overridden, otherwise use the default.
+    const collapsedMaxHeight = getComputedStyle(this)
+      .getPropertyValue("--reveal-collapsed-max-height")
+      .trim() || DEFAULT_COLLAPSED_HEIGHT;
+
+    const previousMaxHeight = bodyWrap.style.maxHeight;
+    bodyWrap.style.maxHeight = collapsedMaxHeight;
+    this.hasOverflow = bodyWrap.scrollHeight > bodyWrap.clientHeight + 1;
+    bodyWrap.style.maxHeight = previousMaxHeight  ;
+
+    if (!this.hasOverflow && this.expanded) {
+      this.performCollapse();
+    }
   }
 
   performExpand() {
@@ -95,11 +124,11 @@ class RevealRow extends LitElement {
   }
 
   render() {
-    const showToggle = this.contentLength > 130;
+    const showToggle = this.hasOverflow;
     return html`
       <div class="wrap ${showToggle ? 'has-more' : ''}">
         <div part="body" @click=${showToggle ? this.performExpand : null} class="body-wrap ${this.expanded ? 'expanded' : 'collapsed'}">
-          <slot></slot>
+          <slot @slotchange=${this.updateOverflowState}></slot>
           <div class="shadow ${showToggle ? 'show' : ''}"></div>
         </div>
         <div class="footer ${showToggle ? 'show' : ''}">

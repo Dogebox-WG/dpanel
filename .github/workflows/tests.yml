@@ -38,13 +38,23 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          FAILED=$(grep -oP '\d+(?= failed)' test-output.txt | head -1)
-          FAILED=${FAILED:-"unknown number of"}
+          FAILED=$(grep -oP 'with \K\d+(?= failed)' test-output.txt | tail -1)
+          FAILED=${FAILED:-"?"}
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          curl -s -H "Content-Type: application/json" \
-            -d "{\"content\":\"**dpanel tests failed** — ${FAILED} test(s) failed on \`${{ github.ref_name }}\`\n${RUN_URL}\"}" \
-            "$DISCORD_WEBHOOK_URL"
+          # Extract final per-browser summary lines (last per browser, skipping progress updates)
+          BROWSER_SUMMARY=$(awk -F'|' '/test files.*failed/{
+            b=$1; s=$NF
+            gsub(/^[ \t]+|[ \t]+$/, "", b)
+            gsub(/^[ \t]+|[ \t]+$/, "", s)
+            lines[b]=b " — " s
+          } END{for(b in lines) print lines[b]}' test-output.txt)
+
+          MSG=$(printf "**dpanel tests failed** — %s test(s) failed on \`%s\`\n\n%s\n\n%s" \
+            "$FAILED" "${{ github.ref_name }}" "$BROWSER_SUMMARY" "$RUN_URL")
+
+          jq -n --arg content "$MSG" '{content: $content}' | \
+            curl -s -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
 
       - name: Fail the job if tests failed
         if: steps.tests.outcome == 'failure'

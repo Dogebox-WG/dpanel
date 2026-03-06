@@ -27,4 +27,25 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run tests
-        run: npm test
+        id: tests
+        run: |
+          npm test 2>&1 | tee test-output.txt
+          exit ${PIPESTATUS[0]}
+        continue-on-error: true
+
+      - name: Notify Discord on failure
+        if: steps.tests.outcome == 'failure'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          FAILED=$(grep -oP '\d+(?= failed)' test-output.txt | head -1)
+          FAILED=${FAILED:-"unknown number of"}
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -s -H "Content-Type: application/json" \
+            -d "{\"content\":\"**dpanel tests failed** — ${FAILED} test(s) failed on \`${{ github.ref_name }}\`\n${RUN_URL}\"}" \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Fail the job if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

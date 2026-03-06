@@ -1,6 +1,6 @@
 export function focus(fieldName) {
   if (!fieldName) return
-  const node = this.shadowRoot.querySelector(`[name=${fieldName}`)
+  const node = this.shadowRoot.querySelector(`[name="${fieldName}"]`)
 
   if (!node) {
     console.warn(`field focus issue: ${fieldName} not found`)

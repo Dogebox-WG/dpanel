@@ -37,6 +37,7 @@ jobs:
         if: steps.tests.outcome == 'failure'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_THREAD_ID: ${{ secrets.DISCORD_THREAD_ID }}
         run: |
           sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\r/\n/g' test-output.txt
           FAILED=$(grep -oP 'with \K\d+(?= failed)' test-output.txt | tail -1)
@@ -55,7 +56,7 @@ jobs:
             "$FAILED" "${{ github.ref_name }}" "$BROWSER_SUMMARY" "$RUN_URL")
 
           jq -n --arg content "$MSG" '{content: $content}' | \
-            curl -s -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
+            curl -s -H "Content-Type: application/json" -d @- "${DISCORD_WEBHOOK_URL}?thread_id=${DISCORD_THREAD_ID}"
 
       - name: Fail the job if tests failed
         if: steps.tests.outcome == 'failure'

@@ -18,7 +18,7 @@ export function renderStatus() {
   })
 
   return html`
-    <div style="display: flex; flex-direction: row; gap: 1em;">
+    <div style="display: flex; flex-direction: row; gap: 1em; margin-bottom: 1em;">
       ${pkg.def.logoBase64 ? html`<img style="width: 82px; height: 82px;" src="${pkg.def.logoBase64}" />` : nothing}
       <div style="width: 100%;">
         <div class="section-title">

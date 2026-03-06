@@ -42,6 +42,7 @@ describe("DynamicForm", () => {
   });
 
   it('given multiple sections, should render a multiple forms', async () => {
+    
     const fields = {
       sections: [
         { 

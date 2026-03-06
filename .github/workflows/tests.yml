@@ -38,6 +38,7 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
+          sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\r/\n/g' test-output.txt
           FAILED=$(grep -oP 'with \K\d+(?= failed)' test-output.txt | tail -1)
           FAILED=${FAILED:-"?"}
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

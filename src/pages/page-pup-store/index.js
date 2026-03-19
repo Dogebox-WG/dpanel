@@ -31,7 +31,11 @@ class StoreView extends LitElement {
       inspectedPup: { type: String },
       searchValue: { type: String },
       _showSourceManagementDialog: { type: Boolean },
-      _hasSourceErrors: { type: Boolean }
+      _hasSourceErrors: { type: Boolean },
+      _sourceCount: { type: Number },
+      _sourceErrorCount: { type: Number },
+      _allSourcesErrored: { type: Boolean },
+      _someSourcesErrored: { type: Boolean }
     }
   }
 
@@ -47,6 +51,10 @@ class StoreView extends LitElement {
     this.packageList = new PaginationController(this, undefined, this.itemsPerPage,{ initialSort });
     this._showSourceManagementDialog = false;
     this._hasSourceErrors = false;
+    this._sourceCount = 0;
+    this._sourceErrorCount = 0;
+    this._allSourcesErrored = false;
+    this._someSourcesErrored = false;
 
     this.inspectedPup;
     this.showCategories = false;
@@ -94,6 +102,11 @@ class StoreView extends LitElement {
   reset() {
     this.fetchLoading = true;
     this.fetchError = false;
+    this._hasSourceErrors = false;
+    this._sourceCount = 0;
+    this._sourceErrorCount = 0;
+    this._allSourcesErrored = false;
+    this._someSourcesErrored = false;
   }
 
   updateBusyState() {
@@ -189,7 +202,58 @@ class StoreView extends LitElement {
 
   checkForSourceErrors() {
     const sources = this.pkgController.getSourceList();
-    this._hasSourceErrors = sources.some(source => source.error);
+    const sourceErrorCount = sources.filter((source) => Boolean(source.error)).length;
+
+    this._sourceCount = sources.length;
+    this._sourceErrorCount = sourceErrorCount;
+    this._hasSourceErrors = sourceErrorCount > 0;
+    this._allSourcesErrored = sources.length > 0 && sourceErrorCount === sources.length;
+    this._someSourcesErrored = sourceErrorCount > 0 && sourceErrorCount < sources.length;
+  }
+
+  renderSourceWarning() {
+    if (!this._hasSourceErrors) {
+      return nothing;
+    }
+
+    if (this._allSourcesErrored) {
+      const body = this._sourceCount === 1
+        ? 'The internet connection is offline. The Pup Store could not reach its source.'
+        : `The internet connection is offline. None of the ${this._sourceCount} pup sources could be reached.`;
+
+      return html`
+        <sl-alert open variant="warning" class="source-warning source-warning-full">
+          <sl-icon slot="icon" name="wifi-off"></sl-icon>
+          <div class="source-warning-copy">
+            <strong>Internet connection is offline</strong>
+            <span>${body}</span>
+          </div>
+          <div class="source-warning-actions">
+            <sl-button size="small" @click=${this.fetchBootstrap} ?disabled=${this.fetchLoading}>
+              Retry
+            </sl-button>
+            <sl-button size="small" variant="text" @click=${this.handleManageSourcesClick}>
+              Manage Sources
+            </sl-button>
+          </div>
+        </sl-alert>
+      `;
+    }
+
+    return html`
+      <sl-alert open variant="warning" class="source-warning">
+        <sl-icon slot="icon" name="exclamation-triangle-fill"></sl-icon>
+        <div class="source-warning-copy">
+          <strong>Some pup sources are unavailable</strong>
+          <span>${this._sourceErrorCount} of ${this._sourceCount} pup sources could not be reached. Available sources will continue to load.</span>
+        </div>
+        <div class="source-warning-actions">
+          <sl-button size="small" variant="text" @click=${this.handleManageSourcesClick}>
+            Manage Sources
+          </sl-button>
+        </div>
+      </sl-alert>
+    `;
   }
 
   render() {
@@ -235,6 +299,8 @@ class StoreView extends LitElement {
           </sl-tab-group>
         </div>
       ` : nothing }
+
+      ${this.renderSourceWarning()}
 
       ${this.fetchLoading
         ? html`<sl-spinner style="--indicator-color:#777;"></sl-spinner>`
@@ -320,6 +386,28 @@ class StoreView extends LitElement {
 
     .source-error::part(base) {
       color: var(--sl-color-warning-600) !important;
+    }
+
+    .source-warning {
+      max-width: 960px;
+      margin: 0 auto 1.5rem auto;
+    }
+
+    .source-warning::part(base) {
+      align-items: flex-start;
+    }
+
+    .source-warning-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .source-warning-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
     }
   `
 }

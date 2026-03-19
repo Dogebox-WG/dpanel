@@ -43,7 +43,7 @@ export function renderSectionBody(ready, SKELS, hasItems) {
       </div>
     ` : nothing }
 
-    ${ready && !hasItems('packages') ? html`
+    ${ready && !hasItems('packages') && !this._allSourcesErrored ? html`
       <div class="empty">
         Such empty.<br>
         No pups available in this repository.

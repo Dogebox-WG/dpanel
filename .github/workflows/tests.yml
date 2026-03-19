@@ -1,0 +1,64 @@
+name: dpanel tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Run tests
+        id: tests
+        run: |
+          npm test 2>&1 | tee test-output.txt
+          exit ${PIPESTATUS[0]}
+        continue-on-error: true
+
+      - name: Notify Discord on failure
+        if: steps.tests.outcome == 'failure'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_THREAD_ID: ${{ secrets.DISCORD_THREAD_ID }}
+        run: |
+          sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\r/\n/g' test-output.txt
+          FAILED=$(grep -oP 'with \K\d+(?= failed)' test-output.txt | tail -1)
+          FAILED=${FAILED:-"?"}
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Extract final per-browser summary lines (last per browser, skipping progress updates)
+          BROWSER_SUMMARY=$(awk -F'|' '/test files.*failed/{
+            b=$1; s=$NF
+            gsub(/^[ \t]+|[ \t]+$/, "", b)
+            gsub(/^[ \t]+|[ \t]+$/, "", s)
+            lines[b]=b " — " s
+          } END{for(b in lines) print lines[b]}' test-output.txt)
+
+          MSG=$(printf "**dpanel tests failed** — %s test(s) failed on \`%s\`\n\n%s\n\n%s" \
+            "$FAILED" "${{ github.ref_name }}" "$BROWSER_SUMMARY" "$RUN_URL")
+
+          jq -n --arg content "$MSG" '{content: $content}' | \
+            curl -s -H "Content-Type: application/json" -d @- "${DISCORD_WEBHOOK_URL}?thread_id=${DISCORD_THREAD_ID}"
+
+      - name: Fail the job if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

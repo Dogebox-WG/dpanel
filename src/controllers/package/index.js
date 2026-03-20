@@ -12,6 +12,7 @@ class PkgController {
   sourcesIndex = {}
   assetIndex = {}
   activityIndex = {}
+  internetConnectivity = null
 
   // Client-side freshness tracking: last seen server timestamps for per-pup updates from websockets.
   // Used to avoid regressing state when an older bootstrap snapshot arrives.
@@ -52,8 +53,12 @@ class PkgController {
   }
 
   setData(bootstrapResponseV2, meta = {}) {
-    const { states, stats, assets, sidebarPreferences } = bootstrapResponseV2;
+    const { states, stats, assets, sidebarPreferences, networkFacts } = bootstrapResponseV2;
     this.handleBootstrapResponse(states, stats, assets, { ...meta, ts: bootstrapResponseV2?.ts });
+
+    this.internetConnectivity = typeof networkFacts?.hasInternetConnectivity === "boolean"
+      ? networkFacts.hasInternetConnectivity
+      : this.internetConnectivity;
     
     // Update store with sidebar preferences from backend
     if (sidebarPreferences) {
@@ -68,7 +73,7 @@ class PkgController {
   }
 
   setStoreData(storeListingRes) {
-    this.handleSourcesResponse(storeListingRes);
+    this.handleSourcesResponse(storeListingRes || {});
     this.notify();
   }
 

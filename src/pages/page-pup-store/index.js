@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing, repeat } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { getStoreListing } from '/api/sources/sources.js';
+import { getBootstrapV2 } from '/api/bootstrap/bootstrap.js';
 import { pkgController } from '/controllers/package/index.js'
 import { PaginationController } from '/components/common/paginator/paginator-controller.js';
 import { bindToClass } from '/utils/class-bind.js'
@@ -35,7 +36,7 @@ class StoreView extends LitElement {
       _sourceCount: { type: Number },
       _sourceErrorCount: { type: Number },
       _allSourcesErrored: { type: Boolean },
-      _someSourcesErrored: { type: Boolean }
+      _internetConnectivity: { type: Boolean }
     }
   }
 
@@ -54,7 +55,7 @@ class StoreView extends LitElement {
     this._sourceCount = 0;
     this._sourceErrorCount = 0;
     this._allSourcesErrored = false;
-    this._someSourcesErrored = false;
+    this._internetConnectivity = null;
 
     this.inspectedPup;
     this.showCategories = false;
@@ -102,11 +103,6 @@ class StoreView extends LitElement {
   reset() {
     this.fetchLoading = true;
     this.fetchError = false;
-    this._hasSourceErrors = false;
-    this._sourceCount = 0;
-    this._sourceErrorCount = 0;
-    this._allSourcesErrored = false;
-    this._someSourcesErrored = false;
   }
 
   updateBusyState() {
@@ -149,13 +145,25 @@ class StoreView extends LitElement {
     this.dispatchEvent(new CustomEvent('busy-start', {}));
 
     try {
-      const storeListingRes = await getStoreListing()
+      const [storeListingRes, bootstrapRes] = await Promise.all([
+        getStoreListing(),
+        getBootstrapV2().catch((err) => {
+          console.warn('Failed to refresh bootstrap while loading Pup Store', err);
+          return null;
+        }),
+      ]);
+
+      if (bootstrapRes) {
+        this.pkgController.setData(bootstrapRes);
+      }
+
       this.pkgController.setStoreData(storeListingRes);
       this.packageList.setData(this.pkgController.pups);
       this.checkForSourceErrors();
     } catch (err) {
       console.error(err);
       this.fetchError = true;
+      this.checkForSourceErrors();
     } finally {
       // Emit a busy stop event which removes this action from the busy-queue.
       this.dispatchEvent(new CustomEvent('busy-stop', {}));
@@ -208,7 +216,36 @@ class StoreView extends LitElement {
     this._sourceErrorCount = sourceErrorCount;
     this._hasSourceErrors = sourceErrorCount > 0;
     this._allSourcesErrored = sources.length > 0 && sourceErrorCount === sources.length;
-    this._someSourcesErrored = sourceErrorCount > 0 && sourceErrorCount < sources.length;
+    this._internetConnectivity = this.pkgController.internetConnectivity;
+  }
+
+  renderFetchError() {
+    if (!this.fetchError) {
+      return nothing;
+    }
+
+    const hasCachedPackages = Boolean(this.packageList?.data?.length);
+    const body = hasCachedPackages
+      ? 'The latest refresh failed. Showing the most recent Pup Store data.'
+      : 'The Pup Store could not be refreshed. Try again or review your configured sources.';
+
+    return html`
+      <sl-alert open variant="danger" class="source-warning">
+        <sl-icon slot="icon" name="exclamation-octagon-fill"></sl-icon>
+        <div class="source-warning-copy">
+          <strong>Could not refresh the Pup Store</strong>
+          <span>${body}</span>
+        </div>
+        <div class="source-warning-actions">
+          <sl-button size="small" @click=${this.fetchBootstrap} ?disabled=${this.fetchLoading}>
+            Retry
+          </sl-button>
+          <sl-button size="small" variant="text" @click=${this.handleManageSourcesClick}>
+            Manage Sources
+          </sl-button>
+        </div>
+      </sl-alert>
+    `;
   }
 
   renderSourceWarning() {
@@ -218,15 +255,15 @@ class StoreView extends LitElement {
 
     if (this._allSourcesErrored) {
       const body = this._sourceCount === 1
-        ? 'The internet connection is offline. The Pup Store could not reach its source.'
-        : `The internet connection is offline. None of the ${this._sourceCount} pup sources could be reached.`;
+        ? 'The Pup Store could not reach its source. Check the source configuration or try again.'
+        : `None of the ${this._sourceCount} pup sources could be reached. Check the source configuration or try again.`;
 
       return html`
-        <sl-alert open variant="warning" class="source-warning source-warning-full">
+        <sl-alert open variant="warning" class="source-warning">
           <div class="source-warning-copy">
             <div class="source-warning-title">
-              <sl-icon class="source-warning-title-icon" name="wifi-off"></sl-icon>
-              <strong>Internet connection is offline</strong>
+              <sl-icon class="source-warning-title-icon" name="exclamation-triangle-fill"></sl-icon>
+              <strong>All pup sources are unavailable</strong>
             </div>
             <span>${body}</span>
           </div>
@@ -247,7 +284,7 @@ class StoreView extends LitElement {
         <sl-icon slot="icon" name="exclamation-triangle-fill"></sl-icon>
         <div class="source-warning-copy">
           <strong>Some pup sources are unavailable</strong>
-          <span>${this._sourceErrorCount} of ${this._sourceCount} pup sources could not be reached. Available sources will continue to load.</span>
+          <span>${this._sourceErrorCount} of ${this._sourceCount} pup sources could not be reached.</span>
         </div>
         <div class="source-warning-actions">
           <sl-button size="small" variant="text" @click=${this.handleManageSourcesClick}>
@@ -258,10 +295,25 @@ class StoreView extends LitElement {
     `;
   }
 
+  renderInternetWarning() {
+    if (this._internetConnectivity !== false) {
+      return nothing;
+    }
+
+    return html`
+      <sl-alert open variant="primary" class="source-warning">
+        <sl-icon slot="icon" name="wifi-off"></sl-icon>
+        <div class="source-warning-copy">
+          <strong>Internet connection appears offline</strong>
+          <span>Internet-backed pup sources may be unavailable, even if local or LAN sources still load.</span>
+        </div>
+      </sl-alert>
+    `;
+  }
+
   render() {
     const ready = (
       !this.fetchLoading &&
-      !this.fetchError &&
       this.packageList.data
     )
 
@@ -302,6 +354,8 @@ class StoreView extends LitElement {
         </div>
       ` : nothing }
 
+      ${this.renderFetchError()}
+      ${this.renderInternetWarning()}
       ${this.renderSourceWarning()}
 
       ${this.fetchLoading

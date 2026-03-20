@@ -9,5 +9,8 @@ export const getResponse = {
       hasConfiguredNetwork: false,
       hasCompletedInitialConfiguration: false
     },
+    networkFacts: {
+      hasInternetConnectivity: true,
+    },
   }
 };

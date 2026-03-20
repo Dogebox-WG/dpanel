@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { getNetworks } from "/api/network/get-networks.js";
 import { putNetwork } from "/api/network/set-network.js";
+import { testPendingNetwork } from "/api/network/test-network.js";
 import { postSetupBootstrap } from "/api/system/post-bootstrap.js";
 
 import { asyncTimeout } from "/utils/timeout.js";
@@ -47,6 +48,7 @@ class SelectNetwork extends LitElement {
       _setNetworkFields: { type: Object },
       _setNetworkValues: { type: Object },
       _attemptSetNetwork: { type: Object },
+      _internetWarning: { type: String },
     };
   }
 
@@ -58,6 +60,7 @@ class SelectNetwork extends LitElement {
     this._setNetworkFields = {};
     this._setNetworkValues = {};
     this._networks = [];
+    this._internetWarning = "";
 
     // Set initial fields
     this.updateSetNetworkFields();
@@ -249,6 +252,8 @@ class SelectNetwork extends LitElement {
   }
 
   _attemptSetNetwork = async (data, form, dynamicFormInstance) => {
+    this._internetWarning = "";
+
     // Check if any field is invalid
     const formFields = this.shadowRoot.querySelectorAll(
       "sl-input, sl-textarea, sl-select",
@@ -286,6 +291,30 @@ class SelectNetwork extends LitElement {
       dynamicFormInstance.retainChanges(); // stops spinner
       this.handleError(response.error);
       return;
+    }
+
+    const connectivityCheck = await testPendingNetwork().catch((err) => {
+      console.warn("Pending network test failed", err);
+      return null;
+    });
+
+    if (!connectivityCheck) {
+      dynamicFormInstance.retainChanges(); // stops spinner
+      this.handleError("Failed to test pending network");
+      return;
+    }
+
+    if (connectivityCheck.hasInternetConnectivity === false) {
+      this._internetWarning = "This network connected successfully, but it does not appear to have internet access yet. Setup can continue, but source verification and background configuration may fail.";
+      createAlert(
+        "warning",
+        [
+          "Connected without internet access.",
+          "Setup can continue, but source verification and background configuration may fail.",
+        ],
+        "exclamation-triangle",
+        8000,
+      );
     }
 
     // temp: wait, because this needs to move to being an async call inside dogeboxd
@@ -379,6 +408,14 @@ class SelectNetwork extends LitElement {
       <div class="page">
         <div class="padded">
           ${renderBanner()}
+          ${this._internetWarning ? html`
+            <div style="margin: 0 8px 2em 8px">
+              <sl-alert variant="warning" open>
+                <sl-icon slot="icon" name="exclamation-triangle-fill"></sl-icon>
+                ${this._internetWarning}
+              </sl-alert>
+            </div>
+          ` : html``}
           ${this._setNetworkFields ? html`
             <dynamic-form
               .fields=${this._setNetworkFields}

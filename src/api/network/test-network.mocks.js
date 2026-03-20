@@ -4,6 +4,7 @@ export const postResponse = {
   group: "networks",
   res: {
     success: true,
+    hasInternetConnectivity: true,
     message: "Network Connection Test Success",
   },
 };

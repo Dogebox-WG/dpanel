@@ -11,3 +11,10 @@ export async function testNetwork(body) {
   });
   return res;
 }
+
+export async function testPendingNetwork() {
+  const res = await client.post(`/system/network/test`, {}, {
+    mock: postResponse,
+  });
+  return res;
+}

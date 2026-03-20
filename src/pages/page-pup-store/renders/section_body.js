@@ -48,7 +48,15 @@ export function renderSectionBody(ready, SKELS, hasItems) {
         Such empty.<br>
         No pups available in this repository.
       </div>
-      ` : nothing 
+      ` : nothing
+    }
+
+    ${ready && !hasItems('packages') && this._allSourcesErrored ? html`
+      <div class="empty">
+        No pups could be loaded right now.<br>
+        All configured sources are currently unavailable.
+      </div>
+      ` : nothing
     }
 
     ${ready && hasItems('packages') ? html`

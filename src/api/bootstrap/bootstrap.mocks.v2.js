@@ -58,6 +58,9 @@ function generateBootstrapV2(path, options) {
   return {
     manifests,
     setupFacts,
+    networkFacts: {
+      hasInternetConnectivity: true,
+    },
     states,
     stats,
     assets,

@@ -223,9 +223,11 @@ class StoreView extends LitElement {
 
       return html`
         <sl-alert open variant="warning" class="source-warning source-warning-full">
-          <sl-icon slot="icon" name="wifi-off"></sl-icon>
           <div class="source-warning-copy">
-            <strong>Internet connection is offline</strong>
+            <div class="source-warning-title">
+              <sl-icon class="source-warning-title-icon" name="wifi-off"></sl-icon>
+              <strong>Internet connection is offline</strong>
+            </div>
             <span>${body}</span>
           </div>
           <div class="source-warning-actions">
@@ -401,6 +403,16 @@ class StoreView extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+    }
+
+    .source-warning-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .source-warning-title-icon {
+      flex: 0 0 auto;
     }
 
     .source-warning-actions {

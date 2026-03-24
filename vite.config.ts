@@ -35,7 +35,8 @@ export default defineConfig({
       '/utils': abs('./src/utils'),
       '/api': abs('./src/api'),
       '/controllers': abs('./src/controllers'),
-      '/styles': abs('./src/styles')
+      '/styles': abs('./src/styles'),
+      '/gen': abs('./src/gen')
     }
   }
 });

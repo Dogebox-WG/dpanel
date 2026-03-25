@@ -10,6 +10,11 @@ import { store } from "/state/store.js";
 import { mocks } from "/api/mocks.js";
 import { getMockConfig, saveMockConfig, resetMockConfig } from "/api/pup-updates/pup-updates.mocks.js";
 import {
+  getMockConfig as getNetworkTestMockConfig,
+  saveMockConfig as saveNetworkTestMockConfig,
+  resetMockConfig as resetNetworkTestMockConfig,
+} from "/api/network/test-network.mocks.js";
+import {
   getMockConfig as getSidebarPupsMockConfig,
   addMockPups,
   removeMockPup,
@@ -22,6 +27,7 @@ class DebugSettingsDialog extends LitElement {
   static properties = {
     isOpen: { type: Boolean },
     _pupUpdateConfig: { type: Object },
+    _networkTestConfig: { type: Object },
     _sidebarPupsConfig: { type: Object },
     _newVersionInput: { type: String },
   };
@@ -41,6 +47,7 @@ class DebugSettingsDialog extends LitElement {
 
     this.mockOptions = mocks;
     this._pupUpdateConfig = getMockConfig();
+    this._networkTestConfig = getNetworkTestMockConfig();
     this._sidebarPupsConfig = getSidebarPupsMockConfig();
     this._newVersionInput = '';
   }
@@ -167,6 +174,16 @@ class DebugSettingsDialog extends LitElement {
     this._pupUpdateConfig = getMockConfig();
   }
 
+  handleNetworkTestConfigChange(field, value) {
+    this._networkTestConfig = { ...this._networkTestConfig, [field]: value };
+    saveNetworkTestMockConfig(this._networkTestConfig);
+  }
+
+  handleResetNetworkTestConfig() {
+    resetNetworkTestMockConfig();
+    this._networkTestConfig = getNetworkTestMockConfig();
+  }
+
   handleAddSidebarPups(count) {
     this._sidebarPupsConfig = addMockPups(count);
   }
@@ -215,6 +232,27 @@ class DebugSettingsDialog extends LitElement {
                     `)}
                   </div>
                 `)}
+
+                <div class="mock-group-wrap">
+                  <h4>Network Test</h4>
+                  <div style="padding: 0.5em 0;">
+                    <div style="margin-bottom: 0.75em;">
+                      <sl-switch
+                        size="small"
+                        ?checked=${this._networkTestConfig.hasInternetConnectivity}
+                        ?disabled=${!networkContext.useMocks}
+                        @sl-change=${(e) => this.handleNetworkTestConfigChange('hasInternetConnectivity', e.target.checked)}
+                      >Has Internet Connectivity</sl-switch>
+                    </div>
+
+                    <sl-button
+                      variant="text"
+                      size="small"
+                      ?disabled=${!networkContext.useMocks}
+                      @click=${this.handleResetNetworkTestConfig}
+                    >Reset</sl-button>
+                  </div>
+                </div>
 
                 <div class="mock-group-wrap">
                   <h4>Sidebar Pups</h4>

@@ -159,6 +159,8 @@ class SelectNetwork extends LitElement {
   }
 
   async _fetchAvailableNetworks() {
+    this._internetWarning = "";
+
     // Start label spinner
     this._form.toggleLabelLoader("network");
 
@@ -251,6 +253,42 @@ class SelectNetwork extends LitElement {
     }
   }
 
+  _buildPendingNetworkData(state) {
+    const selectedNetwork = state?.network;
+    if (!selectedNetwork?.interface) {
+      return null;
+    }
+
+    if (selectedNetwork.type === "ethernet") {
+      return {
+        interface: selectedNetwork.interface,
+      };
+    }
+
+    const isHiddenNetwork = selectedNetwork.value === "hidden";
+    const ssid = isHiddenNetwork ? state["network-ssid"] : selectedNetwork.ssid;
+    const encryption = isHiddenNetwork
+      ? state["network-encryption"]?.value
+      : (selectedNetwork.encryption ?? "none");
+    const requiresPassword = encryption && encryption !== "none";
+    const password = state["network-pass"] ?? "";
+
+    if (!ssid || !encryption) {
+      return null;
+    }
+
+    if (requiresPassword && !password) {
+      return null;
+    }
+
+    return {
+      interface: selectedNetwork.interface,
+      ssid,
+      password,
+      encryption,
+    };
+  }
+
   _attemptSetNetwork = async (data, form, dynamicFormInstance) => {
     this._internetWarning = "";
 
@@ -268,16 +306,7 @@ class SelectNetwork extends LitElement {
     }
 
     const state = dynamicFormInstance.getState();
-    const isHiddenNetwork = state.network.value === "hidden";
-
-    const apiData = {
-      interface: state.network.interface,
-      ssid: isHiddenNetwork ? state["network-ssid"] : state.network.ssid,
-      password: state["network-pass"],
-      encryption: isHiddenNetwork
-        ? state["network-encryption"].value
-        : state.network.encryption,
-    };
+    const apiData = this._buildPendingNetworkData(state);
 
     const response = await putNetwork(apiData).catch(this.handleFault);
 
@@ -293,33 +322,21 @@ class SelectNetwork extends LitElement {
       return;
     }
 
+    // temp: wait, because this needs to move to being an async call inside dogeboxd
+    //       so that the putNetwork above can "complete".
+    await asyncTimeout(5000);
+
     const connectivityCheck = await testPendingNetwork().catch((err) => {
       console.warn("Pending network test failed", err);
       return null;
     });
 
-    if (!connectivityCheck) {
+    if (connectivityCheck?.hasInternetConnectivity !== true) {
       dynamicFormInstance.retainChanges(); // stops spinner
-      this.handleError("Failed to test pending network");
+      this._internetWarning =
+        "An internet connection could not be established. Check your network configuration, confirm the connection is up, then press Much Connect again.";
       return;
     }
-
-    if (connectivityCheck.hasInternetConnectivity === false) {
-      this._internetWarning = "This network connected successfully, but it does not appear to have internet access yet. Setup can continue, but source verification and background configuration may fail.";
-      createAlert(
-        "warning",
-        [
-          "Connected without internet access.",
-          "Setup can continue, but source verification and background configuration may fail.",
-        ],
-        "exclamation-triangle",
-        8000,
-      );
-    }
-
-    // temp: wait, because this needs to move to being an async call inside dogeboxd
-    //       so that the putNetwork above can "complete".
-    await asyncTimeout(5000);
 
     // temp: also call our final initialisation API here.
     // TODO: move this into post-network flow.
@@ -412,6 +429,8 @@ class SelectNetwork extends LitElement {
             <div style="margin: 0 8px 2em 8px">
               <sl-alert variant="warning" open>
                 <sl-icon slot="icon" name="exclamation-triangle-fill"></sl-icon>
+                <strong>Internet connection required.</strong>
+                ${" "}
                 ${this._internetWarning}
               </sl-alert>
             </div>
@@ -426,7 +445,7 @@ class SelectNetwork extends LitElement {
               style="--submit-btn-width: auto; --submit-btn-anchor: end;"
             >
             </dynamic-form>
-            `: nothing }
+            `: html`` }
 
           <div style="margin: 2em 8px">
             <sl-alert variant="warning" open>

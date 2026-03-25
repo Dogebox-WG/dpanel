@@ -58,7 +58,10 @@ export default class ApiClient extends ReactiveClass {
     // If mocks enabled, avoid making legitimate request, return mocked response (success or error) instead.
     const hasMock = !!config.mock
     const useMocks = this.networkContext.useMocks
-    const specificMockEnabled = hasMock && useMocks && isMockEnabled(config.mock.group, config.mock.name, config.mock.method, this.networkContext)
+    const specificMockEnabled = hasMock
+      && useMocks
+      && (config.mock.alwaysInterceptWhenMocksEnabled
+        || isMockEnabled(config.mock.group, config.mock.name, config.mock.method, this.networkContext))
     if (useMocks && hasMock && specificMockEnabled) {
       return await returnMockedResponse(path, config, this.networkContext)
     }

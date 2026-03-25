@@ -1,8 +1,22 @@
 const MOCK_CONFIG_KEY = "dpanel:mockNetworkTest";
 
 const defaultMockConfig = {
-  hasInternetConnectivity: true,
+  simulateOffline: false,
+  simulateOnline: true,
 };
+
+function normalizeMockConfig(config = {}) {
+  const normalized = {
+    ...defaultMockConfig,
+    ...(config || {}),
+  };
+
+  if (normalized.simulateOffline && normalized.simulateOnline) {
+    normalized.simulateOnline = false;
+  }
+
+  return normalized;
+}
 
 export function getMockConfig() {
   try {
@@ -11,7 +25,19 @@ export function getMockConfig() {
       return { ...defaultMockConfig };
     }
 
-    return { ...defaultMockConfig, ...JSON.parse(stored) };
+    const parsed = JSON.parse(stored);
+    if ("simulateOffline" in parsed && !("hasInternetConnectivity" in parsed)) {
+      return normalizeMockConfig(parsed);
+    }
+
+    if ("hasInternetConnectivity" in parsed) {
+      return normalizeMockConfig({
+        simulateOffline: !parsed.hasInternetConnectivity,
+        simulateOnline: parsed.hasInternetConnectivity,
+      });
+    }
+
+    return normalizeMockConfig(parsed);
   } catch (error) {
     console.error("[NetworkTest Mock] Failed to load config:", error);
     return { ...defaultMockConfig };
@@ -20,10 +46,7 @@ export function getMockConfig() {
 
 export function saveMockConfig(config) {
   try {
-    localStorage.setItem(MOCK_CONFIG_KEY, JSON.stringify({
-      ...defaultMockConfig,
-      ...(config || {}),
-    }));
+    localStorage.setItem(MOCK_CONFIG_KEY, JSON.stringify(normalizeMockConfig(config)));
   } catch (error) {
     console.error("[NetworkTest Mock] Failed to save config:", error);
   }
@@ -35,11 +58,12 @@ export function resetMockConfig() {
 
 function generateNetworkTestResponse() {
   const config = getMockConfig();
+  const hasInternetConnectivity = !config.simulateOffline;
 
   return {
     success: true,
-    hasInternetConnectivity: config.hasInternetConnectivity,
-    message: config.hasInternetConnectivity
+    hasInternetConnectivity,
+    message: hasInternetConnectivity
       ? "Network Connection Test Success"
       : "Network connected but internet unavailable",
   };
@@ -49,6 +73,7 @@ export const postResponse = {
   name: "/system/network/test",
   method: "post",
   group: "networks",
+  alwaysInterceptWhenMocksEnabled: true,
   res: generateNetworkTestResponse,
 };
 

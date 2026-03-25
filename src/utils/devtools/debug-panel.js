@@ -10,6 +10,7 @@ import { bindToClass } from "/utils/class-bind.js";
 import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
 import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
+import { testPendingNetwork } from '/api/network/test-network.js';
 import { pupUpdates } from '/state/pup-updates.js';
 import { store } from '/state/store.js';
 
@@ -247,6 +248,16 @@ class DebugPanel extends LitElement {
     console.log('All jobs cleared');
   }
 
+  async handleTestConnectivity() {
+    console.log('[DevTools] Testing internet connectivity...');
+    try {
+      const res = await testPendingNetwork();
+      console.log('[DevTools] Connectivity result:', res);
+    } catch (err) {
+      console.error('[DevTools] Connectivity test failed:', err);
+    }
+  }
+
   async clearCompletedJobs() {
     const { store } = await import('/state/store.js');
     const { clearCompletedJobs } = await import('/api/jobs/jobs.js');
@@ -308,6 +319,9 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>
                     <sl-menu-item @click=${this.emitSyntheticUpdateAvailable}>Update Available</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Network</sl-menu-label>
+                    <sl-menu-item @click=${this.handleTestConnectivity}>Test Internet Connectivity</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Pup Upgrades</sl-menu-label>
                     <sl-menu-item @click=${this.handleCheckPupUpdates}>Check for Updates</sl-menu-item>

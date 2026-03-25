@@ -106,6 +106,10 @@ class DebugSettingsDialog extends LitElement {
         margin-bottom: 4px;
       }
     }
+
+    .mock-option::part(label) {
+      font-family: Monospace;
+    }
   `;
 
   connectedCallback() {
@@ -175,8 +179,18 @@ class DebugSettingsDialog extends LitElement {
   }
 
   handleNetworkTestConfigChange(field, value) {
-    this._networkTestConfig = { ...this._networkTestConfig, [field]: value };
-    saveNetworkTestMockConfig(this._networkTestConfig);
+    const nextConfig = { ...this._networkTestConfig, [field]: value };
+
+    if (field === "simulateOffline" && value) {
+      nextConfig.simulateOnline = false;
+    }
+
+    if (field === "simulateOnline" && value) {
+      nextConfig.simulateOffline = false;
+    }
+
+    saveNetworkTestMockConfig(nextConfig);
+    this._networkTestConfig = getNetworkTestMockConfig();
   }
 
   handleResetNetworkTestConfig() {
@@ -237,20 +251,24 @@ class DebugSettingsDialog extends LitElement {
                   <h4>Network Test</h4>
                   <div style="padding: 0.5em 0;">
                     <div style="margin-bottom: 0.75em;">
-                      <sl-switch
+                      <sl-checkbox
+                        class="mock-option"
                         size="small"
-                        ?checked=${this._networkTestConfig.hasInternetConnectivity}
+                        ?checked=${this._networkTestConfig.simulateOffline}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e) => this.handleNetworkTestConfigChange('hasInternetConnectivity', e.target.checked)}
-                      >Has Internet Connectivity</sl-switch>
+                        @sl-change=${(e) => this.handleNetworkTestConfigChange('simulateOffline', e.target.checked)}
+                      >Simulate Offline</sl-checkbox>
                     </div>
 
-                    <sl-button
-                      variant="text"
+                    <div style="margin-bottom: 0.75em;">
+                      <sl-checkbox
+                        class="mock-option"
                       size="small"
+                        ?checked=${this._networkTestConfig.simulateOnline}
                       ?disabled=${!networkContext.useMocks}
-                      @click=${this.handleResetNetworkTestConfig}
-                    >Reset</sl-button>
+                        @sl-change=${(e) => this.handleNetworkTestConfigChange('simulateOnline', e.target.checked)}
+                      >Simulate Online</sl-checkbox>
+                    </div>
                   </div>
                 </div>
 

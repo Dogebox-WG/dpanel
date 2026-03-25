@@ -289,6 +289,45 @@ class SelectNetwork extends LitElement {
     };
   }
 
+  async _checkPendingNetworkConnectivity() {
+    console.info(
+      "[setup/network] Waiting for pending network to settle before internet check",
+    );
+    await asyncTimeout(5000);
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      console.info(
+        `[setup/network] Running pending network internet check (attempt ${attempt}/3)`,
+      );
+      const connectivityCheck = await testPendingNetwork().catch((err) => {
+        console.warn(
+          `[setup/network] Pending network internet check failed (attempt ${attempt}/3)`,
+          err,
+        );
+        return null;
+      });
+
+      console.info(
+        `[setup/network] Pending network internet check response (attempt ${attempt}/3)`,
+        connectivityCheck,
+      );
+
+      if (connectivityCheck?.hasInternetConnectivity === true) {
+        return true;
+      }
+
+      if (connectivityCheck?.hasInternetConnectivity === false) {
+        return false;
+      }
+
+      if (attempt < 3) {
+        await asyncTimeout(1000);
+      }
+    }
+
+    return false;
+  }
+
   _attemptSetNetwork = async (data, form, dynamicFormInstance) => {
     this._internetWarning = "";
 
@@ -322,16 +361,8 @@ class SelectNetwork extends LitElement {
       return;
     }
 
-    // temp: wait, because this needs to move to being an async call inside dogeboxd
-    //       so that the putNetwork above can "complete".
-    await asyncTimeout(5000);
-
-    const connectivityCheck = await testPendingNetwork().catch((err) => {
-      console.warn("Pending network test failed", err);
-      return null;
-    });
-
-    if (connectivityCheck?.hasInternetConnectivity !== true) {
+    const hasInternetConnectivity = await this._checkPendingNetworkConnectivity();
+    if (!hasInternetConnectivity) {
       dynamicFormInstance.retainChanges(); // stops spinner
       this._internetWarning =
         "An internet connection could not be established. Check your network configuration, confirm the connection is up, then press Much Connect again.";

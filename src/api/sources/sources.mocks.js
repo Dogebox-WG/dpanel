@@ -29,9 +29,7 @@ function _generateStoreListingResponse(sources) {
     });
   }
 
-  return {
-    ...response,
-  };
+  return response;
 }
 
 function generateVersionData(version, pupName) {

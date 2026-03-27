@@ -42,8 +42,12 @@ export default class WebSocketClient extends ReactiveClass {
   }
 
   startWebSocketConnection() {
-    const urlWithAuth = this.url + `?token=${this.token}`
-    this.socket = new WebSocket(urlWithAuth);
+    // Preserve any existing query params, then append the auth token.
+    const socketUrl = new URL(this.url);
+    if (this.token) {
+      socketUrl.searchParams.set('token', this.token);
+    }
+    this.socket = new WebSocket(socketUrl.toString());
     this.socket.onopen = () => {
       this._isConnected = true;
       this.onOpen();

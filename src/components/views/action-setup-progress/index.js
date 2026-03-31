@@ -8,6 +8,7 @@ import "/components/views/x-log-viewer/index.js";
 class SetupProgress extends LitElement {
   static properties = {
     jobId: { type: String },
+    onBack: { type: Object },
     onSuccess: { type: Object },
     onFailure: { type: Object },
     _failed: { type: Boolean },
@@ -87,6 +88,7 @@ class SetupProgress extends LitElement {
   constructor() {
     super();
     this.jobId = "";
+    this.onBack = null;
     this.onSuccess = null;
     this.onFailure = null;
     this._failed = false;
@@ -139,7 +141,12 @@ class SetupProgress extends LitElement {
   }
 
   handleBackClick = () => {
-    this.onFailure && this.onFailure();
+    if (this._failed) {
+      this.onFailure && this.onFailure();
+      return;
+    }
+
+    this.onBack && this.onBack();
   };
 
   render() {
@@ -166,7 +173,15 @@ class SetupProgress extends LitElement {
                 </sl-button>
               </div>
             `
-          : nothing}
+          : this.onBack
+            ? html`
+                <div style="display: flex; justify-content: flex-start;">
+                  <sl-button variant="default" @click=${this.handleBackClick}>
+                    Back
+                  </sl-button>
+                </div>
+              `
+            : nothing}
       </div>
     `;
   }

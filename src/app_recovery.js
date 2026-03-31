@@ -64,6 +64,18 @@ const STEP_NETWORK = 5;
 const STEP_BOOTSTRAP = 6;
 const STEP_DONE = 7;
 const STEP_INSTALL = 8;
+const SETUP_STEP_STORAGE_KEY = "recovery-setup-current-step";
+const STEP_NAMES = {
+  [STEP_LOGIN]: "login",
+  [STEP_INTRO]: "intro",
+  [STEP_SYS_SETTINGS]: "system-settings",
+  [STEP_SET_PASSWORD]: "set-password",
+  [STEP_GENERATE_KEY]: "generate-key",
+  [STEP_NETWORK]: "network",
+  [STEP_BOOTSTRAP]: "bootstrap",
+  [STEP_DONE]: "done",
+  [STEP_INSTALL]: "install",
+};
 
 class AppModeApp extends LitElement {
   static styles = [appModeStyles, navStyles];
@@ -102,10 +114,186 @@ class AppModeApp extends LitElement {
     };
   }
 
+  _logSetupFlow(message, details = {}) {
+    console.log("[recovery-setup]", message, details);
+  }
+
+  _getStepName(stepNumber) {
+    return STEP_NAMES[stepNumber] ?? `unknown-${stepNumber}`;
+  }
+
+  _readPersistedSetupStep() {
+    try {
+      const rawValue = window.sessionStorage.getItem(SETUP_STEP_STORAGE_KEY);
+      if (rawValue === null) {
+        return null;
+      }
+
+      const parsedValue = JSON.parse(rawValue);
+      if (
+        !parsedValue ||
+        !Number.isInteger(parsedValue.stepNumber) ||
+        typeof parsedValue.setupSessionId !== "string" ||
+        !parsedValue.setupSessionId
+      ) {
+        this._clearPersistedSetupStep();
+        return null;
+      }
+
+      return parsedValue;
+    } catch (error) {
+      this._logSetupFlow("persistedStep:read-failed", { error });
+      return null;
+    }
+  }
+
+  _writePersistedSetupStep(stepNumber, setupSessionId) {
+    try {
+      if (!setupSessionId) {
+        this._logSetupFlow("persistedStep:write-skipped", {
+          reason: "missing-setup-session-id",
+          step: stepNumber,
+          stepName: this._getStepName(stepNumber),
+        });
+        return;
+      }
+
+      window.sessionStorage.setItem(
+        SETUP_STEP_STORAGE_KEY,
+        JSON.stringify({ stepNumber, setupSessionId }),
+      );
+      this._logSetupFlow("persistedStep:write", {
+        step: stepNumber,
+        stepName: this._getStepName(stepNumber),
+        setupSessionId,
+      });
+    } catch (error) {
+      this._logSetupFlow("persistedStep:write-failed", { error });
+    }
+  }
+
+  _clearPersistedSetupStep() {
+    try {
+      window.sessionStorage.removeItem(SETUP_STEP_STORAGE_KEY);
+      this._logSetupFlow("persistedStep:cleared");
+    } catch (error) {
+      this._logSetupFlow("persistedStep:clear-failed", { error });
+    }
+  }
+
+  _getAllowedPersistedSteps(setupState) {
+    const {
+      hasCompletedInitialConfiguration,
+      hasGeneratedKey,
+      hasConfiguredNetwork,
+      activeBootstrapJobId,
+      isForbidden,
+    } = setupState;
+
+    if (isForbidden || hasCompletedInitialConfiguration) {
+      return new Set();
+    }
+
+    const pristineSetup =
+      !hasGeneratedKey && !hasConfiguredNetwork && !activeBootstrapJobId;
+
+    if (pristineSetup) {
+      return new Set([
+        STEP_INTRO,
+        STEP_SYS_SETTINGS,
+        STEP_SET_PASSWORD,
+        STEP_GENERATE_KEY,
+      ]);
+    }
+
+    if (activeBootstrapJobId) {
+      if (!this.isLoggedIn) {
+        return new Set();
+      }
+
+      return new Set([
+        STEP_INTRO,
+        STEP_SYS_SETTINGS,
+        STEP_SET_PASSWORD,
+        STEP_GENERATE_KEY,
+        STEP_NETWORK,
+        STEP_BOOTSTRAP,
+      ]);
+    }
+
+    if (hasGeneratedKey) {
+      if (!this.isLoggedIn) {
+        return new Set();
+      }
+
+      return new Set([
+        STEP_INTRO,
+        STEP_SYS_SETTINGS,
+        STEP_SET_PASSWORD,
+        STEP_GENERATE_KEY,
+        STEP_NETWORK,
+      ]);
+    }
+
+    return new Set([
+      STEP_INTRO,
+      STEP_SYS_SETTINGS,
+      STEP_SET_PASSWORD,
+      STEP_GENERATE_KEY,
+    ]);
+  }
+
+  _resolvePersistedSetupStep(setupState, fallbackStep) {
+    const persistedStep = this._readPersistedSetupStep();
+    if (persistedStep === null) {
+      return fallbackStep;
+    }
+
+    if (persistedStep.setupSessionId !== setupState.setupSessionId) {
+      this._logSetupFlow("persistedStep:ignored", {
+        reason: "setup-session-id-mismatch",
+        persistedStep: persistedStep.stepNumber,
+        persistedStepName: this._getStepName(persistedStep.stepNumber),
+        persistedSetupSessionId: persistedStep.setupSessionId,
+        currentSetupSessionId: setupState.setupSessionId,
+        fallbackStep,
+        fallbackStepName: this._getStepName(fallbackStep),
+      });
+      return fallbackStep;
+    }
+
+    const allowedSteps = this._getAllowedPersistedSteps(setupState);
+    if (!allowedSteps.has(persistedStep.stepNumber)) {
+      this._logSetupFlow("persistedStep:ignored", {
+        reason: "step-not-allowed",
+        persistedStep: persistedStep.stepNumber,
+        persistedStepName: this._getStepName(persistedStep.stepNumber),
+        fallbackStep,
+        fallbackStepName: this._getStepName(fallbackStep),
+      });
+      return fallbackStep;
+    }
+
+    this._logSetupFlow("persistedStep:using", {
+      persistedStep: persistedStep.stepNumber,
+      persistedStepName: this._getStepName(persistedStep.stepNumber),
+      setupSessionId: persistedStep.setupSessionId,
+      fallbackStep,
+      fallbackStepName: this._getStepName(fallbackStep),
+    });
+    return persistedStep.stepNumber;
+  }
+
   set setupState(newValue) {
     this._setupState = newValue;
     if (newValue) {
       const stepNumber = this._determineStartingStep(newValue);
+      this._logSetupFlow("setupState updated", {
+        setupState: newValue,
+        chosenStep: stepNumber,
+        chosenStepName: this._getStepName(stepNumber),
+        isLoggedIn: this.isLoggedIn,
+      });
       this.activeStepNumber = stepNumber;
     }
   }
@@ -117,6 +305,11 @@ class AppModeApp extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.isLoggedIn = !!store.networkContext.token;
+    this._logSetupFlow("connected", {
+      isLoggedIn: this.isLoggedIn,
+      hasToken: !!store.networkContext.token,
+      location: window.location.href,
+    });
 
     // Instantiate a web socket connection and add main app as an observer
     this.mainChannel.addObserver(this);
@@ -127,9 +320,15 @@ class AppModeApp extends LitElement {
 
   async fetchSetupState() {
     this.loading = true;
+    this._logSetupFlow("fetchSetupState:start", {
+      isLoggedIn: this.isLoggedIn,
+      hasToken: !!store.networkContext.token,
+    });
     const response = await getSetupBootstrap({ noLogoutRedirect: true });
+    this._logSetupFlow("fetchSetupState:response", response);
 
     if (!response.success && response.status === 401) {
+      this._logSetupFlow("fetchSetupState:forbidden", response);
       this.setupState = { isForbidden: true };
       this.loading = false;
       return;
@@ -149,7 +348,9 @@ class AppModeApp extends LitElement {
   }
 
   async fetchRecoveryState() {
+    this._logSetupFlow("fetchRecoveryState:start");
     const response = await getRecoveryBootstrap({ noLogoutRedirect: true });
+    this._logSetupFlow("fetchRecoveryState:response", response);
 
     if (!response.recoveryFacts) {
       // Only show alert if we're logged in
@@ -174,41 +375,115 @@ class AppModeApp extends LitElement {
       activeBootstrapJobId,
       isForbidden,
     } = setupState;
+    const isPristineSetup =
+      !hasGeneratedKey && !hasConfiguredNetwork && !activeBootstrapJobId;
+
+    this._logSetupFlow("determineStartingStep:input", {
+      setupState,
+      isLoggedIn: this.isLoggedIn,
+      bootstrapJobId: this.bootstrapJobId,
+    });
 
     // First check if we're forbidden
     if (isForbidden) {
+      this._logSetupFlow("determineStartingStep:result", {
+        reason: "forbidden",
+        step: STEP_LOGIN,
+        stepName: this._getStepName(STEP_LOGIN),
+      });
       return STEP_LOGIN;
     }
 
     if (!hasCompletedInitialConfiguration) {
       this.isFirstTimeSetup = true;
 
+      if (isPristineSetup) {
+        const resolvedStep = this.isLoggedIn
+          ? STEP_INTRO
+          : this._resolvePersistedSetupStep(setupState, STEP_INTRO);
+        this._logSetupFlow("determineStartingStep:result", {
+          reason: this.isLoggedIn
+            ? "fresh-setup-pristine-with-stale-login"
+            : "fresh-setup-pristine",
+          step: resolvedStep,
+          stepName: this._getStepName(resolvedStep),
+        });
+        return resolvedStep;
+      }
+
       if (!this.isLoggedIn) {
         if (hasGeneratedKey || hasConfiguredNetwork || activeBootstrapJobId) {
+          this._logSetupFlow("determineStartingStep:result", {
+            reason: "not-logged-in-but-partially-configured",
+            step: STEP_LOGIN,
+            stepName: this._getStepName(STEP_LOGIN),
+          });
           return STEP_LOGIN;
         }
-        return STEP_INTRO;
       }
 
       if (!hasGeneratedKey) {
-        return STEP_GENERATE_KEY;
+        const resolvedStep = this._resolvePersistedSetupStep(
+          setupState,
+          STEP_GENERATE_KEY,
+        );
+        this._logSetupFlow("determineStartingStep:result", {
+          reason: "logged-in-missing-generated-key",
+          step: resolvedStep,
+          stepName: this._getStepName(resolvedStep),
+        });
+        return resolvedStep;
       }
       if (activeBootstrapJobId) {
         this.bootstrapJobId = activeBootstrapJobId;
-        return STEP_BOOTSTRAP;
+        const resolvedStep = this._resolvePersistedSetupStep(
+          setupState,
+          STEP_BOOTSTRAP,
+        );
+        this._logSetupFlow("determineStartingStep:result", {
+          reason: "active-bootstrap-job",
+          step: resolvedStep,
+          stepName: this._getStepName(resolvedStep),
+          bootstrapJobId: activeBootstrapJobId,
+        });
+        return resolvedStep;
       }
       if (!hasConfiguredNetwork) {
-        return STEP_NETWORK;
+        const resolvedStep = this._resolvePersistedSetupStep(
+          setupState,
+          STEP_NETWORK,
+        );
+        this._logSetupFlow("determineStartingStep:result", {
+          reason: "logged-in-missing-network",
+          step: resolvedStep,
+          stepName: this._getStepName(resolvedStep),
+        });
+        return resolvedStep;
       }
+      this._logSetupFlow("determineStartingStep:result", {
+        reason: "initial-config-finished-awaiting-done",
+        step: STEP_DONE,
+        stepName: this._getStepName(STEP_DONE),
+      });
       return STEP_DONE;
     }
 
     // If we're already fully set up, or if we've generated a key, show our login step.
     if (!this.isLoggedIn) {
+      this._logSetupFlow("determineStartingStep:result", {
+        reason: "configured-but-not-logged-in",
+        step: STEP_LOGIN,
+        stepName: this._getStepName(STEP_LOGIN),
+      });
       return STEP_LOGIN;
     }
 
     // Default to login if none of the above conditions are met
+    this._logSetupFlow("determineStartingStep:result", {
+      reason: "configured-and-logged-in",
+      step: STEP_DONE,
+      stepName: this._getStepName(STEP_DONE),
+    });
     return STEP_DONE;
   }
 
@@ -237,13 +512,60 @@ class AppModeApp extends LitElement {
   }
 
   _nextStep = () => {
+    const fromStep = this.activeStepNumber;
     this.isLoggedIn = this.context.store.networkContext.token;
     this.activeStepNumber++;
+    this._logSetupFlow("nextStep", {
+      fromStep,
+      fromStepName: this._getStepName(fromStep),
+      toStep: this.activeStepNumber,
+      toStepName: this._getStepName(this.activeStepNumber),
+      isLoggedIn: this.isLoggedIn,
+    });
   };
 
   _goToStep = (stepNumber) => {
+    const fromStep = this.activeStepNumber;
     this.activeStepNumber = stepNumber;
+    this._logSetupFlow("goToStep", {
+      fromStep,
+      fromStepName: this._getStepName(fromStep),
+      toStep: stepNumber,
+      toStepName: this._getStepName(stepNumber),
+    });
   };
+
+  updated(changedProperties) {
+    if (changedProperties.has("activeStepNumber")) {
+      const previousStep = changedProperties.get("activeStepNumber");
+      if (
+        this.activeStepNumber >= STEP_INTRO &&
+        this.activeStepNumber <= STEP_BOOTSTRAP
+      ) {
+        this._writePersistedSetupStep(
+          this.activeStepNumber,
+          this.setupState?.setupSessionId,
+        );
+      } else if (this.activeStepNumber === STEP_LOGIN && this.setupState) {
+        this._clearPersistedSetupStep();
+      }
+      this._logSetupFlow("activeStepNumber changed", {
+        previousStep,
+        previousStepName:
+          previousStep === undefined ? undefined : this._getStepName(previousStep),
+        nextStep: this.activeStepNumber,
+        nextStepName: this._getStepName(this.activeStepNumber),
+      });
+    }
+
+    if (changedProperties.has("isLoggedIn")) {
+      this._logSetupFlow("isLoggedIn changed", {
+        previous: changedProperties.get("isLoggedIn"),
+        next: this.isLoggedIn,
+        hasToken: !!this.context.store.networkContext.token,
+      });
+    }
+  }
 
   disconnectedCallback() {
     this.mainChannel.removeObserver(this);
@@ -252,6 +574,7 @@ class AppModeApp extends LitElement {
 
   performLogout(e) {
     if (!e.currentTarget.disabled) {
+      this._clearPersistedSetupStep();
       store.updateState({ networkContext: { token: null } });
       window.location.reload();
     }
@@ -360,6 +683,7 @@ class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-system-settings
                             .setupData=${this._setupData}
+                            .onBack=${() => this._goToStep(STEP_INTRO)}
                             .onSuccess=${this._nextStep}
                           ></x-action-system-settings>`,
                       ],
@@ -372,6 +696,7 @@ class AppModeApp extends LitElement {
                             description="Devise a secure password used to encrypt your Dogebox Master Key."
                             retainHash
                             noSubmit
+                            .onBack=${() => this._goToStep(STEP_SYS_SETTINGS)}
                             .onSuccess=${this._nextStep}
                           ></x-action-change-pass>`,
                       ],
@@ -379,6 +704,7 @@ class AppModeApp extends LitElement {
                         STEP_GENERATE_KEY,
                         () =>
                           html`<x-action-create-key
+                            .onBack=${() => this._goToStep(STEP_SET_PASSWORD)}
                             .onSuccess=${this._nextStep}
                           ></x-action-create-key>`,
                       ],
@@ -386,9 +712,9 @@ class AppModeApp extends LitElement {
                         STEP_NETWORK,
                         () =>
                           html`<x-action-select-network
-                            .onSuccess=${async (jobId) => {
+                            .onBack=${() => this._goToStep(STEP_GENERATE_KEY)}
+                            .onSuccess=${(jobId) => {
                               this.bootstrapJobId = jobId;
-                              await asyncTimeout(750);
                               this._nextStep();
                             }}
                             .reflectorToken=${reflectorToken}
@@ -399,6 +725,7 @@ class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-setup-progress
                             .jobId=${this.bootstrapJobId}
+                            .onBack=${() => this._goToStep(STEP_NETWORK)}
                             .onSuccess=${async () => {
                               await asyncTimeout(750);
                               this._nextStep();

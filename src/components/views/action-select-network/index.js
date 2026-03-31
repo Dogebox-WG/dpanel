@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { getNetworks } from "/api/network/get-networks.js";
 import { putNetwork } from "/api/network/set-network.js";
 import { postSetupBootstrap } from "/api/system/post-bootstrap.js";
@@ -42,6 +42,7 @@ class SelectNetwork extends LitElement {
     return {
       showSuccessAlert: { type: Boolean },
       reflectorToken: { type: String },
+      onBack: { type: Object },
       onSuccess: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
@@ -54,6 +55,7 @@ class SelectNetwork extends LitElement {
   constructor() {
     super();
     this._form = null;
+    this.onBack = null;
     this._server_fault = false;
     this._invalid_creds = false;
     this._setNetworkFields = {};
@@ -313,7 +315,6 @@ class SelectNetwork extends LitElement {
 
     // Handle success
     dynamicFormInstance.retainChanges(); // stops spinner
-    dynamicFormInstance.toggleCelebrate();
     await this.handleSuccess(finalSystemBootstrap.jobId);
   };
 
@@ -363,6 +364,12 @@ class SelectNetwork extends LitElement {
     }
   }
 
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
+    }
+  }
+
   _renderIcon(name) {
     return html`<sl-icon name=${name}></sl-icon>`;
   }
@@ -394,6 +401,13 @@ class SelectNetwork extends LitElement {
               .fields=${this._setNetworkFields}
               .values=${this._setNetworkValues}
               .onSubmit=${this._attemptSetNetwork}
+              .footerStart=${this.onBack
+                ? html`
+                    <sl-button variant="default" @click=${this.handleBackClick}>
+                      Back
+                    </sl-button>
+                  `
+                : nothing}
               requireCommit
               theme="yellow"
               style="--submit-btn-width: auto; --submit-btn-anchor: end;"

@@ -51,20 +51,29 @@ class SystemSettings extends LitElement {
       display: flex;
       flex-direction: row;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: flex-start;
       gap: 1em;
       margin-bottom: 2em;
+    }
+
+    .action-wrap-end {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1em;
+      margin-left: auto;
     }
 
     h4 { margin: 0.5em 0; display: flex; align-items: center; }
 
     .next-button {
-      margin-top: 2em;
+      margin-top: 0;
     }
   `];
 
   static get properties() {
     return {
+      onBack: { type: Object },
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
       _keymaps: { type: Array },
@@ -80,6 +89,7 @@ class SystemSettings extends LitElement {
 
   constructor() {
     super();
+    this.onBack = null;
     this._keymaps = [];
     this._timezones = [];
     this._disks = [];
@@ -242,6 +252,12 @@ class SystemSettings extends LitElement {
     this._confirmation_checked = e.target.checked;
   }
 
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
+    }
+  }
+
   render() {
     if (this._loading) {
       return html`<sl-spinner></sl-spinner>`;
@@ -382,19 +398,32 @@ class SystemSettings extends LitElement {
           </sl-alert>
 
           <div class="action-wrap">
-            ${this._changes.disk && !this._is_boot_media ? html`
-              <sl-checkbox @sl-change=${this.handleCheckboxChange}>I understand</sl-checkbox>
-              `: nothing 
-            }
+            ${this.onBack
+              ? html`
+                  <sl-button
+                    variant="default"
+                    ?disabled=${this._inflight}
+                    @click=${this.handleBackClick}
+                  >
+                    Back
+                  </sl-button>
+                `
+              : nothing}
+            <div class="action-wrap-end">
+              ${this._changes.disk && !this._is_boot_media ? html`
+                <sl-checkbox @sl-change=${this.handleCheckboxChange}>I understand</sl-checkbox>
+                `: nothing 
+              }
 
-            <sl-button
-              class="next-button"
-              variant="primary"
-              ?disabled=${this._inflight || (this._changes.disk && !this._is_boot_media && !this._confirmation_checked)}
-              ?loading=${this._inflight}
-              @click=${this._attemptSubmit}
-              >Next</sl-button
-            >
+              <sl-button
+                class="next-button"
+                variant="primary"
+                ?disabled=${this._inflight || (this._changes.disk && !this._is_boot_media && !this._confirmation_checked)}
+                ?loading=${this._inflight}
+                @click=${this._attemptSubmit}
+                >Next</sl-button
+              >
+            </div>
           </div>
         </div>
       </div>

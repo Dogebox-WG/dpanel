@@ -3,6 +3,6 @@ export const postResponse = {
   method: "post",
   group: "system",
   res: {
-    success: true
+    jobId: "mock-bootstrap-job"
   }
 };

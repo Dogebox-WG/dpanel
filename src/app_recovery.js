@@ -20,6 +20,7 @@ import "/components/views/action-login/index.js";
 import "/components/views/action-change-pass/index.js";
 import "/components/views/action-create-key/index.js";
 import "/components/views/action-select-network/index.js";
+import "/components/views/action-setup-progress/index.js";
 import "/components/views/action-select-install-location/index.js";
 import "/components/views/action-system-settings/index.js";
 import "/components/views/setup-dislaimer/index.js";
@@ -60,8 +61,9 @@ const STEP_SYS_SETTINGS = 2;
 const STEP_SET_PASSWORD = 3;
 const STEP_GENERATE_KEY = 4;
 const STEP_NETWORK = 5;
-const STEP_DONE = 6;
-const STEP_INSTALL = 7;
+const STEP_BOOTSTRAP = 6;
+const STEP_DONE = 7;
+const STEP_INSTALL = 8;
 
 class AppModeApp extends LitElement {
   static styles = [appModeStyles, navStyles];
@@ -73,6 +75,7 @@ class AppModeApp extends LitElement {
     isFirstTimeSetup: { type: Boolean },
     isForbidden: { type: Boolean },
     hasLoaded: { type: Boolean },
+    bootstrapJobId: { type: String },
     installationState: { type: String },
     installationBootMedia: { type: String },
     renderReady: { type: Boolean },
@@ -86,6 +89,7 @@ class AppModeApp extends LitElement {
     this.setupState = null;
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
+    this.bootstrapJobId = null;
     this.installationState = "notInstalled";
     this.installationBootMedia = "ro";
     this.hasLoaded = false;
@@ -167,6 +171,7 @@ class AppModeApp extends LitElement {
       hasCompletedInitialConfiguration,
       hasGeneratedKey,
       hasConfiguredNetwork,
+      activeBootstrapJobId,
       isForbidden,
     } = setupState;
 
@@ -175,24 +180,22 @@ class AppModeApp extends LitElement {
       return STEP_LOGIN;
     }
 
-    // Handle first-time setup
     if (!hasCompletedInitialConfiguration) {
       this.isFirstTimeSetup = true;
-      return STEP_INTRO;
-    }
 
-    // If we're already fully set up, or if we've generated a key, show our login step.
-    if (
-      !this.isLoggedIn &&
-      (hasCompletedInitialConfiguration || hasGeneratedKey)
-    ) {
-      return STEP_LOGIN;
-    }
+      if (!this.isLoggedIn) {
+        if (hasGeneratedKey || hasConfiguredNetwork || activeBootstrapJobId) {
+          return STEP_LOGIN;
+        }
+        return STEP_INTRO;
+      }
 
-    // If we're logged in, follow the setup sequence
-    if (this.isLoggedIn) {
       if (!hasGeneratedKey) {
         return STEP_GENERATE_KEY;
+      }
+      if (activeBootstrapJobId) {
+        this.bootstrapJobId = activeBootstrapJobId;
+        return STEP_BOOTSTRAP;
       }
       if (!hasConfiguredNetwork) {
         return STEP_NETWORK;
@@ -200,8 +203,13 @@ class AppModeApp extends LitElement {
       return STEP_DONE;
     }
 
+    // If we're already fully set up, or if we've generated a key, show our login step.
+    if (!this.isLoggedIn) {
+      return STEP_LOGIN;
+    }
+
     // Default to login if none of the above conditions are met
-    return STEP_LOGIN;
+    return STEP_DONE;
   }
 
   firstUpdated() {
@@ -231,6 +239,10 @@ class AppModeApp extends LitElement {
   _nextStep = () => {
     this.isLoggedIn = this.context.store.networkContext.token;
     this.activeStepNumber++;
+  };
+
+  _goToStep = (stepNumber) => {
+    this.activeStepNumber = stepNumber;
   };
 
   disconnectedCallback() {
@@ -374,12 +386,28 @@ class AppModeApp extends LitElement {
                         STEP_NETWORK,
                         () =>
                           html`<x-action-select-network
-                            .onSuccess=${async () => {
+                            .onSuccess=${async (jobId) => {
+                              this.bootstrapJobId = jobId;
                               await asyncTimeout(750);
                               this._nextStep();
                             }}
                             .reflectorToken=${reflectorToken}
                           ></x-action-select-network>`,
+                      ],
+                      [
+                        STEP_BOOTSTRAP,
+                        () =>
+                          html`<x-action-setup-progress
+                            .jobId=${this.bootstrapJobId}
+                            .onSuccess=${async () => {
+                              await asyncTimeout(750);
+                              this._nextStep();
+                            }}
+                            .onFailure=${() => {
+                              this.bootstrapJobId = null;
+                              this._goToStep(STEP_NETWORK);
+                            }}
+                          ></x-action-setup-progress>`,
                       ],
                       [
                         STEP_DONE,

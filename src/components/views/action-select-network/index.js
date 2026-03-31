@@ -42,6 +42,7 @@ class SelectNetwork extends LitElement {
     return {
       showSuccessAlert: { type: Boolean },
       reflectorToken: { type: String },
+      onSuccess: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
       _setNetworkFields: { type: Object },
@@ -296,30 +297,24 @@ class SelectNetwork extends LitElement {
     // TODO: move this into post-network flow.
     const finalSystemBootstrap = await postSetupBootstrap({
       initialSSHKey: state["ssh-key"],
-      // Temporarily don't submit reflectorToken until the service is up and running.
       reflectorToken: this.reflectorToken,
       reflectorHost: store.networkContext.reflectorHost,
       useFoundationPupBinaryCache: store.setupContext.useFoundationPupBinaryCache,
       useFoundationOSBinaryCache: store.setupContext.useFoundationOSBinaryCache
-    }).catch(() => {
-      console.log("bootstrap called but no response returned");
+    }).catch((error) => {
+      this.handleBootstrapError(error);
+      return null;
     });
 
-    // if (!finalSystemBootstrap) {
-    //   dynamicFormInstance.retainChanges(); // stops spinner
-    //   return;
-    // }
-
-    // if (finalSystemBootstrap.error) {
-    //   dynamicFormInstance.retainChanges(); // stops spinner
-    //   this.handleError(finalSystemBootstrap.error);
-    //   return;
-    // }
+    if (!finalSystemBootstrap?.jobId) {
+      dynamicFormInstance.retainChanges(); // stops spinner
+      return;
+    }
 
     // Handle success
     dynamicFormInstance.retainChanges(); // stops spinner
     dynamicFormInstance.toggleCelebrate();
-    await this.handleSuccess();
+    await this.handleSuccess(finalSystemBootstrap.jobId);
   };
 
   handleFault = (fault) => {
@@ -339,7 +334,22 @@ class SelectNetwork extends LitElement {
     createAlert("danger", message, "emoji-frown", null, action, new Error(err));
   }
 
-  async handleSuccess() {
+  handleBootstrapError(err) {
+    const detail = err?.message ?? "No details were returned by the server.";
+    createAlert(
+      "danger",
+      [
+        "Setup could not be started.",
+        "Please review your settings and try again.",
+      ],
+      "emoji-frown",
+      null,
+      { text: "View details" },
+      new Error(detail),
+    );
+  }
+
+  async handleSuccess(jobId) {
     if (this.showSuccessAlert) {
       createAlert(
         "success",
@@ -349,7 +359,7 @@ class SelectNetwork extends LitElement {
       );
     }
     if (this.onSuccess) {
-      await this.onSuccess();
+      await this.onSuccess(jobId);
     }
   }
 

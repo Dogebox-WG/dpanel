@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { jobWebSocket } from "/controllers/sockets/job-channel.js";
@@ -10,6 +10,8 @@ class SetupProgress extends LitElement {
     jobId: { type: String },
     onSuccess: { type: Object },
     onFailure: { type: Object },
+    _failed: { type: Boolean },
+    _errorMessage: { type: String },
   };
 
   static styles = css`
@@ -28,12 +30,14 @@ class SetupProgress extends LitElement {
       border-radius: 16px;
       padding: 1.5rem;
       color: white;
-      background-color: var(--sl-color-yellow-500);
+      background-color: var(--sl-color-cyan-600);
       background-image: linear-gradient(
         to bottom right,
-        var(--sl-color-yellow-500),
-        var(--sl-color-amber-600)
+        var(--sl-color-cyan-600),
+        var(--sl-color-sky-500)
       );
+      position: relative;
+      overflow: hidden;
     }
 
     .banner h1,
@@ -46,47 +50,37 @@ class SetupProgress extends LitElement {
       margin-bottom: 0.75rem;
     }
 
-    .status-card {
-      border: 1px solid var(--sl-panel-border-color);
-      border-radius: 16px;
-      padding: 1rem;
-      background: var(--sl-color-neutral-0);
+    .banner p {
+      line-height: 1.5;
+      font-family: unset;
     }
 
-    .status-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .status-copy h2,
-    .status-copy p {
-      margin: 0;
-    }
-
-    .status-copy h2 {
-      font-size: 1.1rem;
-      margin-bottom: 0.35rem;
-    }
-
-    .status-copy p {
-      color: var(--sl-color-neutral-600);
-      font-family: sans-serif;
-    }
-
-    .error-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 1rem;
+    .log-wrap {
+      border-radius: 12px;
+      overflow: hidden;
     }
 
     x-log-viewer {
-      --log-viewer-height: 360px;
+      --log-viewer-height: 420px;
       --log-footer-height: 56px;
+    }
+
+    .error-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
       border-radius: 12px;
-      overflow: hidden;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid var(--sl-color-danger-400);
+    }
+
+    .error-bar p {
+      margin: 0;
+      color: var(--sl-color-danger-500);
+      font-family: sans-serif;
+      font-size: 0.9rem;
     }
   `;
 
@@ -95,6 +89,8 @@ class SetupProgress extends LitElement {
     this.jobId = "";
     this.onSuccess = null;
     this.onFailure = null;
+    this._failed = false;
+    this._errorMessage = "";
     this.context = new StoreSubscriber(this, store);
     this._completionHandled = false;
   }
@@ -102,11 +98,22 @@ class SetupProgress extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     jobWebSocket.connect();
+    this._keepAlive = setInterval(() => {
+      if (this._completionHandled || this._failed) return;
+      jobWebSocket.connect();
+    }, 10000);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    clearInterval(this._keepAlive);
   }
 
   updated(changedProperties) {
     if (changedProperties.has("jobId")) {
       this._completionHandled = false;
+      this._failed = false;
+      this._errorMessage = "";
     }
 
     const job = this._job;
@@ -118,44 +125,17 @@ class SetupProgress extends LitElement {
       this._completionHandled = true;
       this.onSuccess && this.onSuccess();
     }
+
+    if (job.status === "failed" || job.status === "cancelled") {
+      this._completionHandled = true;
+      this._failed = true;
+      this._errorMessage =
+        job.errorMessage || "Setup failed. Review the logs and try again.";
+    }
   }
 
   get _job() {
     return store.jobsContext.jobs.find((job) => job.id === this.jobId) ?? null;
-  }
-
-  get _statusVariant() {
-    const status = this._job?.status;
-    if (status === "failed" || status === "cancelled") return "danger";
-    if (status === "completed") return "success";
-    return "warning";
-  }
-
-  get _statusLabel() {
-    const status = this._job?.status;
-    if (status === "queued") return "Queued";
-    if (status === "in_progress") return "In Progress";
-    if (status === "failed") return "Failed";
-    if (status === "cancelled") return "Cancelled";
-    if (status === "completed") return "Completed";
-    return "Preparing";
-  }
-
-  get _statusMessage() {
-    const job = this._job;
-    if (!this.jobId) {
-      return "Waiting for the setup job to start.";
-    }
-    if (!job) {
-      return "Connecting to the setup job and loading logs.";
-    }
-    if (job.status === "failed" || job.status === "cancelled") {
-      return job.errorMessage || "Setup failed. Review the logs and try again.";
-    }
-    if (job.status === "completed") {
-      return "Setup finished successfully. Continuing to the next step.";
-    }
-    return job.summaryMessage || "Your Dogebox is applying the selected settings.";
   }
 
   handleBackClick = () => {
@@ -163,9 +143,6 @@ class SetupProgress extends LitElement {
   };
 
   render() {
-    const job = this._job;
-    const isFailed = job?.status === "failed" || job?.status === "cancelled";
-
     return html`
       <div class="page">
         <div class="banner">
@@ -176,38 +153,20 @@ class SetupProgress extends LitElement {
           </p>
         </div>
 
-        <div class="status-card">
-          <div class="status-head">
-            <div class="status-copy">
-              <h2>${job?.displayName || "Initial Setup"}</h2>
-              <p>${this._statusMessage}</p>
-            </div>
-            <sl-tag variant=${this._statusVariant} size="large">
-              ${this._statusLabel}
-            </sl-tag>
-          </div>
-
-          ${job
-            ? html`
-                <x-log-viewer .jobId=${this.jobId}></x-log-viewer>
-              `
-            : html`
-                <sl-alert variant="warning" open>
-                  <sl-icon slot="icon" name="hourglass-split"></sl-icon>
-                  Waiting for the setup log stream.
-                </sl-alert>
-              `}
-
-          ${isFailed
-            ? html`
-                <div class="error-actions">
-                  <sl-button variant="primary" @click=${this.handleBackClick}>
-                    Go Back
-                  </sl-button>
-                </div>
-              `
-            : ""}
+        <div class="log-wrap">
+          <x-log-viewer .jobId=${this.jobId} ?reconnect=${true}></x-log-viewer>
         </div>
+
+        ${this._failed
+          ? html`
+              <div class="error-bar">
+                <p>${this._errorMessage}</p>
+                <sl-button variant="primary" @click=${this.handleBackClick}>
+                  Go Back
+                </sl-button>
+              </div>
+            `
+          : nothing}
       </div>
     `;
   }

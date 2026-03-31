@@ -16,6 +16,7 @@ class LogViewer extends LitElement {
       animateOpen: { type: Boolean },
       opening: { type: Boolean, reflect: true },
       reconnect: { type: Boolean },
+      connecting: { type: Boolean },
     };
   }
 
@@ -32,6 +33,7 @@ class LogViewer extends LitElement {
     this.animateOpen = false;
     this.opening = false;
     this.reconnect = false;
+    this.connecting = false;
     this._reconnectDelay = 0;
     this._reconnectTimer = null;
     this._reconnectStopped = false;
@@ -138,6 +140,10 @@ class LogViewer extends LitElement {
   }
 
   handleToggleConnection() {
+    if (!this.wsClient) {
+      return;
+    }
+
     if (this.wsClient.isConnected) {
       this.wsClient.disconnect();
     } else {
@@ -278,9 +284,11 @@ class LogViewer extends LitElement {
       <div>
         <div id="LogHUD">
           <div class="status">
-            ${this.isConnected
-              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+            ${this.connecting
+              ? html`<sl-tag size="small" pill variant="primary">Connecting</sl-tag>`
+              : this.isConnected
+                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
             }
           </div>
         </div>
@@ -291,7 +299,11 @@ class LogViewer extends LitElement {
             </ul>
           ` : html`
             <div class="no-logs-message">
-              ${this.isConnected ? 'Waiting for logs...' : 'Logs not available'}
+              ${this.connecting
+                ? 'Waiting for logs...'
+                : this.isConnected
+                  ? 'Waiting for logs...'
+                  : 'Logs not available'}
             </div>
           `}
         </div>

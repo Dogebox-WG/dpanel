@@ -8,6 +8,7 @@ import "/components/views/x-log-viewer/index.js";
 class SetupProgress extends LitElement {
   static properties = {
     jobId: { type: String },
+    startErrorMessage: { type: String },
     onBack: { type: Object },
     onSuccess: { type: Object },
     onFailure: { type: Object },
@@ -88,6 +89,7 @@ class SetupProgress extends LitElement {
   constructor() {
     super();
     this.jobId = "";
+    this.startErrorMessage = "";
     this.onBack = null;
     this.onSuccess = null;
     this.onFailure = null;
@@ -140,8 +142,16 @@ class SetupProgress extends LitElement {
     return store.jobsContext.jobs.find((job) => job.id === this.jobId) ?? null;
   }
 
+  get _isFailed() {
+    return Boolean(this.startErrorMessage) || this._failed;
+  }
+
+  get _activeErrorMessage() {
+    return this.startErrorMessage || this._errorMessage;
+  }
+
   handleBackClick = () => {
-    if (this._failed) {
+    if (this._isFailed) {
       this.onFailure && this.onFailure();
       return;
     }
@@ -155,19 +165,24 @@ class SetupProgress extends LitElement {
         <div class="banner">
           <h1>Setting up your Dogebox</h1>
           <p>
-            This can take several minutes while Dogebox applies your network and
-            system settings.
+            ${this.jobId
+              ? "This can take several minutes while Dogebox applies your network and system settings."
+              : "Setup is starting now. Logs will appear here as soon as the backend begins streaming them."}
           </p>
         </div>
 
         <div class="log-wrap">
-          <x-log-viewer .jobId=${this.jobId} ?reconnect=${true}></x-log-viewer>
+          <x-log-viewer
+            .jobId=${this.jobId}
+            ?connecting=${!this.jobId && !this._isFailed}
+            ?reconnect=${true}
+          ></x-log-viewer>
         </div>
 
-        ${this._failed
+        ${this._isFailed
           ? html`
               <div class="error-bar">
-                <p>${this._errorMessage}</p>
+                <p>${this._activeErrorMessage}</p>
                 <sl-button variant="primary" @click=${this.handleBackClick}>
                   Go Back
                 </sl-button>

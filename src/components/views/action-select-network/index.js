@@ -43,7 +43,9 @@ class SelectNetwork extends LitElement {
       showSuccessAlert: { type: Boolean },
       reflectorToken: { type: String },
       onBack: { type: Object },
+      onStart: { type: Object },
       onSuccess: { type: Object },
+      onBootstrapStartFailed: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
       _setNetworkFields: { type: Object },
@@ -56,6 +58,8 @@ class SelectNetwork extends LitElement {
     super();
     this._form = null;
     this.onBack = null;
+    this.onStart = null;
+    this.onBootstrapStartFailed = null;
     this._server_fault = false;
     this._invalid_creds = false;
     this._setNetworkFields = {};
@@ -291,6 +295,8 @@ class SelectNetwork extends LitElement {
       return;
     }
 
+    await this.handleStart();
+
     // temp: wait, because this needs to move to being an async call inside dogeboxd
     //       so that the putNetwork above can "complete".
     await asyncTimeout(5000);
@@ -305,11 +311,19 @@ class SelectNetwork extends LitElement {
       useFoundationOSBinaryCache: store.setupContext.useFoundationOSBinaryCache
     }).catch((error) => {
       this.handleBootstrapError(error);
-      return null;
+      return { errorHandled: true };
     });
+
+    if (finalSystemBootstrap?.errorHandled) {
+      dynamicFormInstance.retainChanges(); // stops spinner
+      return;
+    }
 
     if (!finalSystemBootstrap?.jobId) {
       dynamicFormInstance.retainChanges(); // stops spinner
+      this.handleBootstrapStartFailure(
+        "Setup could not be started. Please review your settings and try again.",
+      );
       return;
     }
 
@@ -348,6 +362,21 @@ class SelectNetwork extends LitElement {
       { text: "View details" },
       new Error(detail),
     );
+    this.handleBootstrapStartFailure(
+      `Setup could not be started. ${detail}`,
+    );
+  }
+
+  handleBootstrapStartFailure(message) {
+    if (this.onBootstrapStartFailed) {
+      this.onBootstrapStartFailed(message);
+    }
+  }
+
+  async handleStart() {
+    if (this.onStart) {
+      await this.onStart();
+    }
   }
 
   async handleSuccess(jobId) {

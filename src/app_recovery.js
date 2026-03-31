@@ -88,6 +88,7 @@ class AppModeApp extends LitElement {
     isForbidden: { type: Boolean },
     hasLoaded: { type: Boolean },
     bootstrapJobId: { type: String },
+    bootstrapStartError: { type: String },
     installationState: { type: String },
     installationBootMedia: { type: String },
     renderReady: { type: Boolean },
@@ -102,6 +103,7 @@ class AppModeApp extends LitElement {
     this.isFirstTimeSetup = false;
     this.isForbidden = false;
     this.bootstrapJobId = null;
+    this.bootstrapStartError = "";
     this.installationState = "notInstalled";
     this.installationBootMedia = "ro";
     this.hasLoaded = false;
@@ -232,6 +234,7 @@ class AppModeApp extends LitElement {
         STEP_SET_PASSWORD,
         STEP_GENERATE_KEY,
         STEP_NETWORK,
+        STEP_BOOTSTRAP,
       ]);
     }
 
@@ -713,9 +716,18 @@ class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-select-network
                             .onBack=${() => this._goToStep(STEP_GENERATE_KEY)}
+                            .onStart=${() => {
+                              this.bootstrapJobId = "";
+                              this.bootstrapStartError = "";
+                              this._nextStep();
+                            }}
                             .onSuccess=${(jobId) => {
                               this.bootstrapJobId = jobId;
-                              this._nextStep();
+                              this.bootstrapStartError = "";
+                            }}
+                            .onBootstrapStartFailed=${(errorMessage) => {
+                              this.bootstrapJobId = null;
+                              this.bootstrapStartError = errorMessage;
                             }}
                             .reflectorToken=${reflectorToken}
                           ></x-action-select-network>`,
@@ -725,13 +737,14 @@ class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-setup-progress
                             .jobId=${this.bootstrapJobId}
+                            .startErrorMessage=${this.bootstrapStartError}
                             .onBack=${() => this._goToStep(STEP_NETWORK)}
-                            .onSuccess=${async () => {
-                              await asyncTimeout(750);
+                            .onSuccess=${() => {
                               this._nextStep();
                             }}
                             .onFailure=${() => {
                               this.bootstrapJobId = null;
+                              this.bootstrapStartError = "";
                               this._goToStep(STEP_NETWORK);
                             }}
                           ></x-action-setup-progress>`,

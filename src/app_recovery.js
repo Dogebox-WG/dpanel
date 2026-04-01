@@ -136,10 +136,16 @@ class AppModeApp extends LitElement {
         !parsedValue ||
         !Number.isInteger(parsedValue.stepNumber) ||
         typeof parsedValue.setupSessionId !== "string" ||
-        !parsedValue.setupSessionId
+        !parsedValue.setupSessionId ||
+        (parsedValue.bootstrapStartError !== undefined &&
+          typeof parsedValue.bootstrapStartError !== "string")
       ) {
         this._clearPersistedSetupStep();
         return null;
+      }
+
+      if (typeof parsedValue.bootstrapStartError !== "string") {
+        parsedValue.bootstrapStartError = "";
       }
 
       return parsedValue;
@@ -149,7 +155,7 @@ class AppModeApp extends LitElement {
     }
   }
 
-  _writePersistedSetupStep(stepNumber, setupSessionId) {
+  _writePersistedSetupStep(stepNumber, setupSessionId, bootstrapStartError = "") {
     try {
       if (!setupSessionId) {
         this._logSetupFlow("persistedStep:write-skipped", {
@@ -162,12 +168,17 @@ class AppModeApp extends LitElement {
 
       window.sessionStorage.setItem(
         SETUP_STEP_STORAGE_KEY,
-        JSON.stringify({ stepNumber, setupSessionId }),
+        JSON.stringify({
+          stepNumber,
+          setupSessionId,
+          bootstrapStartError,
+        }),
       );
       this._logSetupFlow("persistedStep:write", {
         step: stepNumber,
         stepName: this._getStepName(stepNumber),
         setupSessionId,
+        hasBootstrapStartError: !!bootstrapStartError,
       });
     } catch (error) {
       this._logSetupFlow("persistedStep:write-failed", { error });
@@ -414,6 +425,22 @@ class AppModeApp extends LitElement {
         return resolvedStep;
       }
 
+      const persistedStep = this._readPersistedSetupStep();
+      const hasPersistedBootstrapStartError =
+        persistedStep?.setupSessionId === setupState.setupSessionId &&
+        persistedStep.stepNumber === STEP_BOOTSTRAP &&
+        !!persistedStep.bootstrapStartError;
+
+      if (hasPersistedBootstrapStartError) {
+        this.bootstrapStartError = persistedStep.bootstrapStartError;
+        this._logSetupFlow("determineStartingStep:result", {
+          reason: "persisted-bootstrap-start-error",
+          step: STEP_BOOTSTRAP,
+          stepName: this._getStepName(STEP_BOOTSTRAP),
+        });
+        return STEP_BOOTSTRAP;
+      }
+
       if (!this.isLoggedIn) {
         if (hasGeneratedKey || hasConfiguredNetwork || activeBootstrapJobId) {
           this._logSetupFlow("determineStartingStep:result", {
@@ -548,6 +575,7 @@ class AppModeApp extends LitElement {
         this._writePersistedSetupStep(
           this.activeStepNumber,
           this.setupState?.setupSessionId,
+          this.activeStepNumber === STEP_BOOTSTRAP ? this.bootstrapStartError : "",
         );
       } else if (this.activeStepNumber === STEP_LOGIN && this.setupState) {
         this._clearPersistedSetupStep();
@@ -567,6 +595,17 @@ class AppModeApp extends LitElement {
         next: this.isLoggedIn,
         hasToken: !!this.context.store.networkContext.token,
       });
+    }
+
+    if (
+      changedProperties.has("bootstrapStartError") &&
+      this.activeStepNumber === STEP_BOOTSTRAP
+    ) {
+      this._writePersistedSetupStep(
+        this.activeStepNumber,
+        this.setupState?.setupSessionId,
+        this.bootstrapStartError,
+      );
     }
   }
 

@@ -80,7 +80,7 @@ class SetupProgress extends LitElement {
 
     .error-bar p {
       margin: 0;
-      color: var(--sl-color-danger-500);
+      color: white;
       font-family: sans-serif;
       font-size: 0.9rem;
     }
@@ -184,7 +184,7 @@ class SetupProgress extends LitElement {
               <div class="error-bar">
                 <p>${this._activeErrorMessage}</p>
                 <sl-button variant="primary" @click=${this.handleBackClick}>
-                  Go Back
+                  Back
                 </sl-button>
               </div>
             `

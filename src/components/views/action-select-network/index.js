@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { getNetworks } from "/api/network/get-networks.js";
 import { putNetwork } from "/api/network/set-network.js";
 import { postSetupBootstrap } from "/api/system/post-bootstrap.js";
@@ -42,6 +42,10 @@ class SelectNetwork extends LitElement {
     return {
       showSuccessAlert: { type: Boolean },
       reflectorToken: { type: String },
+      onBack: { type: Object },
+      onStart: { type: Object },
+      onSuccess: { type: Object },
+      onBootstrapStartFailed: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
       _setNetworkFields: { type: Object },
@@ -53,6 +57,9 @@ class SelectNetwork extends LitElement {
   constructor() {
     super();
     this._form = null;
+    this.onBack = null;
+    this.onStart = null;
+    this.onBootstrapStartFailed = null;
     this._server_fault = false;
     this._invalid_creds = false;
     this._setNetworkFields = {};
@@ -288,6 +295,8 @@ class SelectNetwork extends LitElement {
       return;
     }
 
+    await this.handleStart();
+
     // temp: wait, because this needs to move to being an async call inside dogeboxd
     //       so that the putNetwork above can "complete".
     await asyncTimeout(5000);
@@ -296,30 +305,31 @@ class SelectNetwork extends LitElement {
     // TODO: move this into post-network flow.
     const finalSystemBootstrap = await postSetupBootstrap({
       initialSSHKey: state["ssh-key"],
-      // Temporarily don't submit reflectorToken until the service is up and running.
       reflectorToken: this.reflectorToken,
       reflectorHost: store.networkContext.reflectorHost,
       useFoundationPupBinaryCache: store.setupContext.useFoundationPupBinaryCache,
       useFoundationOSBinaryCache: store.setupContext.useFoundationOSBinaryCache
-    }).catch(() => {
-      console.log("bootstrap called but no response returned");
+    }).catch((error) => {
+      this.handleBootstrapError(error);
+      return { errorHandled: true };
     });
 
-    // if (!finalSystemBootstrap) {
-    //   dynamicFormInstance.retainChanges(); // stops spinner
-    //   return;
-    // }
+    if (finalSystemBootstrap?.errorHandled) {
+      dynamicFormInstance.retainChanges(); // stops spinner
+      return;
+    }
 
-    // if (finalSystemBootstrap.error) {
-    //   dynamicFormInstance.retainChanges(); // stops spinner
-    //   this.handleError(finalSystemBootstrap.error);
-    //   return;
-    // }
+    if (!finalSystemBootstrap?.jobId) {
+      dynamicFormInstance.retainChanges(); // stops spinner
+      this.handleBootstrapStartFailure(
+        "Setup could not be started. Please review your settings and try again.",
+      );
+      return;
+    }
 
     // Handle success
     dynamicFormInstance.retainChanges(); // stops spinner
-    dynamicFormInstance.toggleCelebrate();
-    await this.handleSuccess();
+    await this.handleSuccess(finalSystemBootstrap.jobId);
   };
 
   handleFault = (fault) => {
@@ -339,7 +349,37 @@ class SelectNetwork extends LitElement {
     createAlert("danger", message, "emoji-frown", null, action, new Error(err));
   }
 
-  async handleSuccess() {
+  handleBootstrapError(err) {
+    const detail = err?.message ?? "No details were returned by the server.";
+    createAlert(
+      "danger",
+      [
+        "Setup could not be started.",
+        "Please review your settings and try again.",
+      ],
+      "emoji-frown",
+      null,
+      { text: "View details" },
+      new Error(detail),
+    );
+    this.handleBootstrapStartFailure(
+      `Setup could not be started. ${detail}`,
+    );
+  }
+
+  handleBootstrapStartFailure(message) {
+    if (this.onBootstrapStartFailed) {
+      this.onBootstrapStartFailed(message);
+    }
+  }
+
+  async handleStart() {
+    if (this.onStart) {
+      await this.onStart();
+    }
+  }
+
+  async handleSuccess(jobId) {
     if (this.showSuccessAlert) {
       createAlert(
         "success",
@@ -349,7 +389,13 @@ class SelectNetwork extends LitElement {
       );
     }
     if (this.onSuccess) {
-      await this.onSuccess();
+      await this.onSuccess(jobId);
+    }
+  }
+
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
     }
   }
 
@@ -384,6 +430,13 @@ class SelectNetwork extends LitElement {
               .fields=${this._setNetworkFields}
               .values=${this._setNetworkValues}
               .onSubmit=${this._attemptSetNetwork}
+              .footerStart=${this.onBack
+                ? html`
+                    <sl-button variant="default" @click=${this.handleBackClick}>
+                      Back
+                    </sl-button>
+                  `
+                : nothing}
               requireCommit
               theme="yellow"
               style="--submit-btn-width: auto; --submit-btn-anchor: end;"

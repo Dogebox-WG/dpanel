@@ -128,35 +128,56 @@ export function _generateErrorField(field) {
 
 export function _generateFormControls(options = {}) {
   const changeCount = this[`_form_${options.formId}_count`];
+  const submitLabel = options.submitLabel || "Save";
+  const submitLabelSuccess = options.submitLabelSuccess || "";
   return html`
     <div class="footer-controls">
-      ${this.allowDiscardChanges && changeCount
-        ? html`
-            <sl-button
-              variant="text"
-              id="${options.formId}__reset_button"
-              @click=${this._handleDiscardChanges}
-              class=${this.theme}
-            >
-              Discard changes
-            </sl-button>
-          `
+      ${this.footerStart
+        ? html`<div class="footer-actions-start">${this.footerStart}</div>`
         : nothing}
 
-      <sl-button
-        id="${options.formId}__save_button"
-        variant="primary"
-        type="submit"
-        class=${this.theme}
-        ?loading=${this._loading}
-        ?disabled=${!changeCount || this._celebrate}
-        form=${options.formId}
-      >
-        ${this._celebrate ? html`
-          <sl-icon name="check-lg" slot=${options.submitLabelSuccess ? "prefix" : ""}></sl-icon>
-          ${options.submitLabelSuccess}
-          ` : (options.submitLabel || "Save")}
-      </sl-button>
+      <div class="footer-actions-end">
+        ${this.allowDiscardChanges && changeCount
+          ? html`
+              <sl-button
+                variant="text"
+                id="${options.formId}__reset_button"
+                @click=${this._handleDiscardChanges}
+                class=${this.theme}
+              >
+                Discard changes
+              </sl-button>
+            `
+          : nothing}
+
+        <sl-button
+          id="${options.formId}__save_button"
+          variant="primary"
+          type="submit"
+          class=${this.theme}
+          ?loading=${this._loading}
+          ?disabled=${!changeCount || this._celebrate}
+          form=${options.formId}
+        >
+          ${this._celebrate
+            ? submitLabelSuccess
+              ? html`
+                  <sl-icon name="check-lg" slot="prefix"></sl-icon>
+                  ${submitLabelSuccess}
+                `
+              : html`
+                  <span class="submit-success-state">
+                    <span class="submit-success-icon" aria-hidden="true">
+                      <sl-icon name="check-lg"></sl-icon>
+                    </span>
+                    <span class="submit-success-placeholder">
+                      ${submitLabel}
+                    </span>
+                  </span>
+                `
+            : submitLabel}
+        </sl-button>
+      </div>
     </div>
   `;
 }

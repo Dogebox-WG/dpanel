@@ -71,7 +71,36 @@ export const styles = css`
   /* Footer buttons (submit, discard etc) */
   .footer-controls {
     display: flex;
+    align-items: center;
     justify-content: var(--submit-btn-anchor, flex-end);
+    gap: 0.75rem;
+  }
+
+  .footer-actions-end {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+  }
+
+  .submit-success-state {
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .submit-success-icon,
+  .submit-success-placeholder {
+    grid-area: 1 / 1;
+  }
+
+  .submit-success-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .submit-success-placeholder {
+    visibility: hidden;
   }
 
   .footer-controls sl-button.discard-button::part(base) {

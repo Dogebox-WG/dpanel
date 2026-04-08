@@ -186,6 +186,12 @@ export const mockJobApi = {
       return jobDate >= cutoff;
     });
     return Promise.resolve({ success: true });
+  },
+
+  forceResetJobs: () => {
+    const cleared = mockJobs.length;
+    mockJobs = [];
+    return Promise.resolve({ success: true, cleared });
   }
 };
 

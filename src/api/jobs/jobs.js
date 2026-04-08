@@ -33,3 +33,11 @@ export async function clearCompletedJobs(olderThanDays = 0) {
     () => client.post('/jobs/clear-completed', { olderThanDays })
   )();
 }
+
+// Force reset all jobs and restart dogeboxd
+export async function forceResetJobsAll() {
+  return useMock(
+    () => mockJobApi.forceResetJobs(),
+    () => client.post('/jobs/force-reset')
+  )();
+}

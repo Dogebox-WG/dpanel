@@ -233,10 +233,10 @@ class DebugPanel extends LitElement {
     }
   }
 
-  async clearAllJobs() {
+  async forceResetJobsMocks() {
     const { store } = await import('/state/store.js');
     
-    const confirmed = confirm('Clear all jobs? This cannot be undone.');
+    const confirmed = confirm('Force reset mocked jobs.');
     if (!confirmed) return;
     
     store.updateState({
@@ -244,7 +244,21 @@ class DebugPanel extends LitElement {
         jobs: []
       }
     });
-    console.log('All jobs cleared');
+    console.log('Mock jobs force reset');
+  }
+
+  async forceResetJobsAll() {
+    const confirmed = confirm('Force reset all active and pending jobs. This will restart dogeboxd.');
+    if (!confirmed) return;
+
+    const { forceResetJobsAll } = await import('/api/jobs/jobs.js');
+
+    try {
+      await forceResetJobsAll();
+      console.log('Requested full job force reset; dogeboxd is restarting');
+    } catch (err) {
+      console.error('Failed to force reset all jobs:', err);
+    }
   }
 
   async clearCompletedJobs() {
@@ -300,10 +314,11 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Response Hooks</sl-menu-label>
                     <sl-menu-item type="checkbox" ?checked=${this._hook_bump_version} @click=${this.handleBumpVersionToggle}>Bump version</sl-menu-item>
                     <sl-divider></sl-divider>
-                    <sl-menu-label>Jobs (Mock Only)</sl-menu-label>
+                    <sl-menu-label>Jobs</sl-menu-label>
                     <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
-                    <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
+                    <sl-menu-item @click=${this.forceResetJobsAll}>Force Reset Jobs (All)</sl-menu-item>
                     <sl-menu-item @click=${this.clearCompletedJobs}>Clear Completed Jobs</sl-menu-item>
+                    <sl-menu-item @click=${this.forceResetJobsMocks}>Force Reset Jobs (Mocks only)</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>
                     <sl-menu-item @click=${this.emitSyntheticSystemProgress}>System Progress</sl-menu-item>

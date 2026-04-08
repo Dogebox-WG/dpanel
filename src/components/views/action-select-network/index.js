@@ -297,11 +297,8 @@ class SelectNetwork extends LitElement {
 
     await this.handleStart();
 
-    // temp: wait, because this needs to move to being an async call inside dogeboxd
-    //       so that the putNetwork above can "complete".
+    // Give the requested network change a moment to settle before starting bootstrap.
     await asyncTimeout(5000);
-
-    // temp: also call our final initialisation API here.
     // TODO: move this into post-network flow.
     const finalSystemBootstrap = await postSetupBootstrap({
       initialSSHKey: state["ssh-key"],

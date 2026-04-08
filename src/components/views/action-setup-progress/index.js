@@ -175,7 +175,7 @@ class SetupProgress extends LitElement {
           <x-log-viewer
             .jobId=${this.jobId}
             ?connecting=${!this.jobId && !this._isFailed}
-            ?reconnect=${true}
+            ?autoReconnect=${true}
           ></x-log-viewer>
         </div>
 

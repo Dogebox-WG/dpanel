@@ -433,13 +433,7 @@ class SelectNetwork extends LitElement {
               .fields=${this._setNetworkFields}
               .values=${this._setNetworkValues}
               .onSubmit=${this._attemptSetNetwork}
-              .footerStart=${this.onBack
-                ? html`
-                    <sl-button variant="default" @click=${this.handleBackClick}>
-                      Back
-                    </sl-button>
-                  `
-                : nothing}
+              .onBack=${this.onBack ? this.handleBackClick : undefined}
               requireCommit
               theme="yellow"
               style="--submit-btn-width: auto; --submit-btn-anchor: end;"

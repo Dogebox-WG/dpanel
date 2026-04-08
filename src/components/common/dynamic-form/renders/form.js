@@ -132,8 +132,12 @@ export function _generateFormControls(options = {}) {
   const submitLabelSuccess = options.submitLabelSuccess || "";
   return html`
     <div class="footer-controls">
-      ${this.footerStart
-        ? html`<div class="footer-actions-start">${this.footerStart}</div>`
+      ${this.onBack
+        ? html`
+            <sl-button variant="default" @click=${() => this.onBack?.()}>
+              ${this.backLabel}
+            </sl-button>
+          `
         : nothing}
 
       <div class="footer-actions-end">

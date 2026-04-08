@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { postChangePass } from "/api/password/change-pass.js";
 import { createAlert } from "/components/common/alert.js";
 import { hash } from "/utils/hash.js"
@@ -239,13 +239,7 @@ class ChangePassView extends LitElement {
           <dynamic-form
             .fields=${this._changePassFields}
             .onSubmit=${this._attemptChangePass}
-            .footerStart=${this.onBack
-              ? html`
-                  <sl-button variant="default" @click=${this.handleBackClick}>
-                    Back
-                  </sl-button>
-                `
-              : nothing}
+            .onBack=${this.onBack ? this.handleBackClick : undefined}
             requireCommit
             theme="purple"
           >

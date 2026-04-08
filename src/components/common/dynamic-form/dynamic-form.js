@@ -12,7 +12,8 @@ class DynamicForm extends LitElement {
       values: { type: Object },
       fields: { type: Object },
       onSubmit: { type: Object },
-      footerStart: { type: Object },
+      onBack: { type: Object },
+      backLabel: { type: String },
       requireCommit: { type: Boolean },
       markModifiedFields: { type: Boolean },
       allowDiscardChanges: { type: Boolean },
@@ -34,7 +35,8 @@ class DynamicForm extends LitElement {
     bindToClass(methods, this);
     this.values = {};
     this.fields = {};
-    this.footerStart = null;
+    this.onBack = undefined;
+    this.backLabel = "Back";
     this.requireCommit = false;
     this.markModifiedFields = false;
     this.allowDiscardChanges = false;

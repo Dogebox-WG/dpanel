@@ -305,6 +305,7 @@ class SelectNetwork extends LitElement {
     // TODO: move this into post-network flow.
     const finalSystemBootstrap = await postSetupBootstrap({
       initialSSHKey: state["ssh-key"],
+      // Reflector data is submitted here so bootstrap can persist it for post-reboot submission.
       reflectorToken: this.reflectorToken,
       reflectorHost: store.networkContext.reflectorHost,
       useFoundationPupBinaryCache: store.setupContext.useFoundationPupBinaryCache,
@@ -314,6 +315,8 @@ class SelectNetwork extends LitElement {
       return { errorHandled: true };
     });
 
+    // Bootstrap start errors are handled either by the catch block above or by
+    // the missing-jobId guard below.
     if (finalSystemBootstrap?.errorHandled) {
       dynamicFormInstance.retainChanges(); // stops spinner
       return;

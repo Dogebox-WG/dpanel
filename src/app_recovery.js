@@ -408,6 +408,7 @@ class AppModeApp extends LitElement {
       return STEP_LOGIN;
     }
 
+    // Handle first-time setup
     if (!hasCompletedInitialConfiguration) {
       this.isFirstTimeSetup = true;
 
@@ -452,6 +453,7 @@ class AppModeApp extends LitElement {
         }
       }
 
+      // If we're logged in, follow the setup sequence.
       if (!hasGeneratedKey) {
         const resolvedStep = this._resolvePersistedSetupStep(
           setupState,

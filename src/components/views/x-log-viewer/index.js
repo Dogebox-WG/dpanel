@@ -17,7 +17,9 @@ class LogViewer extends LitElement {
       jobId: { type: String },
       closing: { type: Boolean, reflect: true },
       animateOpen: { type: Boolean },
-      opening: { type: Boolean, reflect: true },
+      animatingOpen: { type: Boolean, reflect: true },
+      autoReconnect: { type: Boolean },
+      connecting: { type: Boolean },
       isDownloading: { type: Boolean },
     };
   }
@@ -34,21 +36,27 @@ class LogViewer extends LitElement {
     this.follow = true; // Default to true, user can disable temporarily
     this.closing = false;
     this.animateOpen = false;
-    this.opening = false;
+    this.animatingOpen = false;
+    this.autoReconnect = false;
+    this.connecting = false;
     this.isDownloading = false;
     this._streamToken = 0;
+    this._reconnectDelay = 0;
+    this._reconnectTimer = null;
+    this._reconnectStopped = false;
   }
 
   connectedCallback() {
     super.connectedCallback();
+    this._reconnectStopped = false;
     this.startLogStream();
     this._boundTransitionEnd = this._onTransitionEnd.bind(this);
     this.addEventListener('transitionend', this._boundTransitionEnd);
     if (this.animateOpen && (this.jobId || this.pupId)) {
-      this.opening = true;
+      this.animatingOpen = true;
       this._openRaf = requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          this.opening = false;
+          this.animatingOpen = false;
           this._openRaf = null;
         });
       });
@@ -61,6 +69,8 @@ class LogViewer extends LitElement {
       cancelAnimationFrame(this._openRaf);
       this._openRaf = null;
     }
+    this._reconnectStopped = true;
+    clearTimeout(this._reconnectTimer);
     this.removeEventListener('transitionend', this._boundTransitionEnd);
     super.disconnectedCallback();
     if (this.wsClient) {
@@ -270,6 +280,7 @@ class LogViewer extends LitElement {
     // Update component state based on WebSocket events
     this.wsClient.onOpen = (event) => {
       this.isConnected = true;
+      this._reconnectDelay = 0;
       this.requestUpdate();
     };
 
@@ -308,12 +319,31 @@ class LogViewer extends LitElement {
 
     this.wsClient.onClose = (event) => {
       this.isConnected = false;
+      this.wsClient = null;
       this.requestUpdate();
+      this._scheduleReconnect();
     };
 
     if (this.autostart) {
       this.wsClient.connect();
     }
+  }
+
+  _scheduleReconnect() {
+    if (!this.autoReconnect || this._reconnectStopped) return;
+    if (!this.jobId && !this.pupId) return;
+
+    const BASE = 1000;
+    const MAX = 15000;
+    this._reconnectDelay = Math.min(
+      this._reconnectDelay ? this._reconnectDelay * 2 : BASE,
+      MAX,
+    );
+
+    this._reconnectTimer = setTimeout(() => {
+      if (this._reconnectStopped) return;
+      this.setupSocketConnection();
+    }, this._reconnectDelay);
   }
 
   async handleDownloadClick(e) {
@@ -399,13 +429,23 @@ class LogViewer extends LitElement {
   }
 
   render() {
+    const emptyStateMessage = this.connecting
+      ? 'Connecting to log stream...'
+      : this.isLoadingHistory
+        ? 'Loading recent logs...'
+        : this.isConnected
+          ? 'Connected. Waiting for log output...'
+          : 'Disconnected. Logs not available.';
+
     return html`
       <div>
         <div id="LogHUD">
           <div class="status">
-            ${this.isConnected
-              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+            ${this.connecting
+              ? html`<sl-tag size="small" pill variant="primary">Connecting</sl-tag>`
+              : this.isConnected
+                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
             }
           </div>
         </div>
@@ -416,11 +456,7 @@ class LogViewer extends LitElement {
             </ul>
           ` : html`
             <div class="no-logs-message">
-              ${this.isLoadingHistory
-                ? 'Loading logs...'
-                : this.isConnected
-                  ? 'Waiting for logs...'
-                  : 'Logs not available'}
+              ${emptyStateMessage}
             </div>
           `}
         </div>
@@ -464,7 +500,7 @@ class LogViewer extends LitElement {
         max-height: 0;
       }
 
-      :host([opening]) {
+      :host([animatingOpen]) {
         max-height: 0;
       }
       div#LogHUD {

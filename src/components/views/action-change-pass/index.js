@@ -31,6 +31,7 @@ class ChangePassView extends LitElement {
     h1 {
       font-family: "Comic Neue", sans-serif;
     }
+
   `;
 
   static get properties() {
@@ -44,6 +45,7 @@ class ChangePassView extends LitElement {
       refreshAfterChange: { type: Boolean },
       retainHash: { type: Boolean },
       noSubmit: { type: Boolean },
+      onBack: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
     };
@@ -59,6 +61,7 @@ class ChangePassView extends LitElement {
     this.refreshAfterChange = false;
     this.retainHash = false;
     this.noSubmit = false;
+    this.onBack = null;
     this.fieldDefaults = {};
     this._server_fault = false;
     this._invalid_creds = false;
@@ -217,6 +220,12 @@ class ChangePassView extends LitElement {
     }
   }
 
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
+    }
+  }
+
   render() {
     return html`
       <div class="page">
@@ -230,6 +239,7 @@ class ChangePassView extends LitElement {
           <dynamic-form
             .fields=${this._changePassFields}
             .onSubmit=${this._attemptChangePass}
+            .onBack=${this.onBack ? this.handleBackClick : undefined}
             requireCommit
             theme="purple"
           >

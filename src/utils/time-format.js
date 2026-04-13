@@ -42,21 +42,19 @@ export function timeAgo(timestamp) {
  * @returns {string} Date/time like "09-Apr-2026 14:30"
  */
 export function formatDateTime(timestamp) {
-  if (!timestamp) return '';
+  if (timestamp == null || timestamp === '') return '';
 
   const d = new Date(timestamp);
 
   if (Number.isNaN(d.getTime())) return '';
 
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = d.toLocaleDateString('en-GB', { month: 'short' });
-  const year = d.getFullYear();
-  const time = d.toLocaleTimeString('en-GB', {
+  return d.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
   });
-
-  return `${day}-${month}-${year} ${time}`;
 }
 

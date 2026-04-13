@@ -19,6 +19,20 @@ class JobWebSocketService {
     const { useMocks, wsApiBaseUrl } = store.networkContext;
     this.isMockMode = useMocks;
 
+    if (this.ws) {
+      if (this.isMockMode && this.ws.connected) {
+        return;
+      }
+
+      if (
+        !this.isMockMode &&
+        (this.ws.readyState === WebSocket.OPEN ||
+          this.ws.readyState === WebSocket.CONNECTING)
+      ) {
+        return;
+      }
+    }
+
     if (this.isMockMode) {
       this.ws = createMockJobWebSocket();
       this.setupMockHandlers();

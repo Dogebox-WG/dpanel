@@ -5,6 +5,7 @@ export const getResponse = {
   res: {
     success: true,
     setupFacts: {
+      setupSessionId: "mock-setup-session",
       hasGeneratedKey: false,
       hasConfiguredNetwork: false,
       hasCompletedInitialConfiguration: false

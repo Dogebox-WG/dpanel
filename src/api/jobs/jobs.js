@@ -25,6 +25,30 @@ export async function getJob(jobId) {
   )();
 }
 
+// DELETE specific job
+export async function deleteJob(jobId) {
+  return useMock(
+    () => mockJobApi.deleteJob(jobId),
+    () => client.delete(`/jobs/${jobId}`)
+  )();
+}
+
+// POST retry specific job
+export async function retryJob(jobId) {
+  return useMock(
+    () => mockJobApi.retryJob(jobId),
+    () => client.post(`/jobs/${jobId}/retry`, {})
+  )();
+}
+
+// POST create orphaned job candidate
+export async function createOrphanedJobCandidate() {
+  return useMock(
+    () => mockJobApi.createOrphanedJobCandidate(),
+    () => client.post('/jobs/dev/create-orphan-candidate', {})
+  )();
+}
+
 
 // Clear completed jobs
 export async function clearCompletedJobs(olderThanDays = 0) {

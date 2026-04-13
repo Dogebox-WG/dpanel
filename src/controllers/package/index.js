@@ -551,7 +551,8 @@ class PkgController {
       j.pupID === pupId && 
       j.status !== 'completed' && 
       j.status !== 'failed' && 
-      j.status !== 'cancelled'
+      j.status !== 'cancelled' &&
+      j.status !== 'orphaned'
     );
     return activeJobs;
   }

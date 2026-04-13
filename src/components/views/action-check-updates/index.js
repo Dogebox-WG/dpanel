@@ -151,7 +151,7 @@ export class CheckUpdatesView extends LitElement {
     const jobs = this.context?.store?.jobsContext?.jobs || [];
     const job = jobs.find(item => item.id === this._systemJobId);
     if (!job) return;
-    if (job.status === "failed" || job.status === "cancelled") {
+    if (job.status === "failed" || job.status === "cancelled" || job.status === "orphaned") {
       this.markUpdateFailed();
     }
   }

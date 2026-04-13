@@ -10,6 +10,7 @@ import { bindToClass } from "/utils/class-bind.js";
 import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
 import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
+import { createOrphanedJobCandidate } from '/api/jobs/jobs.js';
 import { pupUpdates } from '/state/pup-updates.js';
 import { store } from '/state/store.js';
 
@@ -233,6 +234,41 @@ class DebugPanel extends LitElement {
     }
   }
 
+  async createOrphanedJob() {
+    if (store.networkContext.useMocks) {
+      alert('Create Orphaned Job requires the real backend. Disable Network Mocks first.');
+      return;
+    }
+
+    try {
+      const result = await createOrphanedJobCandidate();
+      const alert = Object.assign(document.createElement('sl-alert'), {
+        variant: 'success',
+        duration: 5000,
+        closable: true
+      });
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="exclamation-octagon"></sl-icon>
+        Created orphan candidate job ${result?.job?.id || ''}. It will be marked orphaned on the next detector pass.
+      `;
+      document.body.appendChild(alert);
+      alert.toast();
+    } catch (error) {
+      console.error('Failed to create orphaned job candidate:', error);
+      const alert = Object.assign(document.createElement('sl-alert'), {
+        variant: 'danger',
+        duration: 5000,
+        closable: true
+      });
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+        Failed to create orphaned job candidate: ${error.message}
+      `;
+      document.body.appendChild(alert);
+      alert.toast();
+    }
+  }
+
   async clearAllJobs() {
     const { store } = await import('/state/store.js');
     
@@ -255,7 +291,7 @@ class DebugPanel extends LitElement {
       await clearCompletedJobs(0);
       
       const remainingJobs = store.jobsContext.jobs.filter(
-        a => !['completed', 'failed', 'cancelled'].includes(a.status)
+        a => !['completed', 'failed', 'cancelled', 'orphaned'].includes(a.status)
       );
       store.updateState({
         jobsContext: { jobs: remainingJobs }
@@ -303,6 +339,11 @@ class DebugPanel extends LitElement {
                     <sl-menu-label>Jobs (Mock Only)</sl-menu-label>
                     <sl-menu-item @click=${this.createMockJob}>Create Mock Job</sl-menu-item>
                     <sl-menu-item @click=${this.clearAllJobs}>Clear All Jobs</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Jobs (Backend Dev Mode)</sl-menu-label>
+                    <sl-menu-item @click=${this.createOrphanedJob}>Create Orphaned Job</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-label>Jobs</sl-menu-label>
                     <sl-menu-item @click=${this.clearCompletedJobs}>Clear Completed Jobs</sl-menu-item>
                     <sl-divider></sl-divider>
                     <sl-menu-label>Synethic Events</sl-menu-label>

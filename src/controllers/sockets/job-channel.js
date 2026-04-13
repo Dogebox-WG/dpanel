@@ -91,27 +91,27 @@ class JobWebSocketService {
 
   handleMessage(message) {
     const { type, update } = message;
-    
-    // Backend sends 'update' field, not 'data'
-    const data = update;
 
     switch (type) {
       case 'bootstrap':
-        // Initial connection sends bootstrap with all jobs
-        if (data && Array.isArray(data.jobs)) {
-          this.handleInitialJobs(data.jobs);
+        if (update && Array.isArray(update.jobs)) {
+          this.handleInitialJobs(update.jobs);
         }
         break;
       case 'job:created':
-        this.handleJobCreated(data);
+        this.handleJobCreated(update);
         break;
       case 'job:updated':
-        this.handleJobUpdated(data);
+        this.handleJobUpdated(update);
         break;
       case 'job:completed':
       case 'job:failed':
       case 'job:cancelled':
-        this.handleJobFinished(data);
+      case 'job:orphaned':
+        this.handleJobFinished(update);
+        break;
+      case 'job:deleted':
+        this.handleJobDeleted(update);
         break;
       default:
         // Ignore other message types (pup updates, stats, etc.)
@@ -154,6 +154,13 @@ class JobWebSocketService {
     const jobs = store.jobsContext.jobs.map(j =>
       j.id === job.id ? { ...j, ...job } : j
     );
+    store.updateState({
+      jobsContext: { jobs }
+    });
+  }
+
+  handleJobDeleted(job) {
+    const jobs = store.jobsContext.jobs.filter(j => j.id !== job?.id);
     store.updateState({
       jobsContext: { jobs }
     });

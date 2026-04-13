@@ -33,12 +33,30 @@ export function timeAgo(timestamp) {
     return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
   }
   
-  // Less than 7 days
-  if (days < 7) {
-    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-  }
-  
-  // More than 7 days
-  return 'a while ago';
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+}
+
+/**
+ * Formats a timestamp in the browser's local timezone.
+ * @param {string|number|Date} timestamp - The timestamp to format
+ * @returns {string} Date/time like "09-Apr-2026 14:30"
+ */
+export function formatDateTime(timestamp) {
+  if (!timestamp) return '';
+
+  const d = new Date(timestamp);
+
+  if (Number.isNaN(d.getTime())) return '';
+
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleDateString('en-GB', { month: 'short' });
+  const year = d.getFullYear();
+  const time = d.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  return `${day}-${month}-${year} ${time}`;
 }
 

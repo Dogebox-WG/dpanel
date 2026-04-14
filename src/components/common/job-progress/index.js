@@ -330,10 +330,6 @@ class JobProgress extends LitElement {
     return icons[status] || 'question-circle';
   }
 
-  canDelete(status) {
-    return isDeletableJobStatus(status);
-  }
-
   handleDeleteClick(e) {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent('job-delete', {
@@ -370,7 +366,7 @@ class JobProgress extends LitElement {
             <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           </div>
 
-          ${this.canDelete(status) ? html`
+          ${isDeletableJobStatus(status) ? html`
             <div class="job-actions">
               <sl-icon-button
                 name="trash"

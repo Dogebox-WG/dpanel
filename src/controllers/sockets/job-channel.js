@@ -116,13 +116,11 @@ class JobWebSocketService {
         this.handleJobCreated(update);
         break;
       case 'job:updated':
-        this.handleJobUpdated(update);
-        break;
       case 'job:completed':
       case 'job:failed':
       case 'job:cancelled':
       case 'job:orphaned':
-        this.handleJobFinished(update);
+        this.handleJobUpdated(update);
         break;
       case 'job:deleted':
         this.handleJobDeleted(update);
@@ -156,15 +154,6 @@ class JobWebSocketService {
   }
 
   handleJobUpdated(job) {
-    const jobs = store.jobsContext.jobs.map(j =>
-      j.id === job.id ? { ...j, ...job } : j
-    );
-    store.updateState({
-      jobsContext: { jobs }
-    });
-  }
-
-  handleJobFinished(job) {
     const jobs = store.jobsContext.jobs.map(j =>
       j.id === job.id ? { ...j, ...job } : j
     );

@@ -1,5 +1,5 @@
 import { store } from "/state/store.js";
-import { isTerminalJobStatus } from "/controllers/jobs/status.js";
+import { isActiveJobStatus } from "/controllers/jobs/status.js";
 
 class JobsController {
   constructor() {
@@ -37,7 +37,7 @@ class JobsController {
     const status = (job?.status || "").toLowerCase();
 
     return (
-      name.includes(matchText.toLowerCase()) && !isTerminalJobStatus(status)
+      name.includes(matchText.toLowerCase()) && isActiveJobStatus(status)
     );
   }
 

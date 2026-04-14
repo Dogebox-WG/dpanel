@@ -2,7 +2,7 @@ import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
 import { clearCompletedJobs, deleteJob } from '/api/jobs/jobs.js';
-import { isTerminalJobStatus } from '/controllers/jobs/status.js';
+import { isActiveJobStatus, isTerminalJobStatus } from '/controllers/jobs/status.js';
 import '/components/common/job-progress/index.js';
 
 class JobActivityPage extends LitElement {
@@ -246,7 +246,7 @@ class JobActivityPage extends LitElement {
       await clearCompletedJobs(0);
       
       // Update local state
-      const remainingJobs = jobs.filter((j) => !isTerminalJobStatus(j.status));
+      const remainingJobs = jobs.filter((j) => isActiveJobStatus(j.status));
       store.updateState({
         jobsContext: { jobs: remainingJobs }
       });

@@ -1,5 +1,5 @@
 import { store } from '/state/store.js';
-import { isTerminalJobStatus } from '/controllers/jobs/status.js';
+import { isActiveJobStatus, isTerminalJobStatus } from '/controllers/jobs/status.js';
 
 /**
  * Lightweight mock for job system
@@ -107,7 +107,8 @@ class MockJobWebSocket {
     const job = mockJobs.find(a => a.id === jobId);
     if (!job) return;
     
-    if (job.status !== 'in_progress' && job.status !== 'queued') {
+    const isActive = isActiveJobStatus(job.status);
+    if (!isActive) {
       return;
     }
 

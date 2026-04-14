@@ -1,6 +1,6 @@
 import { postConfig } from "/api/config/config.js";
 import { pickAndPerformPupAction } from "/api/action/action.js";
-import { isTerminalJobStatus } from "/controllers/jobs/status.js";
+import { isActiveJobStatus } from "/controllers/jobs/status.js";
 import { store } from "/state/store.js";
 
 class PkgController {
@@ -549,7 +549,7 @@ class PkgController {
     // Get active jobs for this pup (enable/disable/install/etc)
     const jobs = store?.jobsContext?.jobs || [];
     const activeJobs = jobs.filter(
-      (j) => j.pupID === pupId && !isTerminalJobStatus(j.status)
+      (j) => j.pupID === pupId && isActiveJobStatus(j.status)
     );
     return activeJobs;
   }
@@ -571,7 +571,7 @@ class PkgController {
 
     //Only show logs for jobs that are queued or in progress.
     const mostRecent = sorted[0];
-    const isActive = mostRecent.status === 'queued' || mostRecent.status === 'in_progress';
+    const isActive = isActiveJobStatus(mostRecent.status);
     if (isActive) {
       return mostRecent;
     }

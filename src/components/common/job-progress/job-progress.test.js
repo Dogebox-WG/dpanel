@@ -29,7 +29,7 @@ describe("JobProgress", () => {
     expect(deleteEvent.detail.job).to.equal(job);
   });
 
-  it("does not show actions for non-queued jobs", async () => {
+  it("does not show delete for non-queued jobs", async () => {
     const jobs = [
       {
         id: "job-2",

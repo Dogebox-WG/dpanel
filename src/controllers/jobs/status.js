@@ -11,12 +11,6 @@ export const FAILURE_JOB_STATUSES = Object.freeze([
   "orphaned",
 ]);
 
-export const RETRYABLE_JOB_STATUSES = Object.freeze([
-  "failed",
-  "cancelled",
-  "orphaned",
-]);
-
 export const DELETABLE_JOB_STATUSES = Object.freeze(["queued"]);
 
 export function isTerminalJobStatus(status) {
@@ -25,10 +19,6 @@ export function isTerminalJobStatus(status) {
 
 export function isFailureJobStatus(status) {
   return FAILURE_JOB_STATUSES.includes(status);
-}
-
-export function isRetryableJobStatus(status) {
-  return RETRYABLE_JOB_STATUSES.includes(status);
 }
 
 export function isDeletableJobStatus(status) {

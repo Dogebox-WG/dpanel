@@ -1,7 +1,7 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
-import { clearCompletedJobs, deleteJob, retryJob } from '/api/jobs/jobs.js';
+import { clearCompletedJobs, deleteJob } from '/api/jobs/jobs.js';
 import { isTerminalJobStatus } from '/controllers/jobs/status.js';
 import '/components/common/job-progress/index.js';
 
@@ -287,23 +287,6 @@ class JobActivityPage extends LitElement {
       alert('Failed to delete job. Please try again.');
     }
   }
-
-  async handleRetryJob(e) {
-    const job = e.detail?.job;
-    if (!job?.id) return;
-
-    try {
-      await retryJob(job.id);
-      store.updateState({
-        jobsContext: {
-          jobs: store.jobsContext.jobs.filter(existingJob => existingJob.id !== job.id)
-        }
-      });
-    } catch (err) {
-      console.error('Failed to retry job:', err);
-      alert('Failed to retry job. Please try again.');
-    }
-  }
   
   filterJobs(jobs) {
     let filtered = jobs;
@@ -375,7 +358,6 @@ class JobActivityPage extends LitElement {
               .job=${job}
               ?initiallyExpanded=${job.id === targetJobId}
               @job-delete=${this.handleDeleteJob}
-              @job-retry=${this.handleRetryJob}
             ></job-progress>
           `)}
           

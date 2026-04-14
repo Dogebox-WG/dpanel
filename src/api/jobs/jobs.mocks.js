@@ -188,40 +188,6 @@ export const mockJobApi = {
     return Promise.resolve({ success: true, deleted: id });
   },
 
-  retryJob: (id) => {
-    const originalJob = mockJobs.find(j => String(j.id) === String(id));
-    mockJobs = mockJobs.filter(j => String(j.id) !== String(id));
-
-    const newJob = {
-      id: mockJobId++,
-      started: new Date().toISOString(),
-      finished: null,
-      displayName: originalJob?.displayName || 'Retried Job',
-      progress: 0,
-      status: 'queued',
-      summaryMessage: 'Job queued',
-      errorMessage: null,
-    };
-
-    mockJobs.unshift(newJob);
-
-    if (mockJobWS) {
-      mockJobWS.send({
-        type: 'job:deleted',
-        update: { id }
-      });
-      mockJobWS.send({
-        type: 'job:created',
-        update: newJob
-      });
-      setTimeout(() => {
-        mockJobWS.simulateProgress(newJob.id);
-      }, 250);
-    }
-
-    return Promise.resolve({ success: true, id: newJob.id });
-  },
-
   createOrphanedJobCandidate: () => {
     return Promise.reject(new Error('Create orphaned job requires the real backend with Network Mocks disabled.'));
   },

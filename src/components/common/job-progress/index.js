@@ -1,6 +1,6 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { timeAgo, formatDateTime } from '/utils/time-format.js';
-import { isDeletableJobStatus, isRetryableJobStatus } from '/controllers/jobs/status.js';
+import { isDeletableJobStatus } from '/controllers/jobs/status.js';
 import { store } from '/state/store.js';
 import '/components/views/x-log-viewer/index.js';
 
@@ -334,22 +334,9 @@ class JobProgress extends LitElement {
     return isDeletableJobStatus(status);
   }
 
-  canRetry(status) {
-    return isRetryableJobStatus(status);
-  }
-
   handleDeleteClick(e) {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent('job-delete', {
-      detail: { job: this.job },
-      bubbles: true,
-      composed: true
-    }));
-  }
-
-  handleRetryClick(e) {
-    e.stopPropagation();
-    this.dispatchEvent(new CustomEvent('job-retry', {
       detail: { job: this.job },
       bubbles: true,
       composed: true
@@ -383,22 +370,13 @@ class JobProgress extends LitElement {
             <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           </div>
 
-          ${(this.canRetry(status) || this.canDelete(status)) ? html`
+          ${this.canDelete(status) ? html`
             <div class="job-actions">
-              ${this.canRetry(status) ? html`
-                <sl-icon-button
-                  name="arrow-repeat"
-                  label="Retry job"
-                  @click=${this.handleRetryClick}
-                ></sl-icon-button>
-              ` : ''}
-              ${this.canDelete(status) ? html`
-                <sl-icon-button
-                  name="trash"
-                  label="Delete job"
-                  @click=${this.handleDeleteClick}
-                ></sl-icon-button>
-              ` : ''}
+              <sl-icon-button
+                name="trash"
+                label="Delete job"
+                @click=${this.handleDeleteClick}
+              ></sl-icon-button>
             </div>
           ` : ''}
           

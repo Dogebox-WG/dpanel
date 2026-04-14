@@ -33,14 +33,6 @@ export async function deleteJob(jobId) {
   )();
 }
 
-// POST retry specific job
-export async function retryJob(jobId) {
-  return useMock(
-    () => mockJobApi.retryJob(jobId),
-    () => client.post(`/jobs/${jobId}/retry`, {})
-  )();
-}
-
 // POST create orphaned job candidate
 export async function createOrphanedJobCandidate() {
   return useMock(

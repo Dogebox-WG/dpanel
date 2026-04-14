@@ -313,7 +313,7 @@ class PupInstallCard extends LitElement {
       font-size: 0.85rem;
       color: #b5a1ff;
     }
-    span.source sl-icon { position: relative; top: 2px; }
+    span.source sl-icon { position: relative; top: -1px; }
   `;
 }
 

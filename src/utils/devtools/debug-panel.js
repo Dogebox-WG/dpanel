@@ -11,6 +11,7 @@ import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
 import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
 import { createOrphanedJobCandidate } from '/api/jobs/jobs.js';
+import { isTerminalJobStatus } from '/controllers/jobs/status.js';
 import { pupUpdates } from '/state/pup-updates.js';
 import { store } from '/state/store.js';
 
@@ -291,7 +292,7 @@ class DebugPanel extends LitElement {
       await clearCompletedJobs(0);
       
       const remainingJobs = store.jobsContext.jobs.filter(
-        a => !['completed', 'failed', 'cancelled', 'orphaned'].includes(a.status)
+        (a) => !isTerminalJobStatus(a.status)
       );
       store.updateState({
         jobsContext: { jobs: remainingJobs }

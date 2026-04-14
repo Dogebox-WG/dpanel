@@ -1,5 +1,6 @@
 import { postConfig } from "/api/config/config.js";
 import { pickAndPerformPupAction } from "/api/action/action.js";
+import { isTerminalJobStatus } from "/controllers/jobs/status.js";
 import { store } from "/state/store.js";
 
 class PkgController {
@@ -547,12 +548,8 @@ class PkgController {
   getJobsForPup(pupId) {
     // Get active jobs for this pup (enable/disable/install/etc)
     const jobs = store?.jobsContext?.jobs || [];
-    const activeJobs = jobs.filter(j => 
-      j.pupID === pupId && 
-      j.status !== 'completed' && 
-      j.status !== 'failed' && 
-      j.status !== 'cancelled' &&
-      j.status !== 'orphaned'
+    const activeJobs = jobs.filter(
+      (j) => j.pupID === pupId && !isTerminalJobStatus(j.status)
     );
     return activeJobs;
   }

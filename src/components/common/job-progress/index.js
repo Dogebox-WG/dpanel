@@ -1,5 +1,6 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { timeAgo, formatDateTime } from '/utils/time-format.js';
+import { isDeletableJobStatus, isRetryableJobStatus } from '/controllers/jobs/status.js';
 import { store } from '/state/store.js';
 import '/components/views/x-log-viewer/index.js';
 
@@ -330,11 +331,11 @@ class JobProgress extends LitElement {
   }
 
   canDelete(status) {
-    return status === 'queued';
+    return isDeletableJobStatus(status);
   }
 
   canRetry(status) {
-    return ['orphaned', 'failed', 'cancelled'].includes(status);
+    return isRetryableJobStatus(status);
   }
 
   handleDeleteClick(e) {

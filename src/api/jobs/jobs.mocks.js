@@ -1,4 +1,5 @@
 import { store } from '/state/store.js';
+import { isTerminalJobStatus } from '/controllers/jobs/status.js';
 
 /**
  * Lightweight mock for job system
@@ -229,7 +230,7 @@ export const mockJobApi = {
   clearCompletedJobs: (olderThanDays) => {
     const cutoff = new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000));
     mockJobs = mockJobs.filter(j => {
-      const isCompleted = ['completed', 'failed', 'cancelled', 'orphaned'].includes(j.status);
+      const isCompleted = isTerminalJobStatus(j.status);
       if (!isCompleted) return true;
       
       const jobDate = new Date(j.finished || j.started);

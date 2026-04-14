@@ -1,4 +1,4 @@
-export const TERMINAL_JOB_STATUSES = Object.freeze([
+export const FINISHED_JOB_STATUSES = Object.freeze([
   "completed",
   "failed",
   "cancelled",
@@ -20,8 +20,8 @@ export const DELETABLE_JOB_STATUSES = Object.freeze([
   "queued"
 ]);
 
-export function isTerminalJobStatus(status) {
-  return TERMINAL_JOB_STATUSES.includes(status);
+export function isFinishedJobStatus(status) {
+  return FINISHED_JOB_STATUSES.includes(status);
 }
 
 export function isActiveJobStatus(status) {

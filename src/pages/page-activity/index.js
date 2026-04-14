@@ -2,7 +2,7 @@ import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
 import { clearCompletedJobs, deleteJob } from '/api/jobs/jobs.js';
-import { isActiveJobStatus, isTerminalJobStatus } from '/controllers/jobs/status.js';
+import { isActiveJobStatus, isFinishedJobStatus } from '/controllers/jobs/status.js';
 import '/components/common/job-progress/index.js';
 
 class JobActivityPage extends LitElement {
@@ -231,7 +231,7 @@ class JobActivityPage extends LitElement {
   
   async handleClearCompleted() {
     const { jobs } = store.jobsContext;
-    const completedCount = jobs.filter((j) => isTerminalJobStatus(j.status)).length;
+    const completedCount = jobs.filter((j) => isFinishedJobStatus(j.status)).length;
     
     if (completedCount === 0) {
       alert('No finished jobs to clear.');
@@ -380,7 +380,7 @@ class JobActivityPage extends LitElement {
     const activeJobs = filteredJobs.filter(j => j.status === 'in_progress');
     const pendingJobs = filteredJobs.filter(j => j.status === 'queued');
     const completedJobs = filteredJobs
-      .filter((j) => isTerminalJobStatus(j.status))
+      .filter((j) => isFinishedJobStatus(j.status))
       .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started));
     
     return html`

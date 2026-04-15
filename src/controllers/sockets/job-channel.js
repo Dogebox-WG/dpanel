@@ -19,6 +19,12 @@ class JobWebSocketService {
     const { useMocks, wsApiBaseUrl } = store.networkContext;
     this.isMockMode = useMocks;
 
+    if (!store.jobsContext.initialized) {
+      store.updateState({
+        jobsContext: { loading: true }
+      });
+    }
+
     if (this.ws) {
       if (this.isMockMode && this.ws.connected) {
         return;
@@ -48,7 +54,7 @@ class JobWebSocketService {
         console.warn('[Job WS] Backend job system not available yet');
         // Set empty jobs state
         store.updateState({
-          jobsContext: { jobs: [], loading: false }
+          jobsContext: { jobs: [], loading: false, initialized: true }
         });
       }
     }
@@ -91,7 +97,7 @@ class JobWebSocketService {
         this.attemptReconnect();
       } else {
         store.updateState({
-          jobsContext: { jobs: [], loading: false }
+          jobsContext: { jobs: [], loading: false, initialized: true }
         });
       }
     };
@@ -135,6 +141,7 @@ class JobWebSocketService {
     store.updateState({
       jobsContext: { 
         jobs: Array.isArray(jobs) ? jobs : [],
+        initialized: true,
         loading: false 
       }
     });
@@ -147,16 +154,22 @@ class JobWebSocketService {
   }
 
   handleJobCreated(job) {
-    const jobs = [...store.jobsContext.jobs, job];
+    const existingJobs = Array.isArray(store.jobsContext.jobs) ? store.jobsContext.jobs : [];
+    const existingIndex = existingJobs.findIndex((item) => item.id === job?.id);
+    const jobs = existingIndex === -1
+      ? [...existingJobs, job]
+      : existingJobs.map((item, index) => (index === existingIndex ? { ...item, ...job } : item));
     store.updateState({
       jobsContext: { jobs }
     });
   }
 
   handleJobUpdated(job) {
-    const jobs = store.jobsContext.jobs.map(j =>
-      j.id === job.id ? { ...j, ...job } : j
-    );
+    const existingJobs = Array.isArray(store.jobsContext.jobs) ? store.jobsContext.jobs : [];
+    const hasExistingJob = existingJobs.some((item) => item.id === job?.id);
+    const jobs = hasExistingJob
+      ? existingJobs.map((item) => (item.id === job.id ? { ...item, ...job } : item))
+      : [...existingJobs, job];
     store.updateState({
       jobsContext: { jobs }
     });

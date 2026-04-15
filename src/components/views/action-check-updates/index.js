@@ -299,7 +299,12 @@ export class CheckUpdatesView extends LitElement {
     return html`
       <div class="page">
 
-        <sl-button variant="text" @click=${() => { this._page = PAGE_ONE; this._confirmation_checked = false;}} class="back-button">
+        <sl-button
+          variant="text"
+          ?disabled=${this._inflight_update}
+          @click=${() => { this._page = PAGE_ONE; this._confirmation_checked = false;}}
+          class="back-button"
+        >
           Back
         </sl-button>
 
@@ -332,7 +337,12 @@ export class CheckUpdatesView extends LitElement {
 
         <div class="action-wrap">
           <sl-checkbox @sl-change=${this.handleCheckboxChange} ?disabled=${this._inflight_update}>I understand</sl-checkbox>
-          <sl-button variant="warning" ?disabled=${!this._confirmation_checked || this._inflight_update} @click=${this.handleSubmit}>
+          <sl-button
+            variant="warning"
+            ?loading=${this._inflight_update}
+            ?disabled=${!this._confirmation_checked || this._inflight_update}
+            @click=${this.handleSubmit}
+          >
             Update now
           </sl-button>
         </div>
@@ -378,7 +388,7 @@ export class CheckUpdatesView extends LitElement {
         `: nothing }
 
         ${this._inflight_update ? html`
-          <p style="line-height: 1.1"><small>This may take up to 2 minutes.<br>Do not refresh or power off your Dogebox while update is in progress.</small></p>`
+          <p style="line-height: 1.1"><small>This may take up to 2 minutes.<br>Do not power off your Dogebox while the update is in progress.</small></p>`
         : nothing }
 
         ${!this._inflight_update ? html`
@@ -406,15 +416,38 @@ export class CheckUpdatesView extends LitElement {
     this._confirmation_checked = e.target.checked;
   }
 
-  async handleSubmit() {
-    this._page = PAGE_THREE;
-    this._update_commenced = false;
-    this._inflight_update = true;
-    this._logs = [];
-    this._systemJobId = "";
-    this._update_outcome = null;
+  seedPendingSystemUpdate(jobId) {
+    if (!jobId) {
+      return;
+    }
 
-    let didErr = false;
+    const jobs = Array.isArray(store.jobsContext.jobs) ? store.jobsContext.jobs : [];
+    const started = new Date().toISOString();
+    const placeholderJob = {
+      id: jobId,
+      action: "system-update",
+      displayName: "System Update",
+      status: "queued",
+      progress: 0,
+      summaryMessage: "System update queued",
+      errorMessage: "",
+      started,
+      finished: null,
+    };
+    const hasExistingJob = jobs.some((job) => job.id === jobId);
+
+    store.updateState({
+      jobsContext: {
+        jobs: hasExistingJob
+          ? jobs.map((job) => (job.id === jobId ? { ...job, ...placeholderJob } : job))
+          : [...jobs, placeholderJob],
+      },
+    });
+  }
+
+  async handleSubmit() {
+    this._inflight_update = true;
+    this._update_outcome = null;
 
     try {
       await asyncTimeout(1000);
@@ -423,20 +456,21 @@ export class CheckUpdatesView extends LitElement {
       // this, and the UI around all our upgrades will have to be updated slightly.
       const res = await commenceUpdate("dogebox", this._updatablePackages[0].latestUpdate.version);
       this._systemJobId = res?.id || "";
+      if (!this._systemJobId) {
+        throw new Error("System update did not return a job id");
+      }
 
-      this._update_commenced = true;
+      this.seedPendingSystemUpdate(this._systemJobId);
+      store.updateState({ dialogContext: { name: null } });
+      const router = getRouter();
+      if (router) {
+        router.go("/settings", { replace: true });
+      }
     } catch (err) {
-      didErr = true;
       console.log("Update error:", err);
-      createAlert('danger', 'Failed to commence update')
+      createAlert("danger", "Failed to commence update");
       this._inflight_update = false;
-      this._update_outcome = "error"
-    }
-
-    if (!didErr) {
-      // Initiate a poll for version change.
-      // When version change is detected, flick to success screen.
-      this.pollForUpdateChange()
+      this._update_outcome = "error";
     }
   }
 

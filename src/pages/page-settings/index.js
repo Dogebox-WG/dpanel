@@ -265,7 +265,7 @@ class SettingsPage extends LitElement {
           <div class="section-title">
             <h3>Help</h3>
           </div>
-            <action-row prefix="book" label="Documentation" href="https://dogebox-docs.dogecoin.org/" target="_blank">
+            <action-row prefix="book" label="Documentation" href="https://dogebox.org/docs/usage" target="_blank">
               View the Dogebox documentation
             </action-row>
       </div>

@@ -49,6 +49,7 @@ class StoreView extends LitElement {
     this._hasSourceErrors = false;
 
     this.inspectedPup;
+    this.searchValue = '';
     this.showCategories = false;
     this.categories = [
       { name: "all", label: "All" },
@@ -177,14 +178,33 @@ class StoreView extends LitElement {
   }
 
   filterPackageList() {
-    if (this.searchValue === "") {
+    const q = (this.searchValue ?? '').trim().toLowerCase();
+    this.packageList.setCurrentPage(1);
+    if (!q) {
       this.packageList.setFilter();
+      return;
     }
-    this.packageList.setFilter((pkg) => pkg?.manifest?.package?.toLowerCase()?.includes(this.searchValue.toLowerCase()));
+    this.packageList.setFilter((pkg) => {
+      const key = (pkg.def?.key || '').toLowerCase();
+      const meta = pkg.def?.versions?.[pkg.def?.latestVersion]?.meta;
+      const name = (meta?.name || '').toLowerCase();
+      const short = (meta?.shortDescription || '').toLowerCase();
+      const installedName = (pkg.state?.manifest?.meta?.name || '').toLowerCase();
+      return (
+        key.includes(q) ||
+        name.includes(q) ||
+        short.includes(q) ||
+        installedName.includes(q)
+      );
+    });
   }
 
   handleManageSourcesClick() {
     this._showSourceManagementDialog = true;
+  }
+
+  handleSearchInput(event) {
+    this.searchValue = event.target.value;
   }
 
   checkForSourceErrors() {
@@ -221,7 +241,15 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input class="constrained w55" type="search" size="large" placeholder="Search">
+        <sl-input
+          class="constrained w55"
+          type="search"
+          size="large"
+          placeholder="Search"
+          clearable
+          .value=${this.searchValue}
+          @input=${this.handleSearchInput}
+        >
           <sl-icon name="search" slot="prefix"></sl-icon>
         </sl-input>
       </div>

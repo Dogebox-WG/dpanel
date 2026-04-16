@@ -56,17 +56,17 @@ export function renderNav(CURPATH) {
             </a>
 
             <a href="/explore" class="menu-item ${CURPATH.startsWith("/explore") ? "active" : ""}">
-              <sl-icon name="search-heart"></sl-icon>
+              <sl-icon name="compass"></sl-icon>
               Explore
             </a>
 
             <a href="/monitoring" class="menu-item ${CURPATH.startsWith("/monitoring") ? "active" : ""}">
-              <sl-icon name="speedometer2"></sl-icon>
+              <sl-icon name="graph-up"></sl-icon>
               Monitor
             </a>
 
             <a href="/settings" class="menu-item ${CURPATH.startsWith("/settings") ? "active" : ""}">
-              <sl-icon name="sliders"></sl-icon>
+              <sl-icon name="gear"></sl-icon>
               Settings
               <x-dot ?open=${showSettingsDot} style="--left: -8px;"></x-dot>
             </a>

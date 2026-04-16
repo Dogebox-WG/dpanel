@@ -9,7 +9,8 @@ class PageContainer extends LitElement {
     :host {
       display: block;
       position: relative;
-      background: #23252a;
+      background: #1e232b;
+      border-bottom: 1px solid #2c3138;
       min-height: 100%;
       box-sizing: border-box;
     }
@@ -32,10 +33,12 @@ class PageContainer extends LitElement {
       position: fixed;
       top: 0px;
       z-index: 99;
-      height: 80px;
+      height: 78px;
       width: calc(100% - var(--page-margin-left));
-      background: #181818;
+      background: #1e232b;
       box-sizing: border-box;
+      border-bottom: 1px solid #21252e;
+      box-shadow: 0 1px 0 #2c3138;
 
       display: flex;
       align-items: center;

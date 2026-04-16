@@ -101,7 +101,7 @@ export const navStyles = css`
     height: 100vh;
     overflow: hidden;
 
-    background: #181818;
+    background: #191a1e;
     box-shadow: 0;
 
     @media (min-width: 576px) {
@@ -140,11 +140,12 @@ export const navStyles = css`
     align-items: center;
     column-gap: 1em;
 
-    margin: 0.2em 0em 0.2em 1em;
+    margin: 0.2em 0.75em;
     padding: 0.55em 1.4em;
+    border-radius: 13px;
 
     @media (min-width:576px) {
-      margin-left: 0em;
+      margin: 0.2em 0.75em;
     }
 
     font-family: "Comic Neue";
@@ -164,22 +165,49 @@ export const navStyles = css`
     background: rgba(255, 255, 255, 0.1);
   }
 
-  #Side .menu-item.active,
-  #Side .menu-item.active sl-icon {
+  #Side .menu-item.active {
+    position: relative;
+    overflow: hidden;
     text-decoration: none;
-    color: white;
-    background: #4360ff;
+    color: #fef2cf;
+    background: linear-gradient(to right, #2f2e2a 0%, #2f2e2a 32%, #98845f 100%);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  }
+
+  #Side .menu-item.active sl-icon {
+    color: #fef2cf;
+  }
+
+  #Side .menu-item.active::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 13px;
+    pointer-events: none;
+    padding: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0) 4%,
+      rgba(213, 174, 87, 0.03) 15%,
+      rgba(255, 248, 222, 0.1) 100%
+    );
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
   }
 
   #Side .menu-item,
   #Side .sub-menu-item {
-    color: rgba(255, 255, 255, 0.5);
+    color: #858588;
   }
 
   #Side .menu-item sl-icon,
   #Side .sub-menu-item sl-icon {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.5rem;
+    color: #858588;
   }
 
   .nav-footer-content {
@@ -188,7 +216,7 @@ export const navStyles = css`
   }
 
   #Side section.section-installed .menu-item.active {
-    background: #4360ff;
+    background: linear-gradient(to right, #2f2e2a 0%, #2f2e2a 33%, #2f2e2a 100%);
   }
 
   .nav-footer {

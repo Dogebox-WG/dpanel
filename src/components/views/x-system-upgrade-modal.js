@@ -10,6 +10,11 @@ import { jobsController } from "/controllers/jobs/index.js";
 import { isFailureJobStatus } from "/controllers/jobs/status.js";
 import "/components/views/x-log-viewer/index.js";
 
+const outcomeHashes = Object.freeze({
+  success: "#system-upgrade-success",
+  error: "#system-upgrade-failed",
+});
+
 class SystemUpgradeModal extends LitElement {
   static properties = {
     activeJobId: { type: String },
@@ -39,12 +44,6 @@ class SystemUpgradeModal extends LitElement {
       font-family: "Comic Neue", sans-serif;
     }
 
-    p {
-      margin: 0;
-      color: #666;
-      line-height: 1.4;
-    }
-
     x-log-viewer {
       --log-viewer-height: 320px;
       --log-footer-height: 56px;
@@ -71,16 +70,21 @@ class SystemUpgradeModal extends LitElement {
     super.connectedCallback();
     jobsController.addObserver(this);
     window.addEventListener("beforeunload", this.handleBeforeUnload);
+    window.addEventListener("hashchange", this.handleHashChange);
+    this.restoreFinishedStateFromHash();
   }
 
   disconnectedCallback() {
     window.removeEventListener("beforeunload", this.handleBeforeUnload);
+    window.removeEventListener("hashchange", this.handleHashChange);
     jobsController.removeObserver(this);
     super.disconnectedCallback();
   }
 
   updated() {
     this.syncFinishedState();
+    this.restoreFinishedStateFromHash();
+    this.syncHashState();
   }
 
   onJobsUpdate(state) {
@@ -105,15 +109,158 @@ class SystemUpgradeModal extends LitElement {
   }
 
   getTrackedJob() {
-    const jobs = Array.isArray(this.context?.store?.jobsContext?.jobs)
-      ? this.context.store.jobsContext.jobs
-      : [];
-
     if (!this.trackedJobId) {
       return null;
     }
 
-    return jobs.find((job) => job.id === this.trackedJobId) || null;
+    return this.getSystemUpdateJobs().find((job) => job.id === this.trackedJobId) || null;
+  }
+
+  getSystemUpdateJobs() {
+    const jobs = Array.isArray(this.context?.store?.jobsContext?.jobs)
+      ? this.context.store.jobsContext.jobs
+      : [];
+
+    return jobs
+      .filter((job) => (job?.action || "").toLowerCase() === "system-update")
+      .sort((left, right) => {
+        const leftTime = Date.parse(left?.finished || left?.started || 0);
+        const rightTime = Date.parse(right?.finished || right?.started || 0);
+        return rightTime - leftTime;
+      });
+  }
+
+  parseOutcomeHash() {
+    const hash = window.location.hash || "";
+
+    for (const [outcome, prefix] of Object.entries(outcomeHashes)) {
+      if (hash === prefix) {
+        return { outcome, jobId: "" };
+      }
+
+      if (hash.startsWith(`${prefix}/`)) {
+        return {
+          outcome,
+          jobId: decodeURIComponent(hash.slice(prefix.length + 1)),
+        };
+      }
+    }
+
+    return null;
+  }
+
+  buildOutcomeHash(outcome, jobId = "") {
+    const prefix = outcomeHashes[outcome];
+    if (!prefix) {
+      return "";
+    }
+
+    return jobId ? `${prefix}/${encodeURIComponent(jobId)}` : prefix;
+  }
+
+  replaceHash(hash) {
+    const nextUrl = `${window.location.pathname}${window.location.search}${hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }
+
+  clearOutcomeHash() {
+    if (!this.parseOutcomeHash()) {
+      return;
+    }
+
+    this.replaceHash("");
+  }
+
+  shouldPreservePendingOutcomeHash() {
+    return (
+      Boolean(this.parseOutcomeHash()) &&
+      this.context?.store?.jobsContext?.initialized !== true
+    );
+  }
+
+  syncHashState() {
+    if (this.isBlocking()) {
+      this.clearOutcomeHash();
+      return;
+    }
+
+    if (!this.trackedJobId || !this.outcome) {
+      if (this.shouldPreservePendingOutcomeHash()) {
+        return;
+      }
+      this.clearOutcomeHash();
+      return;
+    }
+
+    const nextHash = this.buildOutcomeHash(this.outcome, this.trackedJobId);
+    if (window.location.hash === nextHash) {
+      return;
+    }
+
+    this.replaceHash(nextHash);
+  }
+
+  findHashTargetJob(outcome, jobId = "") {
+    const systemUpdateJobs = this.getSystemUpdateJobs();
+    const matchingStatus = outcome === "success"
+      ? (job) => job?.status === "completed"
+      : (job) => isFailureJobStatus(job?.status);
+
+    if (jobId) {
+      return systemUpdateJobs.find(
+        (job) => job.id === jobId && matchingStatus(job),
+      ) || null;
+    }
+
+    return systemUpdateJobs.find((job) => matchingStatus(job)) || null;
+  }
+
+  restoreFinishedStateFromHash() {
+    if (this.isBlocking()) {
+      return;
+    }
+
+    const hashState = this.parseOutcomeHash();
+    if (!hashState) {
+      return;
+    }
+
+    if (this.context?.store?.jobsContext?.initialized !== true) {
+      return;
+    }
+
+    const targetJob = this.findHashTargetJob(hashState.outcome, hashState.jobId);
+    if (!targetJob) {
+      return;
+    }
+
+    if (
+      this.trackedJobId === targetJob.id &&
+      this.outcome === hashState.outcome
+    ) {
+      return;
+    }
+
+    this.trackedJobId = targetJob.id;
+    this.outcome = hashState.outcome;
+  }
+
+  handleHashChange = () => {
+    if (this.isBlocking()) {
+      return;
+    }
+
+    const hashState = this.parseOutcomeHash();
+    if (!hashState) {
+      if (this.outcome) {
+        this.trackedJobId = "";
+        this.outcome = "";
+        this.requestedBootstrapRefresh = false;
+      }
+      return;
+    }
+
+    this.restoreFinishedStateFromHash();
   }
 
   syncFinishedState() {
@@ -177,6 +324,7 @@ class SystemUpgradeModal extends LitElement {
       return;
     }
 
+    this.clearOutcomeHash();
     this.trackedJobId = "";
     this.outcome = "";
     this.requestedBootstrapRefresh = false;
@@ -193,21 +341,18 @@ class SystemUpgradeModal extends LitElement {
   getStatusCopy() {
     if (this.isBlocking()) {
       return {
-        headline: "System upgrade in progress",
-        body: "Do not power off your Dogebox while the upgrade is running.",
+        headline: "System upgrade in progress, do not power off your Dogebox.",
       };
     }
 
     if (this.outcome === "success") {
       return {
         headline: "System upgrade complete",
-        body: "The system upgrade finished successfully.",
       };
     }
 
     return {
       headline: "System upgrade failed",
-      body: "The system upgrade did not complete successfully.",
     };
   }
 
@@ -228,7 +373,6 @@ class SystemUpgradeModal extends LitElement {
       >
         <div class="content">
           <h2>System Upgrade</h2>
-          <p>${copy.body}</p>
 
           <sl-alert open variant=${this.getAlertVariant()}>
             <small>${copy.headline}</small>

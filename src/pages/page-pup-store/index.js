@@ -42,6 +42,7 @@ class StoreView extends LitElement {
       fetchError: { type: Boolean },
       busy: { type: Boolean },
       inspectedPup: { type: String },
+      searchValue: { type: String },
       _showSourceManagementDialog: { type: Boolean },
       _hasSourceErrors: { type: Boolean }
     }
@@ -60,6 +61,7 @@ class StoreView extends LitElement {
     this._showSourceManagementDialog = false;
     this._hasSourceErrors = false;
     this._pupCatalogSig = '';
+    this.searchValue = '';
 
     this.inspectedPup;
     this.showCategories = false;
@@ -74,6 +76,21 @@ class StoreView extends LitElement {
       { name: "host", label: "Host" },
     ]
     bindToClass(renderMethods, this);
+    this.packageList.setFilter((pkg, query) => {
+      const q = (query || '').trim().toLowerCase();
+      if (!q) return true;
+      const key = (pkg?.def?.key || '').toLowerCase();
+      const meta = pkg?.def?.versions?.[pkg?.def?.latestVersion]?.meta;
+      const name = (meta?.name || '').toLowerCase();
+      const short = (meta?.shortDescription || meta?.descShort || '').toLowerCase();
+      const installedName = (pkg?.state?.manifest?.meta?.name || '').toLowerCase();
+      return (
+        key.includes(q) ||
+        name.includes(q) ||
+        short.includes(q) ||
+        installedName.includes(q)
+      );
+    });
   }
 
   connectedCallback() {
@@ -179,6 +196,11 @@ class StoreView extends LitElement {
     }
   }
 
+  handleSearchInput(event) {
+    this.searchValue = event.target.value;
+    this.packageList.setQuery(this.searchValue);
+  }
+
   updated(changedProperties) {
     if (changedProperties.has('pups')) {
       const sig = pupCatalogSignature(this.pups);
@@ -227,7 +249,15 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input class="constrained w55" type="search" size="large" placeholder="Search">
+        <sl-input
+          class="constrained w55"
+          type="search"
+          size="large"
+          placeholder="Search"
+          clearable
+          .value=${this.searchValue}
+          @input=${this.handleSearchInput}
+        >
           <sl-icon name="search" slot="prefix"></sl-icon>
         </sl-input>
       </div>

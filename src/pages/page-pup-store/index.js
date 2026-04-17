@@ -49,6 +49,7 @@ class StoreView extends LitElement {
     this._hasSourceErrors = false;
 
     this.inspectedPup;
+    this.searchValue = '';
     this.showCategories = false;
     this.categories = [
       { name: "all", label: "All" },
@@ -60,6 +61,21 @@ class StoreView extends LitElement {
       { name: "Write", label: "Write" },
       { name: "host", label: "Host" },
     ]
+    this.packageList.setFilter((pkg, query) => {
+      const q = (query || '').trim().toLowerCase();
+      if (!q) return true;
+      const key = (pkg.def?.key || '').toLowerCase();
+      const meta = pkg.def?.versions?.[pkg.def?.latestVersion]?.meta;
+      const name = (meta?.name || '').toLowerCase();
+      const short = (meta?.shortDescription || '').toLowerCase();
+      const installedName = (pkg.state?.manifest?.meta?.name || '').toLowerCase();
+      return (
+        key.includes(q) ||
+        name.includes(q) ||
+        short.includes(q) ||
+        installedName.includes(q)
+      );
+    });
     bindToClass(renderMethods, this);
   }
 
@@ -169,22 +185,15 @@ class StoreView extends LitElement {
     if (changedProperties.has('pups')) {
       this.packageList.setData(this.pups);
     }
-    
-    // Existing code for other property changes
-    if (changedProperties.has('searchValue')) {
-      this.filterPackageList();
-    }
-  }
-
-  filterPackageList() {
-    if (this.searchValue === "") {
-      this.packageList.setFilter();
-    }
-    this.packageList.setFilter((pkg) => pkg?.manifest?.package?.toLowerCase()?.includes(this.searchValue.toLowerCase()));
   }
 
   handleManageSourcesClick() {
     this._showSourceManagementDialog = true;
+  }
+
+  handleSearchInput(event) {
+    this.searchValue = event.target.value;
+    this.packageList.setQuery(this.searchValue);
   }
 
   checkForSourceErrors() {
@@ -221,7 +230,15 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input class="constrained w55" type="search" size="large" placeholder="Search">
+        <sl-input
+          class="constrained w55"
+          type="search"
+          size="large"
+          placeholder="Search"
+          clearable
+          .value=${this.searchValue}
+          @input=${this.handleSearchInput}
+        >
           <sl-icon name="search" slot="prefix"></sl-icon>
         </sl-input>
       </div>

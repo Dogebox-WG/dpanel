@@ -6,6 +6,8 @@ export class PaginationController {
     this.itemsPerPage = itemsPerPage;
     this.currentPage = 1;
     this.options = options;
+    this.filterFn = null;
+    this.query = "";
   }
 
   setData(newData) {
@@ -18,6 +20,7 @@ export class PaginationController {
       this.initial_data = newData;
     }
     this.currentPage = 1;
+    this.applyFilter();
     this.host.requestUpdate();
   }
 
@@ -55,12 +58,32 @@ export class PaginationController {
   }
 
   setFilter(filterFn) {
-    if (!filterFn) {
+    this.filterFn = filterFn || null;
+    this.currentPage = 1;
+    this.applyFilter();
+    this.host.requestUpdate();
+  }
+
+  setQuery(query) {
+    this.query = query ?? "";
+    this.currentPage = 1;
+    this.applyFilter();
+    this.host.requestUpdate();
+  }
+
+  applyFilter() {
+    if (!this.filterFn) {
       this.data = this.initial_data;
-      this.host.requestUpdate();
       return;
     }
-    this.data = this.initial_data.filter(filterFn);
+    this.data = this.initial_data.filter((item) => this.filterFn(item, this.query));
+  }
+
+  clearFilter() {
+    this.filterFn = null;
+    this.query = "";
+    this.data = this.initial_data;
+    this.currentPage = 1;
     this.host.requestUpdate();
   }
 }

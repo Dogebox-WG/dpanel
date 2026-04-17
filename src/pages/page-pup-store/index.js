@@ -61,6 +61,21 @@ class StoreView extends LitElement {
       { name: "Write", label: "Write" },
       { name: "host", label: "Host" },
     ]
+    this.packageList.setFilter((pkg, query) => {
+      const q = (query || '').trim().toLowerCase();
+      if (!q) return true;
+      const key = (pkg.def?.key || '').toLowerCase();
+      const meta = pkg.def?.versions?.[pkg.def?.latestVersion]?.meta;
+      const name = (meta?.name || '').toLowerCase();
+      const short = (meta?.shortDescription || '').toLowerCase();
+      const installedName = (pkg.state?.manifest?.meta?.name || '').toLowerCase();
+      return (
+        key.includes(q) ||
+        name.includes(q) ||
+        short.includes(q) ||
+        installedName.includes(q)
+      );
+    });
     bindToClass(renderMethods, this);
   }
 
@@ -170,33 +185,6 @@ class StoreView extends LitElement {
     if (changedProperties.has('pups')) {
       this.packageList.setData(this.pups);
     }
-    
-    // Existing code for other property changes
-    if (changedProperties.has('searchValue')) {
-      this.filterPackageList();
-    }
-  }
-
-  filterPackageList() {
-    const q = (this.searchValue ?? '').trim().toLowerCase();
-    this.packageList.setCurrentPage(1);
-    if (!q) {
-      this.packageList.setFilter();
-      return;
-    }
-    this.packageList.setFilter((pkg) => {
-      const key = (pkg.def?.key || '').toLowerCase();
-      const meta = pkg.def?.versions?.[pkg.def?.latestVersion]?.meta;
-      const name = (meta?.name || '').toLowerCase();
-      const short = (meta?.shortDescription || '').toLowerCase();
-      const installedName = (pkg.state?.manifest?.meta?.name || '').toLowerCase();
-      return (
-        key.includes(q) ||
-        name.includes(q) ||
-        short.includes(q) ||
-        installedName.includes(q)
-      );
-    });
   }
 
   handleManageSourcesClick() {
@@ -205,6 +193,7 @@ class StoreView extends LitElement {
 
   handleSearchInput(event) {
     this.searchValue = event.target.value;
+    this.packageList.setQuery(this.searchValue);
   }
 
   checkForSourceErrors() {

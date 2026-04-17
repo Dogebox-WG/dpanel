@@ -231,7 +231,6 @@ class PupInstallCard extends LitElement {
       flex-direction: row;
       gap: 1em;
       flex: 1 1 auto;
-      min-width: 0;
     }
 
     .details-wrap.secondary-details {

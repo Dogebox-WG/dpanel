@@ -4,8 +4,9 @@ var pupCardGrid = css`
   .pup-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    @media (min-width:576px) {
-      grid-template-columns: repeat(auto-fit, minmax(576px, 1fr));
+    column-gap: 1rem;
+    @media (min-width:520px) {
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
     }
   }
 `

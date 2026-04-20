@@ -26,7 +26,7 @@ class TagSet extends LitElement {
       ${entries.slice(0, displayCount).map(([key, value], index) => {
         const variant = (this.highlight && index === 0) ? 'success' : 'neutral';
         return html`
-          <sl-tag size="small" variant="${variant}">
+          <sl-tag size="medium" variant="${variant}">
             <span class="tag-key">${key}</span>:&nbsp;
             <span class="tag-value">${value}</span>
           </sl-tag>
@@ -68,6 +68,11 @@ class TagSet extends LitElement {
       text-overflow: ellipsis;
       display: inline-block;
       vertical-align: bottom;
+    }
+
+    sl-tag::part(base) {
+      border:none;
+      background-color: rgba(255, 255, 255, 0.1);
     }
   `
 }

@@ -222,7 +222,7 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input class="constrained w55 search-input" type="search" size="large" placeholder="Search for Pups">
+        <sl-input class="constrained w55 search-input" type="search" size="large" placeholder="Search for Pups...">
           <sl-icon name="search" slot="prefix"></sl-icon>
         </sl-input>
       </div>
@@ -259,14 +259,17 @@ class StoreView extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 2em;
+      margin-bottom: 3em;
       width: 100%;
     }
 
     .constrained {
       width: 100%;
       @media (min-width:576px) {
-        &.w55 { width: 55% }
+        &.w55 {
+          width: clamp(420px, 55%, 1056px);
+          max-width: 100%;
+        }
         &.w80 { width: 80% }
       }
     }
@@ -355,38 +358,51 @@ class StoreView extends LitElement {
     }
 
     .search-input::part(base) {
-      border: 1px solid #505A64;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 48px;
-      background: linear-gradient(90deg, #2B2E37 0%, #2D3037 100%);
-      box-shadow: 0 0 0 1px #1F2228;
+      background-color: #2b3038;
+      background-image:
+        radial-gradient(
+          ellipse 90% 65% at 10% 15%,
+          rgba(255, 255, 255, 0.14) 0%,
+          transparent 52%
+        ),
+        linear-gradient(90deg, #343a44 0%, #262a32 100%);
+      box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      transition: border-color 180ms ease, box-shadow 180ms ease;
     }
 
     .search-input::part(prefix) {
-      color: #505A64;
+      color: #9aa3ae;
     }
 
     .search-input:hover::part(base) {
-      border-color: #5C6672;
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
     .search-input:hover::part(prefix) {
-      color: #5C6672;
+      color: #aeb6c0;
     }
 
     .search-input:focus-within::part(base) {
-      border-color: #6E7A87;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        0 4px 18px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09);
     }
 
     .search-input:focus-within::part(prefix) {
-      color: #6E7A87;
+      color: #c4ccd6;
     }
 
     .search-input::part(input) {
-      color: #C6CDD6;
+      color: #e8eaed;
     }
 
     .search-input::part(input)::placeholder {
-      color: #717B85;
+      color: #8b939e;
       opacity: 1;
     }
   `

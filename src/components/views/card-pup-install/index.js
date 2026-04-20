@@ -88,6 +88,29 @@ class PupInstallCard extends LitElement {
     `
   }
 
+  getOpenableSourceUrl(location) {
+    if (!location || typeof location !== "string") return null;
+    const trimmed = location.trim();
+    if (!trimmed) return null;
+
+    try {
+      return new URL(trimmed).toString();
+    } catch (_err) {
+      try {
+        return new URL(`https://${trimmed}`).toString();
+      } catch (_err2) {
+        return null;
+      }
+    }
+  }
+
+  handleOpenSourceUrl(event, url) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   render() {
     const { 
       defaultIcon, pupName, version, logoBase64, 
@@ -95,6 +118,7 @@ class PupInstallCard extends LitElement {
       installed, source,
       installationState
     } = this;
+    const sourceUrl = this.getOpenableSourceUrl(source?.location);
 
     const getInstallationStatus = () => {
       // If the pup is not installed at all, show nothing
@@ -107,7 +131,7 @@ class PupInstallCard extends LitElement {
       return html`
         <div class="installation-badges">
           ${this.hasUpdate ? html`
-            <sl-tag class="card-installation-tag" pill variant="primary">
+            <sl-tag class="card-installation-tag" pill>
               Update Available <sl-icon class="card-installation-tag-icon" name="info-circle-fill"></sl-icon>
             </sl-tag>
           ` : nothing}
@@ -129,13 +153,6 @@ class PupInstallCard extends LitElement {
               <div class="inner">
                 <span class="name">${pupName}  <small style="color: #777">v${version}</small></span>
                 <span class="description">${short}</span>
-                <span class="source">
-                  ${this.renderSourceIcon(source?.type)}
-                  ${source?.location}
-                  ${source?.error ? html`
-                    <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600); margin-left: 4px;"></sl-icon>
-                  ` : nothing}
-                </span>
                 <x-tag-set class="tag-set" .tags=${upstreamVersions} max=1></x-tag-set>
               </div>
             </div>
@@ -147,6 +164,31 @@ class PupInstallCard extends LitElement {
             </div>
           </div>
 
+          <div class="card-footer">
+            <span class="source">
+              ${this.renderSourceIcon(source?.type)}
+              ${source?.location}
+              ${source?.error ? html`
+                <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600); margin-left: 4px;"></sl-icon>
+              ` : nothing}
+            </span>
+            ${sourceUrl ? html`
+              <span
+                class="open-url-link"
+                role="link"
+                tabindex="0"
+                @click=${(event) => this.handleOpenSourceUrl(event, sourceUrl)}
+                @keydown=${(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    this.handleOpenSourceUrl(event, sourceUrl);
+                  }
+                }}
+              >
+                <sl-icon name="box-arrow-up-right"></sl-icon>
+              </span>
+            ` : nothing}
+          </div>
+
         </div>
       </a>
     `;
@@ -156,6 +198,7 @@ class PupInstallCard extends LitElement {
     :host {
       --icon-size: 72px;
       --row-height: 114px;
+      --card-footer-height: 2.2em;
     }
 
     a, button {
@@ -178,23 +221,56 @@ class PupInstallCard extends LitElement {
       flex-direction: row;
       margin-bottom: 1em;
       width: 100%;
-      padding: 1em;
+      padding: 0.2em 1em;
+      padding-bottom: calc(var(--card-footer-height) + 0.6em);
       box-sizing: border-box;
       overflow: hidden;
       gap: 0em;
-    }
-    .pup-card-wrap::after {
-      content: "";
-      height: 1px;
-      margin-left: calc(var(--icon-size) + 1em);
-      width: 75%;
-      background: #444;
-      position: absolute;
-      bottom: 16px;
+      border-radius: 18px;
+      background-image: linear-gradient(90deg, #2A343D 0%, #21242D 100%);
+      box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.4),
+        0 12px 28px rgba(0, 0, 0, 0.28);
     }
 
-    .pup-card-wrap:hover {
-      background: rgb(46, 45, 51);
+    .pup-card-wrap > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    .pup-card-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(
+        ellipse 85% 55% at 0% 0%,
+        rgba(255, 255, 255, 0.14) 0%,
+        rgba(255, 255, 255, 0.04) 35%,
+        transparent 62%
+      );
+    }
+
+    .pup-card-wrap::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: var(--card-footer-height);
+      border: 1px solid #414850;
+      border-bottom: 0;
+      border-radius: 18px 18px 0 0;
+      box-sizing: border-box;
+      pointer-events: none;
+      z-index: 1;
+      transition: border-color 350ms ease;
+    }
+
+    .pup-card-wrap:hover::before {
+      border-color: #505A64;
       cursor: pointer;
     }
 
@@ -248,12 +324,14 @@ class PupInstallCard extends LitElement {
       flex-direction: column;
       align-items: start;
       line-height: 1.3;
+      gap: 0.1rem;
     }
 
     span.name {
       font-family: 'Comic Neue';
-      font-size: 1.2rem;
+      font-size: clamp(1.05rem, 0.5vw + 0.9rem, 1.2rem);
       font-weight: bold;
+      margin-bottom: 0.15rem;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -264,9 +342,9 @@ class PupInstallCard extends LitElement {
     }
 
     span.description {
-      margin-bottom:;
+      margin-bottom: 0.15rem;
       font-weight: normal;
-      font-size: .9rem;
+      font-size: clamp(0.92rem, 0.25vw + 0.84rem, 1rem);
       display: -webkit-box;
       -webkit-line-clamp: 1;
       -webkit-box-orient: vertical;
@@ -304,16 +382,52 @@ class PupInstallCard extends LitElement {
       margin-left: 6px;
     }
 
+    .card-footer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      min-height: var(--card-footer-height);
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      padding: 0.4em 1em;
+      border-top: 1px solid #414850;
+      background: linear-gradient(180deg, #1D2229 0%, #1D2025 100%);
+      border-radius: 0 0 18px 18px;
+      box-sizing: border-box;
+    }
+
     span.source {
-      margin-top: 2px;
+      margin-left: calc(var(--icon-size) + 1em);
+      flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: row;
       align-items: center;
+      justify-content: flex-end;
       gap: 4px;
-      font-size: 0.85rem;
+      font-size: clamp(0.84rem, 0.2vw + 0.78rem, 0.92rem);
       color: #b5a1ff;
+      text-align: right;
     }
     span.source sl-icon { position: relative; top: -1px; }
+
+    .open-url-link {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      color: #b5a1ff;
+      padding: 0;
+      line-height: 1;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .open-url-link:focus-visible {
+      outline: 1px solid #b5a1ff;
+      border-radius: 4px;
+    }
   `;
 }
 

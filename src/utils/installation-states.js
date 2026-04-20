@@ -47,7 +47,7 @@ export function getInstallationStateProperties(stateId) {
       return {
         class: "broken",
         icon: "exclamation-triangle-fill",
-        variant: "danger"
+        variant: "warning"
       };
     case 'UNINSTALLED':
       return {

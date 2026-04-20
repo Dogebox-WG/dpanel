@@ -222,7 +222,7 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input class="constrained w55" type="search" size="large" placeholder="Search">
+        <sl-input class="constrained w55 search-input" type="search" size="large" placeholder="Search for Pups">
           <sl-icon name="search" slot="prefix"></sl-icon>
         </sl-input>
       </div>
@@ -307,6 +307,7 @@ class StoreView extends LitElement {
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      margin-top: 0.66em;
       @media (min-width: 800px) {
         display: flex;
         flex-direction: row;
@@ -327,12 +328,66 @@ class StoreView extends LitElement {
     .manage-sources-btn::part(base) {
       border: 1px solid #454851;
       background-color: #2E323D;
-      color: #FFFFFF;
+      color: #FDFEFE;
       border-radius: 28px;
+      transition: border-color 350ms ease, box-shadow 350ms ease;
     }
 
     .manage-sources-btn::part(prefix) {
       color: var(--sl-color-primary-600);
+      transition: color 350ms ease;
+    }
+
+    .manage-sources-btn:hover::part(base) {
+      border-color: #5C6672;
+    }
+
+    .manage-sources-btn:hover::part(prefix) {
+      color: var(--sl-color-primary-500);
+    }
+
+    .manage-sources-btn:focus-within::part(base) {
+      border-color: #6E7A87;
+    }
+
+    .manage-sources-btn:focus-within::part(prefix) {
+      color: var(--sl-color-primary-400);
+    }
+
+    .search-input::part(base) {
+      border: 1px solid #505A64;
+      border-radius: 48px;
+      background: linear-gradient(90deg, #2B2E37 0%, #2D3037 100%);
+      box-shadow: 0 0 0 1px #1F2228;
+    }
+
+    .search-input::part(prefix) {
+      color: #505A64;
+    }
+
+    .search-input:hover::part(base) {
+      border-color: #5C6672;
+    }
+
+    .search-input:hover::part(prefix) {
+      color: #5C6672;
+    }
+
+    .search-input:focus-within::part(base) {
+      border-color: #6E7A87;
+    }
+
+    .search-input:focus-within::part(prefix) {
+      color: #6E7A87;
+    }
+
+    .search-input::part(input) {
+      color: #C6CDD6;
+    }
+
+    .search-input::part(input)::placeholder {
+      color: #717B85;
+      opacity: 1;
     }
   `
 }

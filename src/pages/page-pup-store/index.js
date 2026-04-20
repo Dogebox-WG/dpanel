@@ -211,9 +211,10 @@ class StoreView extends LitElement {
 
     return html`
       <page-banner title="Pup Store" subtitle="Dogebox">
+      <img slot="image" height="100px" src="/static/img/friendly-mascot.png" alt="Dogebox Logo" class="dogebox-logo" />
         <div class="slogan-wrap">
           Extend your Dogebox with Pups
-          <sl-button size="large" variant="text" ?disabled=${this.fetchLoading} @click=${this.handleManageSourcesClick} class=${this._hasSourceErrors ? 'source-error' : ''}>
+          <sl-button size="medium" ?disabled=${this.fetchLoading} @click=${this.handleManageSourcesClick} class="manage-sources-btn ${this._hasSourceErrors ? 'source-error' : ''}">
             <sl-icon name=${this._hasSourceErrors ? 'exclamation-triangle-fill' : 'database-fill-add'} slot="prefix"></sl-icon>
             Manage Sources
           </sl-button>
@@ -302,6 +303,7 @@ class StoreView extends LitElement {
 
     .slogan-wrap {
       display: flex;
+      color: #A1A0A6
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -320,6 +322,17 @@ class StoreView extends LitElement {
 
     .source-error::part(base) {
       color: var(--sl-color-warning-600) !important;
+    }
+
+    .manage-sources-btn::part(base) {
+      border: 1px solid #454851;
+      background-color: #2E323D;
+      color: #FFFFFF;
+      border-radius: 28px;
+    }
+
+    .manage-sources-btn::part(prefix) {
+      color: var(--sl-color-primary-600);
     }
   `
 }

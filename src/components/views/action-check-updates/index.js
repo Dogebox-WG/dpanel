@@ -15,6 +15,7 @@ import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { pkgController } from "/controllers/package/index.js";
+import { isFailureJobStatus } from "/controllers/jobs/status.js";
 import { getRouter } from "/router/index.js";
 
 const PAGE_ONE = "checking";
@@ -151,7 +152,7 @@ export class CheckUpdatesView extends LitElement {
     const jobs = this.context?.store?.jobsContext?.jobs || [];
     const job = jobs.find(item => item.id === this._systemJobId);
     if (!job) return;
-    if (job.status === "failed" || job.status === "cancelled") {
+    if (isFailureJobStatus(job.status)) {
       this.markUpdateFailed();
     }
   }

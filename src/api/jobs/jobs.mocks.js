@@ -1,4 +1,5 @@
 import { store } from '/state/store.js';
+import { isActiveJobStatus, isFinishedJobStatus } from '/controllers/jobs/status.js';
 
 /**
  * Lightweight mock for job system
@@ -45,8 +46,8 @@ class MockJobWebSocket {
       this.trigger('open');
       // Send initial jobs
       this.send({
-        type: 'initial',
-        data: mockJobs
+        type: 'bootstrap',
+        update: { jobs: mockJobs }
       });
     }, 100);
 
@@ -92,7 +93,7 @@ class MockJobWebSocket {
     
     this.send({
       type: 'job:created',
-      data: job
+        update: job
     });
 
     // Simulate progress after 2 seconds
@@ -104,9 +105,10 @@ class MockJobWebSocket {
   // Helper: Simulate progress updates
   simulateProgress(jobId) {
     const job = mockJobs.find(a => a.id === jobId);
-    if (!activity) return;
+    if (!job) return;
     
-    if (job.status !== 'in_progress' && job.status !== 'queued') {
+    const isActive = isActiveJobStatus(job.status);
+    if (!isActive) {
       return;
     }
 
@@ -116,13 +118,13 @@ class MockJobWebSocket {
       job.summaryMessage = 'Starting...';
       this.send({
         type: 'job:updated',
-        data: { ...job }
+        update: { ...job }
       });
     }
 
     // Progress update loop
     const interval = setInterval(() => {
-      if (!activity || job.status !== 'in_progress') {
+      if (!job || job.status !== 'in_progress') {
         clearInterval(interval);
         return;
       }
@@ -143,7 +145,7 @@ class MockJobWebSocket {
         
         this.send({
           type: `job:${job.status}`,
-          data: { ...job }
+          update: { ...job }
         });
         
         clearInterval(interval);
@@ -151,7 +153,7 @@ class MockJobWebSocket {
         job.summaryMessage = `Processing... ${job.progress}%`;
         this.send({
           type: 'job:updated',
-          data: { ...job }
+          update: { ...job }
         });
       }
     }, 1500);
@@ -175,12 +177,28 @@ export const mockJobApi = {
     });
   },
 
+  deleteJob: (id) => {
+    const deletedJob = mockJobs.find(j => String(j.id) === String(id));
+    mockJobs = mockJobs.filter(j => String(j.id) !== String(id));
+    if (mockJobWS) {
+      mockJobWS.send({
+        type: 'job:deleted',
+        update: { id: deletedJob?.id ?? id }
+      });
+    }
+    return Promise.resolve({ success: true, deleted: id });
+  },
+
+  createOrphanedJobCandidate: () => {
+    return Promise.reject(new Error('Create orphaned job requires the real backend with Network Mocks disabled.'));
+  },
+
 
   clearCompletedJobs: (olderThanDays) => {
     const cutoff = new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000));
     mockJobs = mockJobs.filter(j => {
-      const isCompleted = ['completed', 'failed'].includes(j.status);
-      if (!isCompleted) return true;
+      const isFinished = isFinishedJobStatus(j.status);
+      if (!isFinished) return true;
       
       const jobDate = new Date(j.finished || j.started);
       return jobDate >= cutoff;

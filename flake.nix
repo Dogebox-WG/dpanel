@@ -2,7 +2,11 @@
   inputs = {
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
-    playwright.url  = "github:pietdevries94/playwright-web-flake";
+    playwright = {
+      url = "github:pietdevries94/playwright-web-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, playwright, ... }:

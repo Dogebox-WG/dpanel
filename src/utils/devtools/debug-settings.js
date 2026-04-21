@@ -271,6 +271,16 @@ class DebugSettingsDialog extends LitElement {
           </div>
 
           <div class="form-control">
+            <sl-switch
+              name="includePreReleaseSystemUpdates"
+              help-text="When enabled, pre-release versions appear in system updates"
+              .checked=${networkContext.includePreReleaseSystemUpdates}
+              @sl-change=${this.handleToggle}>
+                Include Pre-Release System Updates
+            </sl-switch>
+          </div>
+
+          <div class="form-control">
             <sl-button variant="warning" @click=${() => store.updateState({ networkContext: { token: "invalid-token-here" }})}>Invalidate Auth Token</sl-buton>
           </div>
           <div class="form-control">

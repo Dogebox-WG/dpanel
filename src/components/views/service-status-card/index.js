@@ -1,4 +1,5 @@
 import { LitElement, html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import "/components/common/copy-button/copy-button.js";
 
 /**
  * Service status card component for displaying external service information
@@ -26,7 +27,7 @@ class ServiceStatusCard extends LitElement {
           <span class="detail-value">
             ${status.ip || 'Not available'}
             ${status.ip ? html`
-              <sl-copy-button value="${status.ip}" class="copy-btn"></sl-copy-button>
+              <x-copy-button value="${status.ip}" class="copy-btn"></x-copy-button>
             ` : nothing}
           </span>
         </div>

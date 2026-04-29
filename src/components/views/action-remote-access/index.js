@@ -13,6 +13,7 @@ import {
   setSSHState,
 } from "/api/sshkeys/sshkeys.js";
 import "/components/common/action-row/action-row.js";
+import "/components/common/copy-button/copy-button.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 
@@ -267,7 +268,7 @@ export class RemoteAccessSettings extends LitElement {
           <div slot="hidden">
             <div class="key-reveal-dropdown">${k.key}</div>
             <div class="key-actions">
-              <sl-copy-button hoist value=${k.key}></sl-copy-button>
+              <x-copy-button hoist value=${k.key}></x-copy-button>
               <sl-icon-button name="trash-fill" label="Trash" @click=${() => this.handleTrash(k.id)}></sl-icon-button>
             </div>
           </div>

@@ -21,6 +21,7 @@ import { themes } from "/components/common/dynamic-form/themes.js";
 // Components
 import "/components/common/text-loader/text-loader.js";
 import "/components/common/dynamic-form/dynamic-form.js";
+import "/components/common/copy-button/copy-button.js";
 import { notYet } from "/components/common/not-yet-implemented.js"
 
 // Render chunks
@@ -153,8 +154,11 @@ class CreateKey extends LitElement {
     this._revealPhrase = true;
   }
 
-  handleCopyButtonClick() {
-    this.shadowRoot.querySelector("#PhraseCopyBtn").click();
+  async handleCopyButtonClick() {
+    const btn = this.shadowRoot.querySelector("#PhraseCopyBtn");
+    if (btn && typeof btn.copy === "function") {
+      await btn.copy();
+    }
   }
 
   handlePhraseCloseClick() {
@@ -226,10 +230,10 @@ class CreateKey extends LitElement {
         </sl-button>
 
         <sl-button variant="text">
-          <sl-copy-button id="PhraseCopyBtn" value=${this._phrase}
+          <x-copy-button id="PhraseCopyBtn" value=${this._phrase}
             ><span slot="copy-icon"
               >Copy to clipboard &nbsp;<sl-icon name="copy"></sl-icon></span
-          ></sl-copy-button>
+          ></x-copy-button>
         </sl-button>
       </div>
 

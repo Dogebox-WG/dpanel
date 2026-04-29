@@ -1,5 +1,6 @@
 import { LitElement, html, css, choose } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import "/components/common/sparkline-chart/sparkline-chart-v2.js";
+import "/components/common/copy-button/copy-button.js";
 
 class MetricView extends LitElement {
   static properties = {
@@ -29,11 +30,11 @@ class MetricView extends LitElement {
     const tip = desc || String(this.metric.label || this.metric.name || '');
 
     return html`
-      <sl-copy-button
+      <x-copy-button
         class="copy"
         value="${this.metric.values}"
         @click=${(e) => e.stopPropagation()}>
-      </sl-copy-button>
+      </x-copy-button>
 
       <div class="value-container">
         ${choose(type, [

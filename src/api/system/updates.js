@@ -14,11 +14,17 @@ export async function checkForUpdates() {
   return res;
 }
 
-export async function commenceUpdate(pkg, version) {
-  const res = await client.post(`/system/update`, {
+export async function commenceUpdate(pkg, version, options = {}) {
+  const payload = {
     package: pkg,
-    version
-  }, {
+    version,
+  };
+
+  if (options.osRef) {
+    payload.osRef = options.osRef;
+  }
+
+  const res = await client.post(`/system/update`, payload, {
     noLogoutRedirect: true,
     mock: postResponse,
   });

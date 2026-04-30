@@ -7,7 +7,19 @@ const client = new ApiClient(store.networkContext.apiBaseUrl);
 
 export async function checkForUpdates() {
   const preRelease = store.networkContext?.includePreReleaseSystemUpdates;
-  const res = await client.get(`/system/updates${preRelease ? "?includePreReleases=true" : ""}`, {
+  const osRef = store.networkContext?.systemUpdateOSRef?.trim();
+  const params = new URLSearchParams();
+
+  if (preRelease) {
+    params.set("includePreReleases", "true");
+  }
+
+  if (osRef) {
+    params.set("osRef", osRef);
+  }
+
+  const query = params.toString();
+  const res = await client.get(`/system/updates${query ? `?${query}` : ""}`, {
     noLogoutRedirect: true,
     mock: getResponse,
   });

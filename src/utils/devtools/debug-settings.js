@@ -457,17 +457,6 @@ class DebugSettingsDialog extends LitElement {
           </div>
 
           <div class="form-control">
-            <sl-input
-              type="text"
-              name="systemUpdateOSRef"
-              help-text="Dev-only override for the OS repo commit/ref used during system update staging"
-              value=${networkContext.systemUpdateOSRef ?? ""}
-              @sl-change=${this.handleInput}>
-                OS Upgrade Repo Ref
-            </sl-input>
-          </div>
-
-          <div class="form-control">
             <sl-button variant="warning" @click=${() => store.updateState({ networkContext: { token: "invalid-token-here" }})}>Invalidate Auth Token</sl-buton>
           </div>
           <div class="form-control">

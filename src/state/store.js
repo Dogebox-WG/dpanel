@@ -32,7 +32,6 @@ class Store {
       logStatsUpdates: false,
       logStateUpdates: false,
       logProgressUpdates: false,
-      systemUpdateOSRef: "",
       reflectorHost: `https://reflector.dogecoin.org`,
       reflectorToken: Math.random().toString(36).substring(2, 14)
     };

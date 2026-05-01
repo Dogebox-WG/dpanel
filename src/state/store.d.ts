@@ -29,7 +29,6 @@ export interface NetworkContext {
   logStatsUpdates: boolean;
   logStateUpdates: boolean;
   logProgressUpdates: boolean;
-  systemUpdateOSRef: string;
   reflectorHost: string;
   reflectorToken: string;
 }

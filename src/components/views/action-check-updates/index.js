@@ -420,7 +420,10 @@ export class CheckUpdatesView extends LitElement {
 
       // We only support "dogebox" for now, when we want to support multiple packages,
       // this, and the UI around all our upgrades will have to be updated slightly.
-      const res = await commenceUpdate("dogebox", this._updatablePackages[0].latestUpdate.version);
+      const osRef = store.networkContext?.systemUpdateOSRef?.trim();
+      const res = await commenceUpdate("dogebox", this._updatablePackages[0].latestUpdate.version, {
+        osRef,
+      });
       this._systemJobId = res?.id || "";
 
       this._update_commenced = true;

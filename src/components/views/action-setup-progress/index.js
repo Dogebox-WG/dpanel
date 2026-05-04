@@ -2,6 +2,7 @@ import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.m
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { jobWebSocket } from "/controllers/sockets/job-channel.js";
+import { isFailureJobStatus } from "/controllers/jobs/status.js";
 
 import "/components/views/x-log-viewer/index.js";
 
@@ -130,7 +131,7 @@ class SetupProgress extends LitElement {
       this.onSuccess && this.onSuccess();
     }
 
-    if (job.status === "failed" || job.status === "cancelled") {
+    if (isFailureJobStatus(job.status)) {
       this._completionHandled = true;
       this._failed = true;
       this._errorMessage =

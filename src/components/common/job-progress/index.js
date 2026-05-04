@@ -1,5 +1,6 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { timeAgo, formatDateTime } from '/utils/time-format.js';
+import { isDeletableJobStatus } from '/controllers/jobs/status.js';
 import { store } from '/state/store.js';
 import '/components/views/x-log-viewer/index.js';
 
@@ -76,6 +77,10 @@ class JobProgress extends LitElement {
     .job-icon.failed {
       color: #ff6b6b;
     }
+
+    .job-icon.orphaned {
+      color: #f0ad4e;
+    }
     
     .job-icon.queued {
       color: #888;
@@ -147,6 +152,10 @@ class JobProgress extends LitElement {
     .progress-bar.failed {
       background: linear-gradient(90deg, #ff6b6b, #ff8787);
     }
+
+    .progress-bar.orphaned {
+      background: linear-gradient(90deg, #f0ad4e, #f7c46c);
+    }
     
     .progress-bar.queued {
       background: #555;
@@ -193,6 +202,13 @@ class JobProgress extends LitElement {
       color: #888;
       flex: 0 0 200px;
       min-width: 200px;
+    }
+
+    .job-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.25em;
+      flex: 0 0 auto;
     }
     
     .timing-item {
@@ -307,10 +323,20 @@ class JobProgress extends LitElement {
       in_progress: 'arrow-repeat',
       completed: 'check-circle-fill',
       failed: 'exclamation-triangle-fill',
+      orphaned: 'exclamation-octagon',
       queued: 'clock',
       cancelled: 'x-circle'
     };
     return icons[status] || 'question-circle';
+  }
+
+  handleDeleteClick(e) {
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent('job-delete', {
+      detail: { job: this.job },
+      bubbles: true,
+      composed: true
+    }));
   }
   
   render() {
@@ -339,6 +365,16 @@ class JobProgress extends LitElement {
             
             <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           </div>
+
+          ${isDeletableJobStatus(status) ? html`
+            <div class="job-actions">
+              <sl-icon-button
+                name="trash"
+                label="Delete job"
+                @click=${this.handleDeleteClick}
+              ></sl-icon-button>
+            </div>
+          ` : ''}
           
           <div class="timing-info">
             ${started ? html`

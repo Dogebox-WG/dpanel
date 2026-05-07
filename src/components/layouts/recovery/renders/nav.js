@@ -155,6 +155,7 @@ export function renderNav(isFirstTimeSetup) {
     { name: "pass", label: "Set Password" },
     { name: "key", label: "Create Key" },
     { name: "connect", label: "Connect" },
+    { name: "bootstrap", label: "Setting Up" },
   ];
 
   return html`
@@ -180,7 +181,7 @@ export function renderNav(isFirstTimeSetup) {
             </div>
           `,
         )}
-        ${this.activeStepNumber === 6
+        ${this.activeStepNumber === 7
           ? html`
               <div class="step mobile-only" data-completed-step>
                 <sl-button size="small" circle>✓</sl-button>

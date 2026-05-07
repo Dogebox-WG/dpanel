@@ -3,18 +3,24 @@ import { store } from '/state/store.js';
 import WebSocketClient from '/api/sockets.js';
 import { mockedLogRunner } from './log.mocks.js';
 
+const MAX_LOG_LINES = 1000;
+
 class LogViewer extends LitElement {
   static get properties() {
     return {
       autostart: { type: Boolean },
       logs: { type: Array },
       isConnected: { type: Boolean },
+      isLoadingHistory: { type: Boolean },
       follow: { type: Boolean },
       pupId: { type: String },
       jobId: { type: String },
       closing: { type: Boolean, reflect: true },
       animateOpen: { type: Boolean },
-      opening: { type: Boolean, reflect: true },
+      animatingOpen: { type: Boolean, reflect: true },
+      autoReconnect: { type: Boolean },
+      connecting: { type: Boolean },
+      isDownloading: { type: Boolean },
     };
   }
 
@@ -24,24 +30,33 @@ class LogViewer extends LitElement {
     this.pupId = "";
     this.jobId = "";
     this.isConnected = false;
+    this.isLoadingHistory = false;
     this.wsClient = null;
     this.autostart = true;
     this.follow = true; // Default to true, user can disable temporarily
     this.closing = false;
     this.animateOpen = false;
-    this.opening = false;
+    this.animatingOpen = false;
+    this.autoReconnect = false;
+    this.connecting = false;
+    this.isDownloading = false;
+    this._streamToken = 0;
+    this._reconnectDelay = 0;
+    this._reconnectTimer = null;
+    this._reconnectStopped = false;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this.setupSocketConnection();
+    this._reconnectStopped = false;
+    this.startLogStream();
     this._boundTransitionEnd = this._onTransitionEnd.bind(this);
     this.addEventListener('transitionend', this._boundTransitionEnd);
     if (this.animateOpen && (this.jobId || this.pupId)) {
-      this.opening = true;
+      this.animatingOpen = true;
       this._openRaf = requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          this.opening = false;
+          this.animatingOpen = false;
           this._openRaf = null;
         });
       });
@@ -49,10 +64,13 @@ class LogViewer extends LitElement {
   }
 
   disconnectedCallback() {
+    this._streamToken += 1;
     if (this._openRaf) {
       cancelAnimationFrame(this._openRaf);
       this._openRaf = null;
     }
+    this._reconnectStopped = true;
+    clearTimeout(this._reconnectTimer);
     this.removeEventListener('transitionend', this._boundTransitionEnd);
     super.disconnectedCallback();
     if (this.wsClient) {
@@ -76,22 +94,9 @@ class LogViewer extends LitElement {
       // Only reconnect if the ID actually changed (not just initial render)
       if (oldJobId !== undefined || oldPupId !== undefined) {
         if (oldJobId !== newJobId || oldPupId !== newPupId) {
-          // Disconnect old connection
-          if (this.wsClient) {
-            this.wsClient.disconnect();
-            this.wsClient = null;
-            this.isConnected = false;
-          }
-          
-          // Clear old logs
-          this.logs = [];
-          
-          // Setup new connection
-          this.setupSocketConnection();
-          
-          if (this.autostart && this.wsClient) {
-            this.wsClient.connect();
-          }
+          // Disconnect old connection, clear old logs, and setup the new connection.
+          this.resetLogStream();
+          this.startLogStream();
         }
       }
     }
@@ -130,6 +135,10 @@ class LogViewer extends LitElement {
   }
 
   handleToggleConnection() {
+    if (!this.wsClient) {
+      return;
+    }
+
     if (this.wsClient.isConnected) {
       this.wsClient.disconnect();
     } else {
@@ -137,24 +146,133 @@ class LogViewer extends LitElement {
     }
   }
 
-  setupSocketConnection() {
+  getLogTarget() {
+    // Must have either pupId or jobId
+    if (!this.pupId && !this.jobId) {
+      return null;
+    }
+
+    // Determine which endpoint to use
+    return {
+      logType: this.jobId ? 'job' : 'pup',
+      logId: this.jobId || this.pupId,
+    };
+  }
+
+  resetLogStream() {
+    this._streamToken += 1;
+    this.isLoadingHistory = false;
+    if (this.wsClient) {
+      this.wsClient.disconnect();
+      this.wsClient = null;
+    }
+    this.isConnected = false;
+    this.logs = [];
+  }
+
+  async startLogStream() {
+    const target = this.getLogTarget();
+    if (!target) {
+      return;
+    }
+
+    const streamToken = ++this._streamToken;
+
+    if (store.networkContext.useMocks) {
+      this.isLoadingHistory = false;
+      this.setupSocketConnection(target);
+      return;
+    }
+
+    this.isLoadingHistory = true;
+    this.logs = [];
+    this.requestUpdate();
+
+    try {
+      const { lines, resumeToken } = await this.fetchInitialLogs(target);
+      if (streamToken !== this._streamToken) {
+        return;
+      }
+
+      this.logs = this.trimLogs(lines);
+      this.setupSocketConnection(target, resumeToken);
+      await this.requestUpdate();
+      this.scrollToBottomIfNeeded();
+    } catch (error) {
+      if (streamToken !== this._streamToken) {
+        return;
+      }
+
+      console.warn('[Log Viewer] Failed to load initial logs, falling back to live stream only.', error);
+      this.setupSocketConnection(target);
+    } finally {
+      if (streamToken === this._streamToken) {
+        this.isLoadingHistory = false;
+        this.requestUpdate();
+      }
+    }
+  }
+
+  async fetchInitialLogs(target) {
+    const headers = {};
+    if (store.networkContext.token) {
+      headers.Authorization = `Bearer ${store.networkContext.token}`;
+    }
+
+    const response = await fetch(
+      `${store.networkContext.apiBaseUrl}/log/${target.logType}/${target.logId}/tail?limit=${MAX_LOG_LINES}`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Initial log load failed with status ${response.status}`);
+    }
+
+    const payload = await response.json();
+    return {
+      lines: Array.isArray(payload.lines) ? payload.lines : [],
+      resumeToken: typeof payload.resumeToken === 'string' ? payload.resumeToken : null,
+    };
+  }
+
+  trimLogs(logs) {
+    return logs.length > MAX_LOG_LINES
+      ? logs.slice(logs.length - MAX_LOG_LINES)
+      : logs;
+  }
+
+  scrollToBottomIfNeeded() {
+    if (!this.follow) {
+      return;
+    }
+
+    const logContainer = this.shadowRoot?.querySelector('#LogContainer');
+    if (!logContainer) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      logContainer.scrollTop = logContainer.scrollHeight;
+    });
+  }
+
+  setupSocketConnection(target = this.getLogTarget(), resumeToken = null) {
     // Prevent duplicate connections
     if (this.isConnected || this.wsClient) {
       return;
     }
 
-    // Must have either pupId or jobId
-    if (!this.pupId && !this.jobId) {
+    if (!target) {
       return;
     }
 
-    // Determine which endpoint to use
-    const logType = this.jobId ? 'job' : 'pup';
-    const logId = this.jobId || this.pupId;
-    const wsUrl = `${store.networkContext.wsApiBaseUrl}/ws/log/${logType}/${logId}`;
+    const wsUrl = new URL(`/ws/log/${target.logType}/${target.logId}`, store.networkContext.wsApiBaseUrl);
+    if (resumeToken !== null && resumeToken !== undefined) {
+      wsUrl.searchParams.set('resumeToken', String(resumeToken));
+    }
 
     this.wsClient = new WebSocketClient(
-      wsUrl,
+      wsUrl.toString(),
       store.networkContext,
       mockedLogRunner
     );
@@ -162,6 +280,7 @@ class LogViewer extends LitElement {
     // Update component state based on WebSocket events
     this.wsClient.onOpen = (event) => {
       this.isConnected = true;
+      this._reconnectDelay = 0;
       this.requestUpdate();
     };
 
@@ -186,23 +305,23 @@ class LogViewer extends LitElement {
         return;
       }
       
-      this.logs = [...this.logs, logMessage];
+      const updatedLogs = [...this.logs, logMessage];
+      this.logs = this.trimLogs(updatedLogs);
       await this.requestUpdate();
-      if (this.follow) {
-        const logContainer = this.shadowRoot.querySelector('#LogContainer');
-        logContainer.scrollTop = logContainer.scrollHeight;
-      }
+      this.scrollToBottomIfNeeded();
     };
 
     this.wsClient.onError = (event) => {
-      console.error(`[Log Viewer] WebSocket error for ${logType} ${logId}:`, event);
+      console.error(`[Log Viewer] WebSocket error for ${target.logType} ${target.logId}:`, event);
       this.isConnected = false;
       this.requestUpdate();
     };
 
     this.wsClient.onClose = (event) => {
       this.isConnected = false;
+      this.wsClient = null;
       this.requestUpdate();
+      this._scheduleReconnect();
     };
 
     if (this.autostart) {
@@ -210,31 +329,95 @@ class LogViewer extends LitElement {
     }
   }
 
-  handleDownloadClick(e) {
+  _scheduleReconnect() {
+    if (!this.autoReconnect || this._reconnectStopped) return;
+    if (!this.jobId && !this.pupId) return;
+
+    const BASE = 1000;
+    const MAX = 15000;
+    this._reconnectDelay = Math.min(
+      this._reconnectDelay ? this._reconnectDelay * 2 : BASE,
+      MAX,
+    );
+
+    this._reconnectTimer = setTimeout(() => {
+      if (this._reconnectStopped) return;
+      this.setupSocketConnection();
+    }, this._reconnectDelay);
+  }
+
+  async handleDownloadClick(e) {
     e.stopPropagation(); // Prevent event from bubbling up to parent
-    const contentDiv = this.shadowRoot.querySelector("#LogContainer");
-    
-    let textToDownload = '';
+    if (this.isDownloading) {
+      return;
+    }
 
-    // Extracting text from each <li> and adding a newline after each
-    contentDiv.querySelectorAll('li').forEach(li => {
-      textToDownload += li.textContent + '\n';
-    });
+    if (store.networkContext.useMocks || !this.getLogTarget()) {
+      this.downloadBufferedLogs();
+      return;
+    }
 
-    // Creating a Blob for the text
+    this.isDownloading = true;
+
+    try {
+      await this.downloadFullLog();
+    } catch (error) {
+      console.warn('[Log Viewer] Failed to download full log, falling back to buffered logs.', error);
+      this.downloadBufferedLogs();
+    } finally {
+      this.isDownloading = false;
+    }
+  }
+
+  async downloadFullLog() {
+    const target = this.getLogTarget();
+    if (!target) {
+      throw new Error('No log target available for download');
+    }
+
+    const headers = {};
+
+    if (store.networkContext.token) {
+      headers.Authorization = `Bearer ${store.networkContext.token}`;
+    }
+
+    const response = await fetch(
+      `${store.networkContext.apiBaseUrl}/log/${target.logType}/${target.logId}/download`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const filename = this.getDownloadFilename(response, target.logId);
+    this.triggerDownload(blob, filename);
+  }
+
+  downloadBufferedLogs() {
+    const logId = this.jobId || this.pupId || 'unknown';
+    const textToDownload = this.logs.length > 0 ? `${this.logs.join('\n')}\n` : '';
     const blob = new Blob([textToDownload], { type: 'text/plain' });
+    this.triggerDownload(blob, `log_${logId}_${Date.now()}.txt`);
+  }
 
-    // Creating an anchor element to trigger download
+  getDownloadFilename(response, logId) {
+    const contentDisposition = response.headers.get('Content-Disposition');
+    const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+    return filenameMatch?.[1] || `log_${logId}_${Date.now()}.txt`;
+  }
+
+  triggerDownload(blob, filename) {
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.setAttribute('no-intercept', true)
-    a.href = URL.createObjectURL(blob);
-    a.download = `log_${this.pupId}_${Date.now()}.txt`;
+    a.setAttribute('no-intercept', true);
+    a.href = blobUrl;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
-
-    // Cleanup the temporary element
     document.body.removeChild(a);
-
+    URL.revokeObjectURL(blobUrl);
   }
 
   _onTransitionEnd(e) {
@@ -246,13 +429,23 @@ class LogViewer extends LitElement {
   }
 
   render() {
+    const emptyStateMessage = this.connecting
+      ? 'Connecting to log stream...'
+      : this.isLoadingHistory
+        ? 'Loading recent logs...'
+        : this.isConnected
+          ? 'Connected. Waiting for log output...'
+          : 'Disconnected. Logs not available.';
+
     return html`
       <div>
         <div id="LogHUD">
           <div class="status">
-            ${this.isConnected
-              ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
-              : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
+            ${this.connecting
+              ? html`<sl-tag size="small" pill variant="primary">Connecting</sl-tag>`
+              : this.isConnected
+                ? html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="success">Connected</sl-tag>`
+                : html`<sl-tag size="small" pill @click=${this.handleToggleConnection} variant="neutral">Disconnected</sl-tag>`
             }
           </div>
         </div>
@@ -263,7 +456,7 @@ class LogViewer extends LitElement {
             </ul>
           ` : html`
             <div class="no-logs-message">
-              ${this.isConnected ? 'Waiting for logs...' : 'Logs not available'}
+              ${emptyStateMessage}
             </div>
           `}
         </div>
@@ -280,6 +473,8 @@ class LogViewer extends LitElement {
             variant="text"
             size="large"
             target="_blank"
+            ?loading=${this.isDownloading}
+            ?disabled=${this.isDownloading}
             @click=${this.handleDownloadClick}
             >Download
             <sl-icon name="download" slot="suffix"></sl-icon>
@@ -305,7 +500,7 @@ class LogViewer extends LitElement {
         max-height: 0;
       }
 
-      :host([opening]) {
+      :host([animatingOpen]) {
         max-height: 0;
       }
       div#LogHUD {

@@ -34,6 +34,7 @@ class CreateKey extends LitElement {
   static get properties() {
     return {
       showSuccessAlert: { type: Boolean },
+      onBack: { type: Object },
       _authenticationRequired: { type: Boolean },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
@@ -50,6 +51,7 @@ class CreateKey extends LitElement {
   constructor() {
     super();
     this._authenticationRequired = false;
+    this.onBack = null;
     this._server_fault = false;
     this._invalid_creds = false;
     this._form = null;
@@ -164,6 +166,12 @@ class CreateKey extends LitElement {
 
   _handleContinueClick() {
     this.handleSuccess();
+  }
+
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
+    }
   }
 
   render() {
@@ -310,7 +318,17 @@ class CreateKey extends LitElement {
               ${!this._keyListLoading && !hasMasterKey
                 ? html`
                     ${emptyKey}
-                    <div style="text-align: right;">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem;">
+                      ${this.onBack
+                        ? html`
+                            <sl-button
+                              variant="default"
+                              @click=${this.handleBackClick}
+                            >
+                              Back
+                            </sl-button>
+                          `
+                        : html`<span></span>`}
                       <sl-button
                         id="GenKeyBtn"
                         @click=${this.handleGenKeyClick}
@@ -325,7 +343,17 @@ class CreateKey extends LitElement {
                 ? html`
                     ${masterKeyEl}
                     <sl-divider></sl-divider>
-                    <div style="text-align: right;">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem;">
+                      ${this.onBack
+                        ? html`
+                            <sl-button
+                              variant="default"
+                              @click=${this.handleBackClick}
+                            >
+                              Back
+                            </sl-button>
+                          `
+                        : html`<span></span>`}
                       <sl-button
                         @click=${this._handleContinueClick}
                         class="pink"

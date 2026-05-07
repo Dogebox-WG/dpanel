@@ -1,5 +1,5 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
-import { timeAgo } from '/utils/time-format.js';
+import { timeAgo, formatDateTime } from '/utils/time-format.js';
 import { store } from '/state/store.js';
 import '/components/views/x-log-viewer/index.js';
 
@@ -271,6 +271,11 @@ class JobProgress extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .timing-tooltip {
+      --show-delay: 0ms;
+      --hide-delay: 0ms;
+    }
     
   `;
   
@@ -339,13 +344,17 @@ class JobProgress extends LitElement {
             ${started ? html`
               <div class="timing-item">
                 <div class="timing-label">Started</div>
-                <div class="timing-value">${timeAgo(started)}</div>
+                <sl-tooltip class="timing-tooltip" content="${formatDateTime(started)}">
+                  <div class="timing-value">${timeAgo(started)}</div>
+                </sl-tooltip>
               </div>
             ` : ''}
             ${finished ? html`
               <div class="timing-item">
                 <div class="timing-label">Finished</div>
-                <div class="timing-value">${timeAgo(finished)}</div>
+                <sl-tooltip class="timing-tooltip" content="${formatDateTime(finished)}">
+                  <div class="timing-value">${timeAgo(finished)}</div>
+                </sl-tooltip>
               </div>
             ` : ''}
           </div>

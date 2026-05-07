@@ -5,6 +5,7 @@ import {
   withDialog,
   performLogout,
 } from "./middleware.js";
+import { store } from "/state/store.js";
 
 export const routes = [
   // {
@@ -15,7 +16,9 @@ export const routes = [
   // },
   {
     path: "/",
-    before: [(ctx, cmd) => cmd.redirect("/explore")],
+    before: [
+      (ctx, cmd) => cmd.redirect(store.networkContext.token ? "/explore" : "/login"),
+    ],
   },
   {
     path: "/logout",

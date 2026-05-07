@@ -226,7 +226,9 @@ class DPanelApp extends LitElement {
     const CURPATH = window.location.pathname || "";
     const showSystemPrompt = this.context.store.promptContext.display;
     const taskName = this.context.store.promptContext.name;
-    const showChrome = !CURPATH.startsWith("/login");
+    const isUnauthedPath = CURPATH.startsWith("/login") || CURPATH.startsWith("/logout");
+    const hasToken = !!this.context.store.networkContext?.token;
+    const showChrome = !isUnauthedPath && hasToken;
     const mainClasses = classMap({
       fullscreen: !showChrome,
       backward: this.context.store.appContext.navigationDirection === "backward",

@@ -195,7 +195,7 @@ class SettingsPage extends LitElement {
   render() {
     const { updateAvailable } = store.getContext('sys')
     const dialog = store.getContext('dialog')
-    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "language", "date-time"].includes(dialog.name);
+    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "language", "keyboard-layout", "date-time"].includes(dialog.name);
     
     return html`
       <div class="padded">
@@ -227,8 +227,8 @@ class SettingsPage extends LitElement {
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
-            <action-row prefix="keyboard" name="language" label="Language" href="/settings/language">
-              Hello? こんいちは？ Guten tag? Olá?
+            <action-row prefix="keyboard" name="keyboard-layout" label="Keyboard Layout" href="/settings/keyboard-layout">
+              Choose the right layout for your keyboard
             </action-row>
             <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
               Where are we?  What time is it?
@@ -278,6 +278,7 @@ class SettingsPage extends LitElement {
           ["versions", () => renderVersionsDialog(store, this.handleDialogClose)],
           ["import-blockchain", () => this.renderImportBlockchainDialog()],
           ["language", () => html`<x-action-language></x-action-language>`],
+          ["keyboard-layout", () => html`<x-action-language></x-action-language>`],
           ["date-time", () => html`<x-action-date-time></x-action-date-time>`],
         ])}
       </sl-dialog>

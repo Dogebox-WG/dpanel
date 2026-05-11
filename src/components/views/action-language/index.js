@@ -136,7 +136,7 @@ export class LanguageSettings extends LitElement {
     }
     
     return html`
-      <h1>Language</h1>
+      <h1>Keyboard Layout</h1>
 
       <div class="form-control">
 
@@ -144,11 +144,11 @@ export class LanguageSettings extends LitElement {
               name="keymap"
               
               required
-              label="Keymap" 
+              label="Keyboard Layout" 
               ?disabled=${this._inflight}
               data-field="keymap"
               value=${this._current_keymap}
-              help-text="What keyboard layout do you have?"
+              help-text="Choose the layout for your physical keyboard"
               hoist
               @sl-change=${this._handleKeymapInputChange}
             >

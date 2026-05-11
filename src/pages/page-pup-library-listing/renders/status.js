@@ -5,6 +5,7 @@ import { createAlert } from "/components/common/alert.js";
 export function renderStatus(labels, pkg, rollbackAvailable = false) {
   let { statusId, statusLabel, installationId, installationLabel } = labels;
   const isInstallationLoadingStatus = ["uninstalling", "purging", "upgrading"].includes(installationId)
+  const unavailableFromSource = pkg?.computed?.unavailableFromSource;
 
   const styles = css`
     :host {
@@ -77,6 +78,10 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
         ? html`<span class="status-label ${installationId}">${installationLabel}</span>`
         : html`<span class="status-label ${statusId}">${statusLabel}</span>`
     }
+
+    ${unavailableFromSource ? html`
+      <sl-tag pill variant="warning">Unavailable from Source</sl-tag>
+    ` : nothing}
 
     ${installationId === "broken"
       ? html`

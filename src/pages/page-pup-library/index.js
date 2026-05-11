@@ -119,6 +119,11 @@ class LibraryView extends LitElement {
     }
   }
 
+  updatePups() {
+    this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    this.requestUpdate();
+  }
+
   handleActionsMenuSelect(event) {
     const selectedItemValue = event.detail.item.value;
     switch (selectedItemValue) {

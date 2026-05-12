@@ -175,16 +175,13 @@ class SelectNetwork extends LitElement {
 
     networks.forEach((network) => {
       if (network.type === "ethernet") {
-        const mappedLabel =
-          typeof network.label === "string" ? network.label.trim() : "";
-        let ethernetName = mappedLabel
-          ? `${mappedLabel} - ${network.interface}`
-          : `Ethernet - ${network.interface}`;
+        let ethernetName = "Wired Connection";
         if (network.active) ethernetName += " (connected)";
 
         return this._networks.push({
           ...network,
           label: ethernetName,
+          tooltip: network.interface,
           value: network.interface,
         });
       }

@@ -22,20 +22,7 @@ export function _render_select(field, options) {
       >
       ${options.labelEl}
       ${field.options.map(option => html`
-        <sl-option value=${option.value}>
-          ${option.tooltip
-            ? html`
-                <sl-tooltip
-                  content=${option.tooltip}
-                  hoist
-                  placement="top"
-                  style="--sl-z-index-tooltip: 1100;"
-                >
-                  <span>${option.label}</span>
-                </sl-tooltip>
-              `
-            : option.label}
-        </sl-option>
+        <sl-option value=${option.value}>${option.label}</sl-option>
       `)}
     </sl-select>
   `;

@@ -63,6 +63,18 @@ export class LocationPickerView extends LitElement {
       this.installationBootMedia === "ro" ||
       this.installationState === "notInstalled";
     this.mainDialogOpen = this.renderReady && this._fetchDisks;
+    console.log("[disk-debug] install-location willUpdate", {
+      renderReady: this.renderReady,
+      installationBootMedia: this.installationBootMedia,
+      installationState: this.installationState,
+      fetchDisks: this._fetchDisks,
+      inflightDisks: this._inflight_disks,
+      disksFetched: this._disks_fetched,
+      mainDialogOpen: this.mainDialogOpen,
+      installDiskCount: Array.isArray(this._installDisks)
+        ? this._installDisks.length
+        : undefined,
+    });
 
     if (this._fetchDisks && !this._inflight_disks && !this._disks_fetched) {
       this._inflight_disks = true;
@@ -79,9 +91,31 @@ export class LocationPickerView extends LitElement {
   }
 
   async fetchDisks() {
-    this._installDisks = await getInstallDisks();
-    this._inflight_disks = false;
-    this._disks_fetched = true;
+    console.log("[disk-debug] install-location fetchDisks:start", {
+      installationBootMedia: this.installationBootMedia,
+      installationState: this.installationState,
+    });
+    try {
+      const response = await getInstallDisks();
+      console.log("[disk-debug] install-location fetchDisks:response", {
+        isArray: Array.isArray(response),
+        length: Array.isArray(response) ? response.length : undefined,
+        response,
+      });
+      this._installDisks = response;
+    } catch (err) {
+      console.log("[disk-debug] install-location fetchDisks:error", err);
+      throw err;
+    } finally {
+      console.log("[disk-debug] install-location fetchDisks:complete", {
+        installDiskCount: Array.isArray(this._installDisks)
+          ? this._installDisks.length
+          : undefined,
+        installDisksIsArray: Array.isArray(this._installDisks),
+      });
+      this._inflight_disks = false;
+      this._disks_fetched = true;
+    }
   }
 
   connectedCallback() {
@@ -279,6 +313,15 @@ export class LocationPickerView extends LitElement {
   };
 
   renderList = () => {
+    if (!this._inflight_disks && !this._installDisks.length) {
+      console.log("[disk-debug] install-location renderList:empty", {
+        renderReady: this.renderReady,
+        installationBootMedia: this.installationBootMedia,
+        installationState: this.installationState,
+        installDisks: this._installDisks,
+      });
+    }
+
     return html`
       <div class="page">
         <sl-button
@@ -477,6 +520,11 @@ export class LocationPickerView extends LitElement {
   handleDiskSelection = (e, row) => {
     const diskName = row.getAttribute("data-name");
     const found = this._installDisks.findIndex((d) => d.name === diskName);
+    console.log("[disk-debug] install-location handleDiskSelection", {
+      diskName,
+      found,
+      installDisks: this._installDisks,
+    });
     if (found !== -1) {
       this._selected_disk_index = found;
       this._page = PAGE_THREE;
@@ -501,10 +549,15 @@ export class LocationPickerView extends LitElement {
     try {
       await asyncTimeout(3000);
       const diskName = this._installDisks[this._selected_disk_index].name;
+      console.log("[disk-debug] install-location handleSubmit:start", {
+        diskName,
+        selectedDiskIndex: this._selected_disk_index,
+      });
       const res = await postInstallToDisk({
         disk: diskName,
         secret: "yes-i-will-destroy-everything-on-this-disk",
       });
+      console.log("[disk-debug] install-location handleSubmit:response", res);
 
       createAlert("success", [
         "Installation complete",
@@ -512,6 +565,7 @@ export class LocationPickerView extends LitElement {
       ]);
     } catch (err) {
       didErr = true;
+      console.log("[disk-debug] install-location handleSubmit:error", err);
       console.log("Installation error:", err);
       createAlert("danger", "Failed to install on selected disk");
     } finally {

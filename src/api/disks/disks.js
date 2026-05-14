@@ -15,6 +15,11 @@ export async function getDisks() {
     mock: getResponse,
     noLogoutRedirect: true,
   });
+  console.log("[disk-debug] getDisks response", {
+    isArray: Array.isArray(res),
+    length: Array.isArray(res) ? res.length : undefined,
+    response: res,
+  });
   return res;
 }
 
@@ -22,6 +27,11 @@ export async function getInstallDisks() {
   const res = await client.get(`/system/install-disks`, {
     mock: getInstallResponse,
     noLogoutRedirect: true,
+  });
+  console.log("[disk-debug] getInstallDisks response", {
+    isArray: Array.isArray(res),
+    length: Array.isArray(res) ? res.length : undefined,
+    response: res,
   });
   return res;
 }

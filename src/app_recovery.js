@@ -367,6 +367,10 @@ class AppModeApp extends LitElement {
     this._logSetupFlow("fetchRecoveryState:response", response);
 
     if (!response.recoveryFacts) {
+      this._logSetupFlow("fetchRecoveryState:missing-recovery-facts", {
+        isLoggedIn: this.isLoggedIn,
+        response,
+      });
       // Only show alert if we're logged in
       if (this.isLoggedIn) {
         alert("Failed to fetch bootstrap.");
@@ -378,6 +382,11 @@ class AppModeApp extends LitElement {
       response.recoveryFacts.installationBootMedia ?? "ro";
     this.installationState =
       response.recoveryFacts.installationState ?? "notInstalled";
+    this._logSetupFlow("fetchRecoveryState:resolved-install-state", {
+      installationBootMedia: this.installationBootMedia,
+      installationState: this.installationState,
+      recoveryFacts: response.recoveryFacts,
+    });
     this.hasLoaded = true;
   }
 

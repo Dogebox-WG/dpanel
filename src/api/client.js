@@ -40,6 +40,7 @@ export default class ApiClient extends ReactiveClass {
   }
 
   async request(path, config) {
+    const shouldLogDiskDebug = path === '/system/disks' || path === '/system/install-disks'
 
     // if config.body is an empty object, remove the property.
     // this is to prevent the browser from sending an empty body to the server
@@ -73,10 +74,41 @@ export default class ApiClient extends ReactiveClass {
 
     let response, data
 
+    if (shouldLogDiskDebug) {
+      console.log('[disk-debug] api request:start', {
+        path,
+        url,
+        method: config.method,
+        hasAuthToken: !!this.networkContext.token,
+        useMocks,
+        hasMock,
+        specificMockEnabled,
+        noLogoutRedirect: config.noLogoutRedirect === true,
+      })
+    }
+
     try {
       response = await fetch(url, { ...config, headers });
     } catch (fetchErr) {
+      if (shouldLogDiskDebug) {
+        console.log('[disk-debug] api request:network-error', {
+          path,
+          url,
+          method: config.method,
+          error: fetchErr,
+        })
+      }
       throw new Error('An error occurred while fetching data, refer to network logs');
+    }
+
+    if (shouldLogDiskDebug) {
+      console.log('[disk-debug] api request:response', {
+        path,
+        url,
+        method: config.method,
+        status: response.status,
+        ok: response.ok,
+      })
     }
 
     if (response.status === 404) {
@@ -84,10 +116,16 @@ export default class ApiClient extends ReactiveClass {
     }
 
     if (response.status === 403) {
+      shouldLogDiskDebug && console.log('[disk-debug] api request:forbidden', { path, url })
       return { success: false, error: true, status: 403 }
     }
 
     if (response.status === 401) {
+      shouldLogDiskDebug && console.log('[disk-debug] api request:unauthorised', {
+        path,
+        url,
+        noLogoutRedirect: config.noLogoutRedirect === true,
+      })
       if (config.noLogoutRedirect) {
         return { success: false, error: true, status: 401 }
       } else {
@@ -106,6 +144,16 @@ export default class ApiClient extends ReactiveClass {
     } catch (jsonParseErr) {
       console.warn('Could not JSON parse response from server', jsonParseErr);
       throw new Error('Could not JSON parse response from server');
+    }
+
+    if (shouldLogDiskDebug) {
+      console.log('[disk-debug] api request:json', {
+        path,
+        url,
+        isArray: Array.isArray(data),
+        length: Array.isArray(data) ? data.length : undefined,
+        data,
+      })
     }
 
     // Return payload, unmodified.

@@ -192,8 +192,18 @@ class PkgController {
     const sourceData = this.sourcesIndex?.[sourceId];
     if (!sourceData) return true;
 
-    // A source refresh failure should not mark every installed pup from that source unavailable
-    if (sourceData.error) return false;
+    if (sourceData.error) {
+      if (
+        sourceData.type === "disk" &&
+        /source path does not exist/i.test(sourceData.error)
+      ) {
+        // A configured disk source whose root path has been deleted is unavailable.
+        return true;
+      }
+
+      // Other source refresh failures should not mark every installed pup as unavailable.
+      return false;
+    }
 
     // If the source no longer includes the pup, treat the installed pup as unavailable
     return !sourceData.pups?.[pupName];

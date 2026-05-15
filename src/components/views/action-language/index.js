@@ -74,7 +74,9 @@ export class LanguageSettings extends LitElement {
   async _fetch() {
     try {
       this._loading = true;
-      this._keymaps = await getKeymaps();
+      const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+      const keymaps = await getKeymaps();
+      this._keymaps = [...keymaps].sort((a, b) => collator.compare(a.label, b.label));
       this._current_keymap = await getKeymap();
       this._changes.keymap = this._current_keymap;
 

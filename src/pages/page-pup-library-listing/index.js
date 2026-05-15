@@ -494,6 +494,9 @@ class PupPage extends LitElement {
     const hasWebUI = (pkg.state.webUIs || []).length > 0;
     const pinnedPups = this.context.store.sidebarContext?.pinned || [];
     const isInSidebar = pinnedPups.includes(pkg.state.id);
+    const source = pkg?.state?.source || pkg?.def?.source || null;
+    const sourceLocation = source?.location?.trim();
+    const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
 
     const renderMenu = () => html`
       <action-row prefix="power" name="state" label="Enabled" ?disabled=${disableActions}>
@@ -546,6 +549,28 @@ class PupPage extends LitElement {
       <action-row prefix="box-arrow-up" name="ints" label="Interfaces" .trigger=${this.handleMenuClick}>
         Functionality this pup provides for other pups.
       </action-row>
+
+      ${sourceLocation ? html`
+        <action-row
+          prefix="link-45deg"
+          label="Source"
+          href=${isWebSource ? sourceLocation : ""}
+          target=${isWebSource ? "_blank" : "_self"}
+        >
+          <span title=${sourceLocation}>${sourceLocation}</span>
+          ${!isWebSource ? html`
+            <sl-copy-button
+              slot="suffix"
+              value=${sourceLocation}
+              title="Copy source path"
+              @click=${(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            ></sl-copy-button>
+          ` : nothing}
+        </action-row>
+      ` : nothing}
     `
 
     const renderCareful = () => html`

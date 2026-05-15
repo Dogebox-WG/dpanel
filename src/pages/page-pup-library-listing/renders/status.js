@@ -55,6 +55,13 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
       color: rgba(255, 255, 255, 0.7);
       font-size: 0.9rem;
     }
+
+    .status-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      width: fit-content;
+    }
   `
 
   const [ brokenReason, isRecoverable ] = getBrokenReason(pkg)
@@ -80,7 +87,9 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
     }
 
     ${unavailableFromSource ? html`
-      <sl-tag pill variant="warning">Unavailable from Source</sl-tag>
+      <div class="status-badges">
+        <sl-tag pill variant="warning">Unavailable from Source</sl-tag>
+      </div>
     ` : nothing}
 
     ${installationId === "broken"

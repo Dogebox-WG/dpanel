@@ -150,6 +150,9 @@ class PupInstallPage extends LitElement {
     if (!pkg) return;
 
     const { statusId, statusLabel, installationId, isInstalled, installationLabel } = pkg?.computed
+    const source = pkg?.def?.source || pkg?.state?.source || null;
+    const sourceLocation = source?.location?.trim();
+    const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
     const popover_page = path[1];
 
     const wrapperClasses = classMap({
@@ -277,6 +280,27 @@ class PupInstallPage extends LitElement {
             <action-row prefix="box-arrow-up" name=ints label=Interfaces .trigger=${this.handleMenuClick}>
               Functionality this pup provides for other pups.
             </action-row>
+            ${sourceLocation ? html`
+              <action-row
+                prefix="link-45deg"
+                label="Source"
+                href=${isWebSource ? sourceLocation : ""}
+                target=${isWebSource ? "_blank" : "_self"}
+              >
+                <span title=${sourceLocation}>${sourceLocation}</span>
+                ${!isWebSource ? html`
+                  <sl-copy-button
+                    slot="suffix"
+                    value=${sourceLocation}
+                    title="Copy source path"
+                    @click=${(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                  ></sl-copy-button>
+                ` : nothing}
+              </action-row>
+            ` : nothing}
           </div>
         </section>
 

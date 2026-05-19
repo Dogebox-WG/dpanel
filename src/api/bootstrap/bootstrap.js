@@ -10,8 +10,9 @@ export async function getBootstrap() {
   return client.get('/setup/bootstrap', { mock });
 }
 
-export async function getBootstrapV2() {
-  return client.get('/system/bootstrap', { mock: mockV2, hooks: [bumpVersionHook]})
+export async function getBootstrapV2(config = {}) {
+  const hooks = config.hooks || [bumpVersionHook];
+  return client.get('/system/bootstrap', { ...config, mock: mockV2, hooks })
 }
 
 export async function doBootstrap() {

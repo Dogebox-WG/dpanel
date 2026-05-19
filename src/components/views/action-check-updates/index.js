@@ -37,6 +37,7 @@ export class CheckUpdatesView extends LitElement {
       _page: { type: String },
       _logs: { type: Array },
       _systemJobId: { type: String },
+      _awaiting_reconnect: { type: Boolean },
     };
   }
 
@@ -51,6 +52,7 @@ export class CheckUpdatesView extends LitElement {
     this._updates = [];
     this._systemJobId = "";
     this._updatePollId = null;
+    this._awaiting_reconnect = false;
   }
 
   connectedCallback() {
@@ -370,14 +372,18 @@ export class CheckUpdatesView extends LitElement {
         ${this._inflight_update ? html`
         <sl-alert open variant="primary" style="text-align: left">
           <small style="display:inline-block; margin-bottom: 4px;">
-            ${this._update_commenced ? "Update in progress..." : "Commencing update..." }
+            ${this._awaiting_reconnect
+              ? "Dogebox is restarting..."
+              : this._update_commenced ? "Update in progress..." : "Commencing update..." }
           </small>
           <sl-progress-bar indeterminate></sl-progress-bar>
         </sl-alert>
         `: nothing }
 
         ${this._inflight_update ? html`
-          <p style="line-height: 1.1"><small>This may take up to 2 minutes.<br>Do not refresh or power off your Dogebox while update is in progress.</small></p>`
+          <p style="line-height: 1.1"><small>${this._awaiting_reconnect
+            ? "Dogebox is restarting. This page will reconnect automatically."
+            : "This may take up to 2 minutes. Do not refresh or power off your Dogebox while update is in progress."}</small></p>`
         : nothing }
 
         ${!this._inflight_update ? html`
@@ -390,6 +396,9 @@ export class CheckUpdatesView extends LitElement {
           `: nothing}
           ${!this._inflight_update && this._update_outcome === "success" ? html`
             <small>Much update! Such wow.</small>
+          `: nothing}
+          ${!this._inflight_update && this._update_outcome === "success" ? html`
+            <sl-button size="small" variant="text" @click=${() => window.location.replace('/login?flush=1')}>Reconnect</sl-button>
           `: nothing}
           ${!this._inflight_update && this._update_outcome === "error" && this._systemJobId ? html`
             <sl-button size="small" variant="text" @click=${this.handleViewSystemActivity}>View system activity</sl-button>
@@ -412,6 +421,7 @@ export class CheckUpdatesView extends LitElement {
     this._logs = [];
     this._systemJobId = "";
     this._update_outcome = null;
+    this._awaiting_reconnect = false;
 
     let didErr = false;
 
@@ -455,11 +465,19 @@ export class CheckUpdatesView extends LitElement {
           this.stopUpdatePolling();
           this._inflight_update = false;
           this._update_outcome = "timeout";
+          this._awaiting_reconnect = false;
           return;
         }
         const { dbxVersion } = store.getContext('app');
         console.log('Current version is:', dbxVersion, 'Checking for new version now..')
-        const { version } = await getBootstrapV2();
+        const bootstrap = await getBootstrapV2({ noLogoutRedirect: true });
+        if (bootstrap?.status === 401) {
+          this._awaiting_reconnect = true;
+          return;
+        }
+
+        this._awaiting_reconnect = false;
+        const { version } = bootstrap;
 
         if (version?.release && version.release !== dbxVersion) {
           this.stopUpdatePolling();
@@ -467,6 +485,7 @@ export class CheckUpdatesView extends LitElement {
 
           // Stop spinner
           this._inflight_update = false;
+          this._awaiting_reconnect = false;
 
           // Trigger success UI
           this._update_outcome = "success";
@@ -476,8 +495,8 @@ export class CheckUpdatesView extends LitElement {
 
         }
       } catch (err) {
-        // Squelch errs.
-        // If bootstrap failed, it will try again.
+        // During a system switch the API can be briefly unavailable; keep polling.
+        this._awaiting_reconnect = true;
         console.warn('Strange', err)
       } finally {
         attempts++;

@@ -81,14 +81,6 @@ export function renderSectionInstalledBody(ready, SKELS, hasItems) {
       </div>
       <style>${pupCardGrid}</style>
 
-      <paginator-ui
-        ?disabled=${this.busy}
-        @go-next=${this.installedList.nextPage}
-        @go-prev=${this.installedList.previousPage}
-        currentPage=${this.installedList.currentPage}
-        totalPages=${this.installedList.getTotalPages()}
-      ></paginator-ui>
-
       `: nothing
     }
   `

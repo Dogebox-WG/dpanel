@@ -1,4 +1,5 @@
 import { LitElement, html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { canCopyToClipboard } from '/utils/clipboard.js';
 
 /**
  * Service status card component for displaying external service information
@@ -18,6 +19,7 @@ class ServiceStatusCard extends LitElement {
 
   renderTailscaleContent() {
     const status = this.service?.status || {};
+    const canCopy = canCopyToClipboard();
 
     return html`
       <div class="service-details">
@@ -25,7 +27,7 @@ class ServiceStatusCard extends LitElement {
           <span class="detail-label">IP Address</span>
           <span class="detail-value">
             ${status.ip || 'Not available'}
-            ${status.ip ? html`
+            ${status.ip && canCopy ? html`
               <sl-copy-button value="${status.ip}" class="copy-btn"></sl-copy-button>
             ` : nothing}
           </span>

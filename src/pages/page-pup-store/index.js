@@ -20,6 +20,19 @@ const initialSort = (a, b) => {
   return 0;
 }
 
+/** Stable id set for store rows so we do not reset pagination on every pkgController.notify(). */
+function pupCatalogSignature(pups) {
+  if (!pups?.length) return '';
+  return pups
+    .map((p) => {
+      const sourceId = p?.def?.source?.id ?? p?.state?.source?.id ?? '';
+      const key = p?.def?.key ?? p?.state?.manifest?.meta?.name ?? p?.state?.id ?? '';
+      return `${sourceId}\0${key}`;
+    })
+    .sort()
+    .join('\n');
+}
+
 class StoreView extends LitElement {
 
   static get properties() {
@@ -29,7 +42,6 @@ class StoreView extends LitElement {
       fetchError: { type: Boolean },
       busy: { type: Boolean },
       inspectedPup: { type: String },
-      searchValue: { type: String },
       _showSourceManagementDialog: { type: Boolean },
       _hasSourceErrors: { type: Boolean }
     }
@@ -47,6 +59,7 @@ class StoreView extends LitElement {
     this.packageList = new PaginationController(this, undefined, this.itemsPerPage,{ initialSort });
     this._showSourceManagementDialog = false;
     this._hasSourceErrors = false;
+    this._pupCatalogSig = '';
 
     this.inspectedPup;
     this.showCategories = false;
@@ -139,6 +152,7 @@ class StoreView extends LitElement {
       const storeListingRes = await getStoreListing()
       this.pkgController.setStoreData(storeListingRes);
       this.packageList.setData(this.pkgController.pups);
+      this._pupCatalogSig = pupCatalogSignature(this.pkgController.pups);
       this.checkForSourceErrors();
     } catch (err) {
       console.error(err);
@@ -167,20 +181,12 @@ class StoreView extends LitElement {
 
   updated(changedProperties) {
     if (changedProperties.has('pups')) {
-      this.packageList.setData(this.pups);
+      const sig = pupCatalogSignature(this.pups);
+      if (sig !== this._pupCatalogSig) {
+        this._pupCatalogSig = sig;
+        this.packageList.setData(this.pups);
+      }
     }
-    
-    // Existing code for other property changes
-    if (changedProperties.has('searchValue')) {
-      this.filterPackageList();
-    }
-  }
-
-  filterPackageList() {
-    if (this.searchValue === "") {
-      this.packageList.setFilter();
-    }
-    this.packageList.setFilter((pkg) => pkg?.manifest?.package?.toLowerCase()?.includes(this.searchValue.toLowerCase()));
   }
 
   handleManageSourcesClick() {

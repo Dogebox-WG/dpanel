@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "dogeboxd-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771907648,
+        "narHash": "sha256-o9r8Tg+nbOJHfV39VjKCpE0HE4uIKPqzGtnufXxK19o=",
+        "owner": "Dogebox-WG",
+        "repo": "dogeboxd",
+        "rev": "6332fb6f29ea580584eef382b02a51630db3d382",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Dogebox-WG",
+        "ref": "feat/proto",
+        "repo": "dogeboxd",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -38,16 +55,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1748708770,
-        "narHash": "sha256-q8jG2HJWgooWa9H0iatZqBPF3bp0504e05MevFmnFLY=",
+        "lastModified": 1771714954,
+        "narHash": "sha256-nhZJPnBavtu40/L2aqpljrfUNb2rxmWTmSjK2c9UKds=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a59eb7800787c926045d51b70982ae285faa2346",
+        "rev": "afbbf774e2087c3d734266c22f96fca2e78d3620",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-25.05",
+        "ref": "nixos-25.11",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -83,11 +100,29 @@
         "type": "github"
       }
     },
+    "protovalidate-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771426165,
+        "narHash": "sha256-YGqdbmIFcaIi5WX7j4ifnK6po3YJ6Wy0dAY14Eq5GOU=",
+        "owner": "bufbuild",
+        "repo": "protovalidate",
+        "rev": "cb78a6b7343910d526c355b792eaebeb4ce9bd48",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bufbuild",
+        "repo": "protovalidate",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
+        "dogeboxd-src": "dogeboxd-src",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "playwright": "playwright"
+        "playwright": "playwright",
+        "protovalidate-src": "protovalidate-src"
       }
     },
     "systems": {

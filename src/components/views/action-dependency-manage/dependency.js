@@ -262,7 +262,7 @@ class DependencyList extends LitElement {
             <sl-divider></sl-divider>
 
             <span class="label" style="margin-bottom:0.25em;">Other Providers</span>
-            <sl-button variant="text" target="_blank" class="link-button-left">
+            <sl-button variant="text" href="/explore" class="link-button-left">
               <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
               Browse the Pup Store for compatible Pups
             </sl-button>
@@ -276,16 +276,21 @@ class DependencyList extends LitElement {
                   'No default provider'
                 }
               </sl-tag>
-            </small>              
-            <sl-button variant="text" target="_blank" class="link-button-left">
-              <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
-              View in Pup Store
-            </sl-button>
+            </small>
+            ${(() => {
+              const url = this.getProviderStoreUrl(providerInfo?.DefaultProvider);
+              return url ? html`
+                <sl-button variant="text" href=${url} class="link-button-left">
+                  <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
+                  View in Pup Store
+                </sl-button>
+              ` : nothing;
+            })()}
 
             <sl-divider></sl-divider>
 
             <span class="label" style="margin-bottom:0.25em;">Other Providers</span>
-            <sl-button variant="text" target="_blank" class="link-button-left">
+            <sl-button variant="text" href="/explore" class="link-button-left">
               <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
               Browse the Pup Store for compatible Pups
             </sl-button>
@@ -302,6 +307,8 @@ class DependencyList extends LitElement {
       <small>No default provider.</small>
     `
 
+    const storeUrl = this.getProviderStoreUrl(providerInfo?.DefaultProvider);
+
     return html`
       <small>
         <sl-tag slot="suffix" size="small">
@@ -309,10 +316,12 @@ class DependencyList extends LitElement {
         </sl-tag>
       </small>
 
-      <sl-button variant="text" target="_blank" class="link-button-left">
-        <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
-        View in Pup Store
-      </sl-button>
+      ${storeUrl ? html`
+        <sl-button variant="text" href=${storeUrl} class="link-button-left">
+          <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
+          View in Pup Store
+        </sl-button>
+      ` : nothing}
     `
   }
 
@@ -328,6 +337,21 @@ class DependencyList extends LitElement {
     }
     
     return false;
+  }
+
+  // Resolve a /explore/:sourceid/:pupname URL for a provider entry that only
+  // carries sourceLocation + pupName. Returns null when the source is not
+  // present in the local sources index (e.g. source not added on this dogebox).
+  getProviderStoreUrl(provider) {
+    if (!provider) return null;
+    const { pupName, sourceLocation } = provider;
+    if (!pupName || !sourceLocation) return null;
+
+    const sources = pkgController.getSourceList?.() || [];
+    const match = sources.find(s => s.location === sourceLocation);
+    if (!match || !match.sourceId) return null;
+
+    return `/explore/${match.sourceId}/${encodeURIComponent(pupName)}`;
   }
 
   render() {

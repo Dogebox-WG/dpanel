@@ -54,6 +54,7 @@ export function renderSectionBody(ready, SKELS, hasItems) {
     ${ready && hasItems('packages') ? html`
       <div class="pup-card-grid">
         ${repeat(this.packageList.getCurrentPageData(), (pkg) => `${pkg.def?.source?.id || 'unknown'}-${pkg.def?.key || 'unknown'}`, (pkg) => {
+          const latestManifest = pkg.def?.versions?.[pkg.def?.latestVersion] || null;
           return html`
           <pup-install-card
             defaultIcon="box"
@@ -63,8 +64,9 @@ export function renderSectionBody(ready, SKELS, hasItems) {
             pupName=${pkg.def?.key || 'unknown'}
             version=${pkg.def?.latestVersion || 'unknown'}
             logoBase64=${pkg.def?.logoBase64 || ''}
-            .upstreamVersions=${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.upstreamVersions || {}}
-            short="${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.shortDescription || ''}"
+            .upstreamVersions=${latestManifest?.meta?.upstreamVersions || {}}
+            .manifest=${latestManifest}
+            short="${latestManifest?.meta?.shortDescription || ''}"
             ?installed=${pkg.computed?.isInstalled || false}
             href=${pkg.computed?.storeURL || '#'}
             .source=${pkg.def?.source || null}

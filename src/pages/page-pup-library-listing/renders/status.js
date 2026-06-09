@@ -1,6 +1,7 @@
 import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 import { rollbackPup } from "/api/pup-updates/pup-updates.js";
 import { createAlert } from "/components/common/alert.js";
+import "/components/common/pup-build-badge.js";
 
 export function renderStatus(labels, pkg, rollbackAvailable = false) {
   let { statusId, statusLabel, installationId, installationLabel } = labels;
@@ -54,6 +55,18 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
       color: rgba(255, 255, 255, 0.7);
       font-size: 0.9rem;
     }
+
+    .status-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
+      flex-wrap: wrap;
+      padding-bottom: 0.5rem;
+    }
+
+    .status-heading .status-label {
+      padding-bottom: 0;
+    }
   `
 
   const [ brokenReason, isRecoverable ] = getBrokenReason(pkg)
@@ -71,12 +84,15 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
   };
 
   return html`
-    ${installationId === "uninstalled" || installationId === "broken"
-      ? html`<span class="status-label ${installationId}">${installationLabel}</span>`
-      : isInstallationLoadingStatus
+    <div class="status-heading">
+      ${installationId === "uninstalled" || installationId === "broken"
         ? html`<span class="status-label ${installationId}">${installationLabel}</span>`
-        : html`<span class="status-label ${statusId}">${statusLabel}</span>`
-    }
+        : isInstallationLoadingStatus
+          ? html`<span class="status-label ${installationId}">${installationLabel}</span>`
+          : html`<span class="status-label ${statusId}">${statusLabel}</span>`
+      }
+      <pup-build-badge .manifest=${pkg.state.manifest}></pup-build-badge>
+    </div>
 
     ${installationId === "broken"
       ? html`

@@ -1,4 +1,5 @@
 import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import "/components/common/pup-build-badge.js";
 
 export function renderStatus() {
   const pupContext = this.context.store.pupContext
@@ -10,6 +11,7 @@ export function renderStatus() {
   const isInstalled = installationId === 'ready' && pkg.computed.isInstalled;
   const isBroken = installationId === 'broken';
   const isLoadingStatus = ["installing"].includes(installationId);
+  const manifest = pkg.def.versions[pkg.def.latestVersion];
 
   const installationLabelClass = classMap({
     "installed": installationLabel === 'Ready',
@@ -25,7 +27,10 @@ export function renderStatus() {
           <h3 class="installation-label ${installationLabelClass}">${installationLabel}</h3>
         </div>
         <div>
-          <span class="status-label">${pkg.def.versions[pkg.def.latestVersion].meta.name}</span>
+          <div class="status-heading">
+            <span class="status-label">${manifest.meta.name}</span>
+            <pup-build-badge .manifest=${manifest}></pup-build-badge>
+          </div>
           <sl-progress-bar class="loading-bar" value="0" ?indeterminate=${isLoadingStatus}></sl-progress-bar>
         </div>
       </div>
@@ -42,6 +47,18 @@ const styles = css`
     padding-bottom: 0.5rem;
     font-family: 'Comic Neue';
     text-transform: capitalize;
+  }
+
+  .status-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    flex-wrap: wrap;
+    padding-bottom: 0.5rem;
+  }
+
+  .status-heading .status-label {
+    padding-bottom: 0;
   }
 
   .loading-bar {

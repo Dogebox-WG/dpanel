@@ -7,6 +7,7 @@
   } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
   import "/components/common/tag-set/tag-set.js";
+  import "/components/common/pup-build-badge.js";
   import { store } from "/state/store.js";
   import { StoreSubscriber } from "/state/subscribe.js";
   import { pupUpdates } from "/state/pup-updates.js";
@@ -25,6 +26,7 @@
         href: { type: String },
         gref: { type: String },
         upstreamVersions: { type: Object },
+        manifest: { type: Object },
       };
     }
 
@@ -54,7 +56,7 @@
     }
 
     render() {
-      const { defaultIcon, logoBase64, pupName, version, status, hasGui, href, gref, upstreamVersions } = this;
+      const { defaultIcon, logoBase64, pupName, version, status, hasGui, href, gref, upstreamVersions, manifest } = this;
 
       const statusClassMap = classMap({
         status: true,
@@ -78,6 +80,7 @@
                   ` : nothing}
                 </span>
                 <x-tag-set .tags=${upstreamVersions} highlight max=1></x-tag-set>
+                <pup-build-badge class="build-badge" .manifest=${manifest}></pup-build-badge>
                 <span class=${statusClassMap}>${status}</span>
               </div>
             </div>
@@ -203,6 +206,10 @@
 
       span.status.needs_attention {
         color: var(--sl-color-amber-600);
+      }
+
+      .build-badge {
+        margin-top: 0.25em;
       }
 
     `;

@@ -6,6 +6,7 @@ import {
 } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
 
 import "/components/common/tag-set/tag-set.js";
+import "/components/common/pup-build-badge.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { getInstallationStateProperties } from "../../../utils/installation-states.js";
@@ -26,6 +27,7 @@ class PupInstallCard extends LitElement {
       href: { type: String },
       gref: { type: String },
       upstreamVersions: { type: Object },
+      manifest: { type: Object },
       installed: { type: Boolean },
       updateAvailable: { type: Boolean },
       source: { type: Object },
@@ -92,7 +94,7 @@ class PupInstallCard extends LitElement {
     const { 
       defaultIcon, pupName, version, logoBase64, 
       status, gui, short, href, upstreamVersions,
-      installed, source,
+      installed, source, manifest,
       installationState
     } = this;
 
@@ -137,6 +139,7 @@ class PupInstallCard extends LitElement {
                   ` : nothing}
                 </span>
                 <x-tag-set class="tag-set" .tags=${upstreamVersions} max=1></x-tag-set>
+                <pup-build-badge class="build-badge" .manifest=${manifest}></pup-build-badge>
               </div>
             </div>
           </div>
@@ -289,6 +292,10 @@ class PupInstallCard extends LitElement {
     }
 
     .tag-set {
+      margin-top: 6px;
+    }
+
+    .build-badge {
       margin-top: 6px;
     }
 

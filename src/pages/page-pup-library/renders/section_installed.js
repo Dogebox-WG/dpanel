@@ -72,6 +72,7 @@ export function renderSectionInstalledBody(ready, SKELS, hasItems) {
               logoBase64=${pkg?.assets?.logos?.mainLogoBase64}
               status=${pkg.computed.statusLabel}
               .upstreamVersions=${pkg.state.manifest?.meta?.upstreamVersions || {}}
+              .manifest=${pkg.state.manifest}
               href=${pkg.computed.libraryURL}
               gref=${pkg.computed.pupURL}
               ?hasGui=${false}

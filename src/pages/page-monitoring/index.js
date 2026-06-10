@@ -1074,19 +1074,20 @@ class MonitoringPage extends LitElement {
 
     /* Dashboard Tabs */
     .dashboard-tabs-container {
-      margin-bottom: 1rem;
+      margin-bottom: 0;
       margin-top: 3rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .dashboard-tabs {
+      --dashboard-tab-height: 41px;
       display: flex;
       gap: 0.5rem;
       align-items: center;
       overflow-x: auto;
       overflow-y: hidden;
       scrollbar-width: thin;
-      padding-bottom: 0.5rem;
+      padding-bottom: 0;
     }
 
     .dashboard-tabs::-webkit-scrollbar {
@@ -1117,6 +1118,7 @@ class MonitoringPage extends LitElement {
       font-family: 'Comic Neue', sans-serif;
       font-size: 0.9rem;
       color: var(--sl-color-neutral-400);
+      margin-bottom: -1px;
     }
 
     .dashboard-tab:hover {
@@ -1187,7 +1189,7 @@ class MonitoringPage extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.5rem 0.75rem;
+      padding: 0;
       background: rgba(255, 255, 255, 0.02);
       border: 1px dashed rgba(255, 255, 255, 0.2);
       border-bottom: none;
@@ -1195,6 +1197,10 @@ class MonitoringPage extends LitElement {
       cursor: pointer;
       transition: all 0.2s ease;
       color: var(--sl-color-neutral-400);
+      margin-bottom: -1px;
+      width: var(--dashboard-tab-height);
+      height: var(--dashboard-tab-height);
+      box-sizing: border-box;
     }
 
     .add-dashboard-btn:hover {

@@ -9,6 +9,7 @@ import { hookManager } from "/api/hooks.js";
 import { bindToClass } from "/utils/class-bind.js";
 import * as devToolFunctions from "./functions/index.js";
 import "./debug-settings.js";
+import { getRouter } from "/router/index.js";
 import { checkPupUpdates } from '/api/pup-updates/pup-updates.js';
 import { pupUpdates } from '/state/pup-updates.js';
 import { store } from '/state/store.js';
@@ -132,6 +133,13 @@ class DebugPanel extends LitElement {
 
   showSettingsDialog() {
     this.shadowRoot.querySelector("debug-settings-dialog").openDialog();
+  }
+
+  openModalGallery() {
+    const router = getRouter();
+    if (router) {
+      router.go("/dev/modals");
+    }
   }
 
   handleBumpVersionToggle() {
@@ -315,6 +323,7 @@ class DebugPanel extends LitElement {
                   </sl-menu>
                 </sl-menu-item>
                 <sl-menu-item @click=${this.showSettingsDialog}>Open Config</sl-menu-item>
+                <sl-menu-item @click=${this.openModalGallery}>Modal gallery</sl-menu-item>
               </sl-menu>
             </sl-dropdown>
 

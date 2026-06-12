@@ -19,6 +19,7 @@ import { createAlert } from "/components/common/alert.js";
 export class RemoteAccessSettings extends LitElement {
   static get properties() {
     return {
+      hideTitle: { type: Boolean, attribute: "hide-title" },
       _loading: { type: Boolean},
       _inflight: { type: Boolean },
       _server_fault: { type: String },
@@ -59,10 +60,6 @@ export class RemoteAccessSettings extends LitElement {
       justify-content: space-between;
       align-items: center;
       margin-top: 1em;
-
-      sl-button {
-        margin-right: -1em;
-      }
     }
 
     .key-reveal-dropdown {
@@ -220,7 +217,7 @@ export class RemoteAccessSettings extends LitElement {
     const hasKeys = this._ssh_public_keys.length
     const keys = this._ssh_public_keys 
     return html`
-      <h1>Remote Access</h1>
+      ${this.hideTitle ? nothing : html`<h1>Remote Access</h1>`}
 
       <div class="helper-text">
         <pre>ssh shibe@${window.location.hostname}</pre>

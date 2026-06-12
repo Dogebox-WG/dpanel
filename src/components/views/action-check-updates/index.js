@@ -24,6 +24,7 @@ const PAGE_THREE = "installation";
 export class CheckUpdatesView extends LitElement {
   static get properties() {
     return {
+      hideTitle: { type: Boolean, attribute: "hide-title" },
       mode: { type: String }, // either canInstall or mustInstall
       open: { type: Boolean, reflect: true },
       _ready: { type: Boolean },
@@ -250,10 +251,13 @@ export class CheckUpdatesView extends LitElement {
     `;
   }
 
+  renderPageTitle = () =>
+    this.hideTitle ? nothing : html`<h1>System Updates</h1>`;
+
   renderIntro = () => {
     return html`
       <div class="page">
-        <h1>System Updates</h1>
+        ${this.renderPageTitle()}
 
         ${this._inflight_checking ? html `
         <sl-alert open variant="primary" style="text-align: left">
@@ -302,7 +306,7 @@ export class CheckUpdatesView extends LitElement {
           Back
         </sl-button>
 
-        <h1>System Updates</h1>
+        ${this.renderPageTitle()}
         
         <div class="updates-list">
           ${this._updatablePackages.length ? this._updatablePackages.map((item) => html`
@@ -344,7 +348,7 @@ export class CheckUpdatesView extends LitElement {
     return html`
       <div class="page">
 
-        <h1>System Updates</h1>
+        ${this.renderPageTitle()}
 
         ${!this._inflight_update && this._update_outcome === "success" ? html`
           <sl-alert open variant="success" style="text-align: left">
@@ -516,8 +520,8 @@ export class CheckUpdatesView extends LitElement {
       display: flex;
       flex-direction: row;
       align-items: center;
-      justify-content: center;
-      gap: 1.5em;
+      justify-content: flex-end;
+      gap: 1em;
       width: 100%;
     }
 

@@ -94,6 +94,12 @@ export const routes = [
     before: [isAuthed, asPage],
   },
   {
+    path: "/dev/modals",
+    component: "x-page-dev-modals",
+    pageTitle: "Modal gallery",
+    before: [isAuthed, asPage],
+  },
+  {
     path: "/explore/:sourceid/:pupname",
     component: "x-page-pup-store-listing",
     dynamicTitle: true,

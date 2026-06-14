@@ -525,7 +525,7 @@ class MonitoringPage extends LitElement {
   renderEditButton() {
     return html`
       <div class="edit-button-container">
-        <sl-button 
+        <sl-button
           variant=${this.editMode ? 'primary' : 'default'}
           size="small"
           @click=${this.handleEditModeToggle}
@@ -541,9 +541,14 @@ class MonitoringPage extends LitElement {
     if (!this.editMode) return nothing;
 
     return html`
-      <button class="add-fab" @click=${this.handleAddClick}>
-        <sl-icon name="plus-lg"></sl-icon>
-      </button>
+      <div class="add-fab-container">
+        <sl-tooltip content="Add components">
+          <button class="add-fab" @click=${this.handleAddClick}>
+            <sl-icon name="plus-lg"></sl-icon>
+            <span class="add-fab-label">Add</span>
+          </button>
+        </sl-tooltip>
+      </div>
     `;
   }
 
@@ -1040,10 +1045,14 @@ class MonitoringPage extends LitElement {
     }
 
     /* Add FAB */
-    .add-fab {
+    .add-fab-container {
       position: fixed;
       bottom: 2rem;
       right: 2rem;
+      z-index: 100;
+    }
+
+    .add-fab {
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -1051,25 +1060,23 @@ class MonitoringPage extends LitElement {
       border: none;
       cursor: pointer;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(7, 255, 174, 0.4);
+      gap: 0.1rem;
+      padding: 0;
       transition: all 0.2s ease;
-      z-index: 100;
-    }
-
-    .add-fab:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(7, 255, 174, 0.6);
-    }
-
-    .add-fab:active {
-      transform: scale(1.05);
     }
 
     .add-fab sl-icon {
-      font-size: 1.5rem;
-      color: #000;
+      font-size: 1.35rem;
+    }
+
+    .add-fab-label {
+      font-family: 'Comic Neue', sans-serif;
+      font-size: 0.7rem;
+      font-weight: bold;
+      line-height: 1;
     }
 
     /* Dashboard Tabs */

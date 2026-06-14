@@ -527,6 +527,7 @@ class MonitoringPage extends LitElement {
       <div class="edit-button-container">
         <sl-button
           variant=${this.editMode ? 'primary' : 'default'}
+          class="edit-mode-toggle ${this.editMode ? 'can-save' : ''}"
           size="small"
           @click=${this.handleEditModeToggle}
         >
@@ -1042,6 +1043,30 @@ class MonitoringPage extends LitElement {
       top: 1.5rem;
       right: 1.5rem;
       z-index: 100;
+    }
+
+    .edit-mode-toggle::part(base) {
+      background: rgba(7, 255, 174, 0.08);
+      border-color: rgba(7, 255, 174, 0.3);
+      color: #07ffae;
+    }
+
+    .edit-mode-toggle::part(base):hover {
+      background: rgba(7, 255, 174, 0.14);
+      border-color: rgba(7, 255, 174, 0.5);
+      color: #07ffae;
+    }
+
+    .edit-mode-toggle.can-save::part(base) {
+      background: #07ffae;
+      border-color: #07ffae;
+      color: #000;
+    }
+
+    .edit-mode-toggle.can-save::part(base):hover {
+      background: #25ffb9;
+      border-color: #25ffb9;
+      color: #000;
     }
 
     /* Add FAB */

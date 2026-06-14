@@ -1659,18 +1659,18 @@ class MonitoringPage extends LitElement {
 
     .empty-icon {
       font-size: 3rem;
-      color: var(--sl-color-neutral-500);
+      color: var(--sl-color-neutral-600);
       margin-bottom: 1rem;
     }
 
     .empty-state h3 {
       font-family: 'Comic Neue', sans-serif;
-      color: var(--sl-color-neutral-300);
+      color: var(--sl-color-neutral-600);
       margin: 0 0 0.5rem 0;
     }
 
     .empty-state p {
-      color: var(--sl-color-neutral-500);
+      color: var(--sl-color-neutral-600);
       margin: 0 0 1.5rem 0;
       max-width: 400px;
     }

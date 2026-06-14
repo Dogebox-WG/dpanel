@@ -138,7 +138,7 @@ class StoreView extends LitElement {
     try {
       const storeListingRes = await getStoreListing()
       this.pkgController.setStoreData(storeListingRes);
-      this.packageList.setData(this.pkgController.pups);
+      this.packageList.setData(this.pkgController.pups.filter(p => p.def));
       this.checkForSourceErrors();
     } catch (err) {
       console.error(err);
@@ -151,7 +151,7 @@ class StoreView extends LitElement {
   }
 
   updatePups() {
-    this.pups = [...this.pkgController.pups];
+    this.pups = this.pkgController.pups.filter(p => p.def);
     this.checkForSourceErrors();
     this.requestUpdate('pups');
   }

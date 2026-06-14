@@ -25,6 +25,7 @@
         href: { type: String },
         gref: { type: String },
         upstreamVersions: { type: Object },
+        sourceUnavailable: { type: Boolean },
       };
     }
 
@@ -75,6 +76,9 @@
                   <small style="color: #777">v${version}</small>
                   ${this.hasUpdate ? html`
                     <sl-badge variant="primary" pill pulse>Update Available</sl-badge>
+                  ` : nothing}
+                  ${this.sourceUnavailable ? html`
+                    <sl-badge variant="warning" pill>Unavailable from Source</sl-badge>
                   ` : nothing}
                 </span>
                 <x-tag-set .tags=${upstreamVersions} highlight max=1></x-tag-set>

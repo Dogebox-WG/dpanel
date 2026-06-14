@@ -40,7 +40,6 @@ export default class ApiClient extends ReactiveClass {
   }
 
   async request(path, config) {
-
     // if config.body is an empty object, remove the property.
     // this is to prevent the browser from sending an empty body to the server
     // which is not what we want.

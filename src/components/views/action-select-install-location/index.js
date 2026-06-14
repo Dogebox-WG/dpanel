@@ -10,7 +10,7 @@ import { asyncTimeout } from "/utils/timeout.js";
 import "/components/common/action-row/action-row.js";
 import "/components/views/x-activity-log.js";
 import "/components/common/text-loader/text-loader.js";
-import { getDisks, postInstallToDisk } from "/api/disks/disks.js";
+import { getInstallDisks, postInstallToDisk } from "/api/disks/disks.js";
 import { promptPowerOff } from "/pages/page-settings/power-helpers.js";
 import { mainChannel } from "/controllers/sockets/main-channel.js";
 
@@ -79,11 +79,7 @@ export class LocationPickerView extends LitElement {
   }
 
   async fetchDisks() {
-    this._allDisks = await getDisks();
-    this._installDisks = this._allDisks.filter(
-      (d) => d?.suitability?.install?.usable && d?.suitability?.install?.sizeOK,
-    );
-    this._bootMediaDisk = this._allDisks.find((d) => d.bootMedia);
+    this._installDisks = await getInstallDisks();
     this._inflight_disks = false;
     this._disks_fetched = true;
   }
@@ -505,7 +501,7 @@ export class LocationPickerView extends LitElement {
     try {
       await asyncTimeout(3000);
       const diskName = this._installDisks[this._selected_disk_index].name;
-      const res = await postInstallToDisk({
+      await postInstallToDisk({
         disk: diskName,
         secret: "yes-i-will-destroy-everything-on-this-disk",
       });

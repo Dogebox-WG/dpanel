@@ -79,7 +79,6 @@ class SystemPrompt extends LitElement {
       <div class="outer">
         <div class="inner">
           <div class="heading-container">
-            <img src="/static/img/prompt_b.png" />
             <div class="more-container">
               <hr />
               <a href="#" @click=${this.handleWhyClick}

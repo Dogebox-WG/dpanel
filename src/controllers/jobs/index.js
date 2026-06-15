@@ -1,4 +1,5 @@
 import { store } from "/state/store.js";
+import { isActiveJobStatus } from "/controllers/jobs/status.js";
 
 class JobsController {
   constructor() {
@@ -33,11 +34,10 @@ class JobsController {
 
   isJobPending(job, matchText) {
     const name = (job?.displayName || "").toLowerCase();
-    const statusesToIgnore = ["completed", "failed", "cancelled"];
     const status = (job?.status || "").toLowerCase();
 
     return (
-      name.includes(matchText.toLowerCase()) && !statusesToIgnore.includes(status)
+      name.includes(matchText.toLowerCase()) && isActiveJobStatus(status)
     );
   }
 

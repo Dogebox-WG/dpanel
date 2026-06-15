@@ -3,8 +3,8 @@ import { store } from '/state/store.js';
 import WebSocketClient from '/api/sockets.js';
 import { mockedLogRunner } from './log.mocks.js';
 
-const MAX_LOG_LINES = 1000;
-
+const LOG_PAGE_SIZE = 1000;
+const OLDER_LOGS_LOAD_DELAY_MS = 500;
 class LogViewer extends LitElement {
   static get properties() {
     return {
@@ -21,6 +21,9 @@ class LogViewer extends LitElement {
       autoReconnect: { type: Boolean },
       connecting: { type: Boolean },
       isDownloading: { type: Boolean },
+      isLoadingOlderLogs: { type: Boolean },
+      hasMoreOlderLogs: { type: Boolean },
+      olderLogsCursor: { type: String },
     };
   }
 
@@ -40,10 +43,15 @@ class LogViewer extends LitElement {
     this.autoReconnect = false;
     this.connecting = false;
     this.isDownloading = false;
+    this.isLoadingOlderLogs = false;
+    this.hasMoreOlderLogs = false;
+    this.olderLogsCursor = null;
     this._streamToken = 0;
     this._reconnectDelay = 0;
     this._reconnectTimer = null;
     this._reconnectStopped = false;
+    this._scrollHandler = null;
+    this._olderLogsLoadTimer = null;
   }
 
   connectedCallback() {
@@ -71,7 +79,12 @@ class LogViewer extends LitElement {
     }
     this._reconnectStopped = true;
     clearTimeout(this._reconnectTimer);
+    clearTimeout(this._olderLogsLoadTimer);
     this.removeEventListener('transitionend', this._boundTransitionEnd);
+    const logContainer = this.shadowRoot?.querySelector('#LogContainer');
+    if (logContainer && this._scrollHandler) {
+      logContainer.removeEventListener('scroll', this._scrollHandler);
+    }
     super.disconnectedCallback();
     if (this.wsClient) {
       this.wsClient.disconnect();
@@ -106,7 +119,7 @@ class LogViewer extends LitElement {
     const logContainer = this.shadowRoot.querySelector('#LogContainer');
     let wasAtBottom = true;
     
-    logContainer.addEventListener('scroll', () => {
+    this._scrollHandler = () => {
       const isAtBottom = Math.abs(logContainer.scrollHeight - logContainer.clientHeight - logContainer.scrollTop) < 1;
       
       // Only update follow if it needs to change
@@ -118,7 +131,15 @@ class LogViewer extends LitElement {
       }
       
       wasAtBottom = isAtBottom;
-    });
+      if (logContainer.scrollTop <= 1) {
+        this.scheduleOlderLogsLoad();
+      } else {
+        clearTimeout(this._olderLogsLoadTimer);
+        this._olderLogsLoadTimer = null;
+      }
+    };
+
+    logContainer.addEventListener('scroll', this._scrollHandler);
   }
 
   handleCheckboxClick(e) {
@@ -162,6 +183,11 @@ class LogViewer extends LitElement {
   resetLogStream() {
     this._streamToken += 1;
     this.isLoadingHistory = false;
+    this.isLoadingOlderLogs = false;
+    this.hasMoreOlderLogs = false;
+    this.olderLogsCursor = null;
+    clearTimeout(this._olderLogsLoadTimer);
+    this._olderLogsLoadTimer = null;
     if (this.wsClient) {
       this.wsClient.disconnect();
       this.wsClient = null;
@@ -185,16 +211,23 @@ class LogViewer extends LitElement {
     }
 
     this.isLoadingHistory = true;
+    this.isLoadingOlderLogs = false;
+    this.hasMoreOlderLogs = false;
+    this.olderLogsCursor = null;
+    clearTimeout(this._olderLogsLoadTimer);
+    this._olderLogsLoadTimer = null;
     this.logs = [];
     this.requestUpdate();
 
     try {
-      const { lines, resumeToken } = await this.fetchInitialLogs(target);
+      const { lines, resumeToken, olderLogsCursor, hasMoreOlderLogs } = await this.fetchInitialLogs(target);
       if (streamToken !== this._streamToken) {
         return;
       }
 
-      this.logs = this.trimLogs(lines);
+      this.logs = lines;
+      this.olderLogsCursor = olderLogsCursor;
+      this.hasMoreOlderLogs = hasMoreOlderLogs;
       this.setupSocketConnection(target, resumeToken);
       await this.requestUpdate();
       this.scrollToBottomIfNeeded();
@@ -214,13 +247,23 @@ class LogViewer extends LitElement {
   }
 
   async fetchInitialLogs(target) {
+    return this.fetchLogPage(target);
+  }
+
+  async fetchLogPage(target, before = null) {
     const headers = {};
     if (store.networkContext.token) {
       headers.Authorization = `Bearer ${store.networkContext.token}`;
     }
 
+    const url = new URL(`/log/${target.logType}/${target.logId}/tail`, store.networkContext.apiBaseUrl);
+    url.searchParams.set('limit', String(LOG_PAGE_SIZE));
+    if (before !== null && before !== undefined) {
+      url.searchParams.set('before', String(before));
+    }
+
     const response = await fetch(
-      `${store.networkContext.apiBaseUrl}/log/${target.logType}/${target.logId}/tail?limit=${MAX_LOG_LINES}`,
+      url,
       { headers }
     );
 
@@ -232,13 +275,91 @@ class LogViewer extends LitElement {
     return {
       lines: Array.isArray(payload.lines) ? payload.lines : [],
       resumeToken: typeof payload.resumeToken === 'string' ? payload.resumeToken : null,
+      olderLogsCursor: typeof payload.olderCursor === 'string' ? payload.olderCursor : null,
+      hasMoreOlderLogs: payload.hasMoreOlder === true,
     };
   }
 
-  trimLogs(logs) {
-    return logs.length > MAX_LOG_LINES
-      ? logs.slice(logs.length - MAX_LOG_LINES)
-      : logs;
+  scheduleOlderLogsLoad(delayMs = OLDER_LOGS_LOAD_DELAY_MS) {
+    const logContainer = this.shadowRoot?.querySelector('#LogContainer');
+    if (!logContainer || logContainer.scrollTop > 1 || this._olderLogsLoadTimer) {
+      return;
+    }
+
+    this._olderLogsLoadTimer = setTimeout(() => {
+      this._olderLogsLoadTimer = null;
+      this.loadOlderLogs();
+    }, delayMs);
+  }
+
+  async loadOlderLogs() {
+    const target = this.getLogTarget();
+    const logContainer = this.shadowRoot?.querySelector('#LogContainer');
+    if (!target || !logContainer || this.isLoadingHistory || this.isLoadingOlderLogs || !this.hasMoreOlderLogs || !this.olderLogsCursor || store.networkContext.useMocks) {
+      return;
+    }
+
+    const streamToken = this._streamToken;
+    const previousScrollHeight = logContainer.scrollHeight;
+    const previousScrollTop = logContainer.scrollTop;
+    this.isLoadingOlderLogs = true;
+    this.requestUpdate();
+
+    try {
+      const page = await this.fetchLogPage(target, this.olderLogsCursor);
+      if (streamToken !== this._streamToken) {
+        return;
+      }
+
+      const olderLines = this.mergeOlderLogs(page.lines, this.logs);
+      this.logs = olderLines;
+      this.olderLogsCursor = page.olderLogsCursor;
+      this.hasMoreOlderLogs = page.hasMoreOlderLogs;
+      await this.updateComplete;
+
+      requestAnimationFrame(() => {
+        if (previousScrollTop <= 1) {
+          logContainer.scrollTop = 0;
+          this.scheduleOlderLogsLoad();
+          return;
+        }
+
+        logContainer.scrollTop = previousScrollTop + (logContainer.scrollHeight - previousScrollHeight);
+      });
+    } catch (error) {
+      console.warn('[Log Viewer] Failed to load older logs.', error);
+    } finally {
+      if (streamToken === this._streamToken) {
+        this.isLoadingOlderLogs = false;
+        this.requestUpdate();
+      }
+    }
+  }
+
+  mergeOlderLogs(olderLines, currentLogs) {
+    if (olderLines.length === 0) {
+      return currentLogs;
+    }
+
+    const dedupedOlderLines = olderLines[olderLines.length - 1] === currentLogs[0]
+      ? olderLines.slice(0, -1)
+      : olderLines;
+
+    return [...dedupedOlderLines, ...currentLogs];
+  }
+
+  canDownloadFullLog() {
+    return this.jobId || (this.pupId && this.pupId !== 'dbx' && this.pupId !== 'dkm');
+  }
+
+  getPartialLogMessage() {
+    if (!this.hasMoreOlderLogs) {
+      return '';
+    }
+
+    return this.canDownloadFullLog()
+      ? 'Only part of this log is loaded. Download to access the complete file.'
+      : 'Only part of this log is loaded. Scroll up to load more.';
   }
 
   scrollToBottomIfNeeded() {
@@ -305,8 +426,7 @@ class LogViewer extends LitElement {
         return;
       }
       
-      const updatedLogs = [...this.logs, logMessage];
-      this.logs = this.trimLogs(updatedLogs);
+      this.logs = [...this.logs, logMessage];
       await this.requestUpdate();
       this.scrollToBottomIfNeeded();
     };
@@ -436,6 +556,7 @@ class LogViewer extends LitElement {
         : this.isConnected
           ? 'Connected. Waiting for log output...'
           : 'Disconnected. Logs not available.';
+    const partialLogMessage = this.getPartialLogMessage();
 
     return html`
       <div>
@@ -451,6 +572,11 @@ class LogViewer extends LitElement {
         </div>
         <div id="LogContainer">
           ${this.logs.length > 0 ? html`
+            ${this.isLoadingOlderLogs ? html`
+              <div class="log-notices">
+                <div class="log-notice loading">Loading older log entries...</div>
+              </div>
+            ` : null}
             <ul>
               ${this.logs.map(log => html`<li>${log}</li>`)}
             </ul>
@@ -469,6 +595,9 @@ class LogViewer extends LitElement {
               @click=${this.handleCheckboxClick}
             >Auto scroll</sl-checkbox>
           </div>
+          ${partialLogMessage ? html`
+            <div class="log-notice partial persistent">${partialLogMessage}</div>
+          ` : null}
           <sl-button 
             variant="text"
             size="large"
@@ -543,6 +672,11 @@ class LogViewer extends LitElement {
         padding: 0em 1.5em;
         box-sizing: border-box;
       }
+      div#LogFooter .options {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
       ul {
         list-style-type: none;
         padding: 0;
@@ -564,6 +698,31 @@ class LogViewer extends LitElement {
         color: #666;
         font-style: italic;
         font-size: 0.85rem;
+      }
+      .log-notices {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+      .log-notice {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        padding: 0.65rem 0.8rem;
+        border-radius: 0.45rem;
+      }
+      .log-notice.partial {
+        background: rgba(255, 193, 7, 0.15);
+        color: #f7d774;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+      }
+      .log-notice.partial.persistent {
+        flex: 1;
+        margin: 0 1rem;
+      }
+      .log-notice.loading {
+        background: rgba(255, 255, 255, 0.08);
+        color: #ccc;
       }
     `;
   }

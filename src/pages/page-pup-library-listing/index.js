@@ -31,6 +31,7 @@ import { renderDialog } from "./renders/dialog.js";
 import { renderActions } from "./renders/actions.js";
 import { renderStatus } from "./renders/status.js";
 import { addSidebarPup, removeSidebarPup } from "/api/system/sidebar-preferences.js";
+import { canCopyToClipboard } from "/utils/clipboard.js";
 
 class PupPage extends LitElement {
   static get properties() {
@@ -479,6 +480,7 @@ class PupPage extends LitElement {
     const source = pkg?.state?.source || pkg?.def?.source || null;
     const sourceLocation = source?.location?.trim();
     const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
+    const canCopy = canCopyToClipboard();
 
     const renderMenu = () => html`
       <action-row prefix="power" name="state" label="Enabled" ?disabled=${disableActions}>
@@ -540,7 +542,7 @@ class PupPage extends LitElement {
           target=${isWebSource ? "_blank" : "_self"}
         >
           <span title=${sourceLocation}>${sourceLocation}</span>
-          ${!isWebSource ? html`
+          ${!isWebSource && canCopy ? html`
             <sl-copy-button
               slot="suffix"
               value=${sourceLocation}

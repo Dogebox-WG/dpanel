@@ -10,6 +10,7 @@ describe("jobWebSocket", () => {
         jobs: [
           {
             id: "job-1",
+            action: "install",
             displayName: "Tracked Job",
             status: "in_progress",
             progress: 30,
@@ -20,6 +21,7 @@ describe("jobWebSocket", () => {
           },
           {
             id: "job-2",
+            action: "install",
             displayName: "Queued Job",
             status: "queued",
             progress: 0,
@@ -29,6 +31,7 @@ describe("jobWebSocket", () => {
             finished: null,
           },
         ],
+        initialized: true,
         loading: false,
         error: null,
       },
@@ -74,6 +77,49 @@ describe("jobWebSocket", () => {
       id: "job-2",
       displayName: "Queued Job",
       status: "queued",
+    });
+  });
+
+  it("upserts created jobs instead of duplicating seeded placeholders", () => {
+    store.updateState({
+      jobsContext: {
+        jobs: [
+          ...store.jobsContext.jobs,
+          {
+            id: "job-3",
+            action: "system-update",
+            displayName: "System Update",
+            status: "queued",
+            progress: 0,
+            summaryMessage: "System update queued",
+            errorMessage: "",
+            started: new Date().toISOString(),
+            finished: null,
+          },
+        ],
+      },
+    });
+
+    jobWebSocket.handleMessage({
+      type: "job:created",
+      update: {
+        id: "job-3",
+        action: "system-update",
+        displayName: "System Update",
+        status: "in_progress",
+        progress: 25,
+        summaryMessage: "Applying upgrade",
+      },
+    });
+
+    const matchingJobs = store.jobsContext.jobs.filter((job) => job.id === "job-3");
+    expect(matchingJobs).to.have.length(1);
+    expect(matchingJobs[0]).to.include({
+      id: "job-3",
+      action: "system-update",
+      status: "in_progress",
+      progress: 25,
+      summaryMessage: "Applying upgrade",
     });
   });
 });

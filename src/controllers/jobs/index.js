@@ -4,11 +4,15 @@ import { isActiveJobStatus } from "/controllers/jobs/status.js";
 class JobsController {
   constructor() {
     this.observers = new Set();
+    this.bootstrapSystemUpdate = null;
     this.state = this.deriveState(store.getContext("jobs"));
 
     store.subscribe({
       stateChanged: () => {
         const jobsContext = store.getContext("jobs");
+        if (jobsContext?.initialized) {
+          this.bootstrapSystemUpdate = null;
+        }
         const nextState = this.deriveState(jobsContext);
         const hasChanges = JSON.stringify(this.state) !== JSON.stringify(nextState);
 
@@ -22,23 +26,66 @@ class JobsController {
 
   deriveState(jobsContext = {}) {
     const jobs = Array.isArray(jobsContext?.jobs) ? jobsContext.jobs : [];
-    const activeSystemUpdate = jobs.find((job) => this.isJobPending(job, "system update"));
-    const status = ((activeSystemUpdate?.status || "").toLowerCase() || "active").replace(/_/g, " ");
+    const initialized = jobsContext?.initialized === true;
+    const activeSystemUpdate =
+      this.findActiveSystemUpdateJob(jobs) ||
+      (!initialized ? this.createBootstrapFallbackJob() : null);
+    const status = this.getDisplayStatus(activeSystemUpdate?.status);
 
     return {
       activeSystemUpdate,
+      activeSystemUpdateJobId: activeSystemUpdate?.id || "",
       isSystemUpdateLocked: Boolean(activeSystemUpdate),
       systemUpdateStatus: status,
     };
   }
 
-  isJobPending(job, matchText) {
-    const name = (job?.displayName || "").toLowerCase();
+  findActiveSystemUpdateJob(jobs = []) {
+    return jobs.find((job) => this.isSystemUpdateJobPending(job));
+  }
+
+  createBootstrapFallbackJob() {
+    if (!this.bootstrapSystemUpdate?.id) {
+      return null;
+    }
+
+    return {
+      id: this.bootstrapSystemUpdate.id,
+      action: "system-update",
+      displayName: "System Update",
+      status: this.bootstrapSystemUpdate.status,
+      progress: 0,
+      summaryMessage: "System update in progress",
+      errorMessage: "",
+    };
+  }
+
+  isSystemUpdateJobPending(job) {
+    const action = (job?.action || "").toLowerCase();
     const status = (job?.status || "").toLowerCase();
 
-    return (
-      name.includes(matchText.toLowerCase()) && isActiveJobStatus(status)
-    );
+    return action === "system-update" && isActiveJobStatus(status);
+  }
+
+  getDisplayStatus(status) {
+    return ((status || "").toLowerCase() || "active").replace(/_/g, " ");
+  }
+
+  hydrateFromBootstrap(setupFacts = {}) {
+    const jobId = setupFacts?.activeSystemUpdateJobId || "";
+    const status = (setupFacts?.activeSystemUpdateStatus || "in_progress").toLowerCase();
+
+    this.bootstrapSystemUpdate = jobId
+      ? { id: jobId, status }
+      : null;
+
+    const nextState = this.deriveState(store.getContext("jobs"));
+    const hasChanges = JSON.stringify(this.state) !== JSON.stringify(nextState);
+    this.state = nextState;
+
+    if (hasChanges) {
+      this.notifyObservers();
+    }
   }
 
   addObserver(observer) {
@@ -67,6 +114,10 @@ class JobsController {
 
   getActiveSystemUpdateStatus() {
     return this.state.systemUpdateStatus;
+  }
+
+  getActiveSystemUpdate() {
+    return this.state.activeSystemUpdate;
   }
 }
 

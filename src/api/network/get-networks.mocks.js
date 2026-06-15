@@ -5,8 +5,8 @@ export const getResponse = {
   res: {
     success: true,
     networks: [
-      { type: "ethernet", interface: "eth0" },
-      { type: "ethernet", interface: "eth1" },
+      { type: "ethernet", interface: "eth0", active: true },
+      { type: "ethernet", interface: "eth1", active: false },
       {
         type: "wifi",
         interface: "wlan0",

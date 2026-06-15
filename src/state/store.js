@@ -65,6 +65,7 @@ class Store {
     };
     this.jobsContext = {
       jobs: [],
+      initialized: false,
       loading: false,
       error: null,
     };

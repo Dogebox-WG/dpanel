@@ -225,7 +225,6 @@ class SocketChannel {
 
         case "pup-updates-checked":
           // Backend has completed checking for updates, refresh our cache
-          console.log('[MainChannel] Received pup-updates-checked event, refreshing cache');
           pupUpdates.refresh();
           break;
       }

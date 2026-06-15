@@ -415,85 +415,67 @@ class PupPage extends LitElement {
       );
     };
 
-    const renderStats = () => {
-      if (pkg.stats.metrics.length === 0) {
+    const renderMetricCollection = (metrics = [], manifestList = [], emptyMessage = "") => {
+      if (metrics.length === 0) {
         return html`
-          <div class="metrics-wrap">
-            <small style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">Such empty. Pup reports no metrics</small>
+          <div class="stats-empty">
+            <small>${emptyMessage}</small>
           </div>
         `;
       }
 
-      const manifestList = pkg.state.manifest?.metrics ?? [];
-
       const defsByName = new Map(
         manifestList
-          .filter((m) => m.name?.trim())
-          .map((m) => [String(m.name).trim().toLowerCase(), m])
+          .filter((metricDef) => metricDef.name?.trim())
+          .map((metricDef) => [String(metricDef.name).trim().toLowerCase(), metricDef]),
       );
 
-      const enriched = (pkg.stats.metrics || []).map((m) => {
-        const matchedDef = defsByName.get(String(m.name || '').trim().toLowerCase());
-        const desc = (matchedDef?.description?.trim?.() || "");
-        return { ...m, description: desc };
+      const enrichedMetrics = metrics.map((metric) => {
+        const matchedDef = defsByName.get(String(metric.name || "").trim().toLowerCase());
+        const description = matchedDef?.description?.trim?.() || metric.description || "";
+        return { ...metric, description };
       });
 
+      const renderMetricCard = (metric) => html`
+        <div class="metric-container compact-metric-card">
+          <div
+            class="metric-label"
+            title=${(metric.description ||
+            metric.label ||
+            metric.name ||
+            "").trim()}
+          >
+            ${metric.label ?? metric.name ?? ""}
+          </div>
+          <x-metric .metric=${metric}></x-metric>
+        </div>
+      `;
+
       return html`
-        <div class="metrics-wrap">
-          ${enriched.map(
-            (metric) => html`
-              <div class="metric-container">
-                <div
-                  class="metric-label"
-                  title=${(metric.description ||
-                  metric.label ||
-                  metric.name ||
-                  "").trim()}
-                >
-                  ${metric.label ?? metric.name ?? ""}
-                </div>
-                <x-metric .metric=${metric}></x-metric>
-              </div>
-            `,
-          )}
+        <div class="metrics-wrap compact-metrics">
+          ${enrichedMetrics.map((metric) => renderMetricCard(metric))}
         </div>
       `;
     };
 
-    const renderResources = () => {
-      if (pkg.stats.systemMetrics.length === 0) {
-        return html`
-          <div class="metrics-wrap">
-            <p class="no-metrics">No resource metrics available</p>
-          </div>
-        `;
-      }
+    const renderStats = () => renderMetricCollection(
+      Array.isArray(pkg?.stats?.metrics) ? pkg.stats.metrics : [],
+      pkg.state.manifest?.metrics ?? [],
+      "Such empty. Pup reports no metrics",
+    );
 
-      return html`
-        <div class="metrics-wrap">
-          ${pkg.stats.systemMetrics.map(
-            (metric) => html`
-              <div class="metric-container">
-                <div
-                  class="metric-label"
-                  title=${(metric.description ||
-                  metric.label ||
-                  metric.name ||
-                  "").trim?.() || ""}
-                >
-                  ${metric.label ?? metric.name ?? ""}
-                </div>
-                <x-metric .metric=${metric}></x-metric>
-              </div>
-            `,
-          )}
-        </div>
-      `;
+    const renderResources = () => {
+      return renderMetricCollection(
+        pkg.stats.systemMetrics,
+        [],
+        "No resource metrics available",
+      );
     };
 
     const hasWebUI = (pkg.state.webUIs || []).length > 0;
     const pinnedPups = this.context.store.sidebarContext?.pinned || [];
     const isInSidebar = pinnedPups.includes(pkg.state.id);
+    const hasStatsMetrics = (pkg.stats.metrics || []).length > 0;
     const source = pkg?.state?.source || pkg?.def?.source || null;
     const sourceLocation = source?.location?.trim();
     const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
@@ -624,14 +606,14 @@ class PupPage extends LitElement {
           ${this.renderActions(labels, hasLogs)}
         </section>
 
-        ${isRunning ? html`
+        ${isRunning && hasStatsMetrics ? html`
         <section>
           <div class=${sectionTitleClasses}>
             <h3>Stats</h3>
           </div>
           ${renderStats()}
         </section>
-        ` : nothing }
+        ` : nothing}
 
         <section>
           <div class=${sectionTitleClasses}>
@@ -811,6 +793,40 @@ class PupPage extends LitElement {
       margin: 0 0 0.35rem 0;
       user-select: text;
       pointer-events: auto;
+    }
+
+    .metrics-wrap.compact-metrics {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1em;
+      align-items: start;
+      grid-auto-rows: auto;
+    }
+
+    .metrics-wrap.compact-metrics .metric-container {
+      gap: 0.5em;
+      background: rgba(255, 255, 255, 0.01);
+      padding: 0.75em 0.85em;
+      min-height: 130px;
+    }
+
+    .metrics-wrap.compact-metrics .metric-container > x-metric {
+      --metric-padding: 0.65em;
+      --metric-value-size: 0.82rem;
+      --metric-sparkline-height: 72px;
+    }
+
+    .stats-empty {
+      margin-top: 0.5em;
+      display: flex;
+      align-items: center;
+      min-height: 0;
+      padding: 0.75em 0;
+      color: var(--sl-color-neutral-600);
+      font-family: "Comic Neue";
+    }
+
+    .stats-empty small {
+      margin: 0;
     }
   `;
 }

@@ -182,7 +182,7 @@ class StoreView extends LitElement {
   }
 
   updatePups() {
-    this.pups = [...this.pkgController.pups];
+    this.pups = this.pkgController.pups.filter(p => p.def);
     this.checkForSourceErrors();
     this.requestUpdate('pups');
   }
@@ -290,6 +290,8 @@ class StoreView extends LitElement {
     }
 
     const SKELS = Array.from({ length: 1 })
+    const totalPages = this.packageList.data ? Math.max(this.packageList.getTotalPages(), 1) : 1;
+    const paginationDisabled = this.busy || this.fetchLoading || this.fetchError || !this.packageList.data;
 
     return html`
       <page-banner title="Pup Store" subtitle="Dogebox">
@@ -348,6 +350,16 @@ class StoreView extends LitElement {
         : this.renderSectionBody(ready, SKELS, hasItems)
       }
 
+      <div class="pagination-dock">
+        <paginator-ui
+          ?disabled=${paginationDisabled}
+          @go-next=${this.packageList.nextPage}
+          @go-prev=${this.packageList.previousPage}
+          currentPage=${this.packageList.currentPage}
+          totalPages=${totalPages}
+        ></paginator-ui>
+      </div>
+
       ${this._showSourceManagementDialog ? html`
         <action-manage-sources></action-manage-sources>
       ` : nothing }
@@ -357,8 +369,10 @@ class StoreView extends LitElement {
 
   static styles = css`
     :host {
+      --pagination-dock-height: 72px;
+      box-sizing: border-box;
       display: block;
-      padding: 20px;
+      padding: 20px 20px calc(20px + var(--pagination-dock-height));
     }
 
     div.row {
@@ -426,6 +440,26 @@ class StoreView extends LitElement {
       padding: var(--sl-spacing-x-large) var(--sl-spacing-medium);
       font-family: 'Comic Neue', sans-serif;
       text-align: center;
+    }
+
+    .pagination-dock {
+      position: fixed;
+      left: var(--page-margin-left);
+      right: 0;
+      bottom: 0;
+      z-index: 90;
+      height: var(--pagination-dock-height);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      box-sizing: border-box;
+      padding: 0 20px;
+      background: #23252a;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .pagination-dock paginator-ui {
+      width: 100%;
     }
 
     .slogan-wrap {

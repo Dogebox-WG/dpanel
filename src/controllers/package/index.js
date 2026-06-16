@@ -1,5 +1,6 @@
 import { postConfig } from "/api/config/config.js";
 import { pickAndPerformPupAction } from "/api/action/action.js";
+import { isActiveJobStatus } from "/controllers/jobs/status.js";
 import { store } from "/state/store.js";
 
 class PkgController {
@@ -10,6 +11,7 @@ class PkgController {
   stateIndex = {}
   statsIndex = {}
   sourcesIndex = {}
+  hasLoadedSources = false
   assetIndex = {}
   activityIndex = {}
 
@@ -147,6 +149,7 @@ class PkgController {
 
   determineCalculatedVals(pup) {
     const isInstalled = !!pup.state
+    const unavailableFromSource = this.isPupUnavailableFromSource(pup)
 
     const activeActions = pup.state?.id ? this.getActionsForPup(pup.state.id) : [];
     const activeJobs = pup.state?.id ? this.getJobsForPup(pup.state.id) : [];
@@ -161,8 +164,11 @@ class PkgController {
         statusLabel: status.label,
         installationId: installation.id,
         installationLabel: installation.label,
+        unavailableFromSource,
         // Convention: /explore/:source_id/:pup_name
-        storeURL: isInstalled
+        storeURL: unavailableFromSource && !pup.def
+          ? null
+          : isInstalled
           ? `/explore/${pup.state.source.id}/${encodeURIComponent(pup.state.manifest.meta.name)}`
           : `/explore/${pup.def.source.id}/${encodeURIComponent(pup.def.key)}`,
         // Convention: /pups/:pup_id/:pup_name
@@ -176,8 +182,71 @@ class PkgController {
     return out
   }
 
+  isPupUnavailableFromSource(pup) {
+    if (!this.hasLoadedSources) return false;
+
+    const sourceId = pup?.state?.source?.id;
+    const pupName = pup?.state?.manifest?.meta?.name;
+    if (!sourceId || !pupName) return false;
+
+    // If the source itself no longer exists, treat the installed pup as unavailable
+    const sourceData = this.sourcesIndex?.[sourceId];
+    if (!sourceData) return true;
+
+    if (sourceData.error) {
+      if (
+        sourceData.type === "disk" &&
+        /source path does not exist/i.test(sourceData.error)
+      ) {
+        // A configured disk source whose root path has been deleted is unavailable.
+        return true;
+      }
+
+      // Other source refresh failures should not mark every installed pup as unavailable.
+      return false;
+    }
+
+    // If the source no longer includes the pup, treat the installed pup as unavailable
+    return !sourceData.pups?.[pupName];
+  }
+
   handleSourcesResponse(sources) {
     this.sourcesIndex = sources
+    this.hasLoadedSources = true
+
+    // Keep installed pups visible even if they were removed or updated underneath us.
+    // Source defs are pruned here, but installed state remains in the library.
+    const prunedPups = []
+    for (const pup of this.pups) {
+      const sourceId = pup?.def?.source?.id;
+      const defKey = pup?.def?.key;
+
+      if (!sourceId || !defKey) {
+        prunedPups.push(pup);
+        continue;
+      }
+
+      const sourceData = sources?.[sourceId];
+      if (sourceData?.error) {
+        prunedPups.push(pup);
+        continue;
+      }
+      const sourceStillHasPup = Boolean(sourceData?.pups?.[defKey]);
+
+      if (sourceStillHasPup) {
+        prunedPups.push(pup);
+        continue;
+      }
+
+      if (pup.state) {
+        prunedPups.push({
+          ...pup,
+          def: null,
+        });
+      }
+    }
+
+    this.pups = prunedPups
 
     try {
       for (const [sourceId, sourceData] of Object.entries(sources)) {
@@ -230,6 +299,11 @@ class PkgController {
           }
         }
       }
+
+      this.pups = this.pups.map((pup) => ({
+        ...pup,
+        computed: this.determineCalculatedVals(pup),
+      }));
     } catch (definitionProcessingError) {
       console.error(definitionProcessingError);
     }
@@ -258,7 +332,7 @@ class PkgController {
   }
 
   removePupsBySourceId(sourceId) {
-    this.pups = this.pups.filter(p => p.def.source.id !== sourceId);
+    this.pups = this.pups.filter(p => p?.def?.source?.id !== sourceId);
     if (this.sourcesIndex[sourceId]) {
       delete this.sourcesIndex[sourceId];
     }
@@ -547,11 +621,8 @@ class PkgController {
   getJobsForPup(pupId) {
     // Get active jobs for this pup (enable/disable/install/etc)
     const jobs = store?.jobsContext?.jobs || [];
-    const activeJobs = jobs.filter(j => 
-      j.pupID === pupId && 
-      j.status !== 'completed' && 
-      j.status !== 'failed' && 
-      j.status !== 'cancelled'
+    const activeJobs = jobs.filter(
+      (j) => j.pupID === pupId && isActiveJobStatus(j.status)
     );
     return activeJobs;
   }
@@ -573,7 +644,7 @@ class PkgController {
 
     //Only show logs for jobs that are queued or in progress.
     const mostRecent = sorted[0];
-    const isActive = mostRecent.status === 'queued' || mostRecent.status === 'in_progress';
+    const isActive = isActiveJobStatus(mostRecent.status);
     if (isActive) {
       return mostRecent;
     }

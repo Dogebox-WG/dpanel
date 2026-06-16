@@ -12,6 +12,7 @@ import { getMockList } from "/api/keys/get-keylist.mocks.js";
 
 // Utils
 import { asyncTimeout } from "/utils/timeout.js";
+import { canCopyToClipboard } from "/utils/clipboard.js";
 import { createAlert } from "/components/common/alert.js";
 
 // Styles
@@ -43,7 +44,7 @@ class CreateKey extends LitElement {
       _keyReady: { type: Boolean },
       _revealPhrase: { type: Boolean },
       _termsChecked: { type: Boolean },
-      _phrase: { type: String },
+      _phrase: { type: Array },
       onSuccess: { type: Object },
     };
   }
@@ -57,7 +58,7 @@ class CreateKey extends LitElement {
     this._form = null;
     this._keyList = [];
     this._keyListLoading = false;
-    this._phrase = "";
+    this._phrase = [];
     this.onSuccess = null;
     this.showSuccessAlert = false;
     this.label = "Create your key";
@@ -153,10 +154,6 @@ class CreateKey extends LitElement {
     this._revealPhrase = true;
   }
 
-  handleCopyButtonClick() {
-    this.shadowRoot.querySelector("#PhraseCopyBtn").click();
-  }
-
   handlePhraseCloseClick() {
     const dialog = this.shadowRoot.querySelector("#KeyGenDialog");
     this._revealPhrase = false;
@@ -177,7 +174,10 @@ class CreateKey extends LitElement {
   render() {
     const emptyPhrase =
       "one two three four five six seven eight nine ten eleven twelve".split(" ");
-    const phrase = this._phrase || [];
+    const phrase = Array.isArray(this._phrase) ? this._phrase : [];
+    const canCopy = canCopyToClipboard();
+    const canCopyPhrase = canCopy && this._revealPhrase && phrase.length > 0;
+    const phraseCopyValue = phrase.join(" ");
 
     const phraseGridClasses = classMap({
       "phrase-grid": true,
@@ -225,12 +225,15 @@ class CreateKey extends LitElement {
           <sl-icon name="eye-slash"></sl-icon>
         </sl-button>
 
-        <sl-button variant="text">
-          <sl-copy-button id="PhraseCopyBtn" value=${this._phrase}
-            ><span slot="copy-icon"
-              >Copy to clipboard &nbsp;<sl-icon name="copy"></sl-icon></span
-          ></sl-copy-button>
-        </sl-button>
+        ${canCopyPhrase
+          ? html`
+              <sl-copy-button id="PhraseCopyBtn" value=${phraseCopyValue}>
+                <span slot="copy-icon">
+                  Copy to clipboard &nbsp;<sl-icon name="copy"></sl-icon>
+                </span>
+              </sl-copy-button>
+            `
+          : nothing}
       </div>
 
       <div class="phraseFooter">

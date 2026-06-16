@@ -1,16 +1,15 @@
 import { LitElement, html, css, choose } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import "/components/common/sparkline-chart/sparkline-chart-v2.js";
+import { canCopyToClipboard } from '/utils/clipboard.js';
 
 class MetricView extends LitElement {
   static properties = {
-    metric: { type: Object, reflect: true },
-    expand: { type: Boolean, reflect: true }
+    metric: { type: Object, reflect: true }
   }
 
   constructor() {
     super();
     this.metric = { values: [] };
-    this.expand = false;
   }
 
   set metric(val) {
@@ -23,31 +22,60 @@ class MetricView extends LitElement {
     return this._metric;
   }
 
+  getMetricValues() {
+    return Array.isArray(this.metric?.values) ? this.metric.values : [];
+  }
+
+  getNumericValues() {
+    return this.getMetricValues().filter((value) => Number.isFinite(value));
+  }
+
+  getLatestValue() {
+    const values = this.getMetricValues();
+    const value = values[values.length - 1];
+    return value === undefined || value === null || value === '' ? '-' : value;
+  }
+
+  resolveDisplayMode() {
+    const type = this.metric?.type || null;
+    if (type === 'int' || type === 'float') {
+      return this.getNumericValues().length >= 2 ? 'chart' : 'value';
+    }
+
+    if (type === 'string') {
+      return 'value';
+    }
+
+    return 'unsupported';
+  }
+
   render () {
-    const type = this.metric.type || null;
-    const desc = (this.metric.description ?? '').trim();
-    const tip = desc || String(this.metric.label || this.metric.name || '');
+    const mode = this.resolveDisplayMode();
+    const canCopy = canCopyToClipboard();
 
     return html`
-      <sl-copy-button
-        class="copy"
-        value="${this.metric.values}"
-        @click=${(e) => e.stopPropagation()}>
-      </sl-copy-button>
+      ${canCopy
+        ? html`
+            <sl-copy-button
+              class="copy"
+              value="${this.getMetricValues()}"
+              @click=${(e) => e.stopPropagation()}>
+            </sl-copy-button>
+          `
+        : ''}
 
-      <div class="value-container">
-        ${choose(type, [
-          ['int',   this.renderChart],
-          ['float', this.renderChart],
-          ['string', this.renderText]
+      <div class="value-container ${mode}">
+        ${choose(mode, [
+          ['chart', this.renderChart],
+          ['value', this.renderValue]
         ], () => html`not supported`)}
       </div>
     `
   }
 
   renderChart = () => {
-    const values = (this.metric.values || []).filter(Boolean);
-    if (values.length < 2) return html`<span>-</span>`;
+    const values = this.getNumericValues();
+    if (values.length < 2) return this.renderValue();
 
     return html`
       <sparkline-chart-v2
@@ -57,11 +85,8 @@ class MetricView extends LitElement {
     `;
   }
 
-  renderText = () => {
-    const arr = this.metric.values || [];
-    let value = arr[arr.length - 1];
-    if (!value) value = '-';
-    return html`<span class="string">${value}</span>`;
+  renderValue = () => {
+    return html`<span class="metric-value">${this.getLatestValue()}</span>`;
   }
 
   static styles = css`
@@ -77,9 +102,6 @@ class MetricView extends LitElement {
       width: 100%;
       box-sizing: border-box;
       overflow: var(--metric-overflow, hidden);
-    }
-    :host([expand]) {
-      min-width: max-content;
     }
 
     .icon {
@@ -103,25 +125,30 @@ class MetricView extends LitElement {
       font-weight: normal;
       font-size: var(--metric-value-size, 0.9rem);
     }
-    .value-container:has(sparkline-chart-v2) {
+    .value-container.chart {
       align-items: stretch;
       flex: 1 1 auto;
       min-height: var(--metric-sparkline-height, 160px);
     }
+
+    .value-container.value {
+      min-height: auto;
+    }
+
     .value-container > sparkline-chart-v2 {
       flex: 1 1 auto;
       min-height: 0;
       width: 100%;
     }
 
-    .string {
+    .metric-value {
       position: relative;
       display: block;
       max-width: 100%;
       white-space: pre-wrap;
       line-height: 1.2rem;
     }
-    .string::after {
+    .metric-value::after {
       content: "";
       display: inline-block;
       position: absolute;

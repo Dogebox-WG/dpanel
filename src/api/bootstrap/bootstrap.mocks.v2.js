@@ -93,7 +93,13 @@ function generateAssetsV2(states, pupDefinitions = []) {
 }
 
 function generateSetupFacts() {
-  return { hasCompletedInitialConfiguration: true, hasConfiguredNetwork: true, hasGeneratedKey: true };
+  return {
+    hasCompletedInitialConfiguration: true,
+    hasConfiguredNetwork: true,
+    hasGeneratedKey: true,
+    activeSystemUpdateJobId: "",
+    activeSystemUpdateStatus: "",
+  };
 }
 
 function generateRandomStatsV2(states, manifests) {

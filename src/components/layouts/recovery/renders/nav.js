@@ -3,7 +3,7 @@ import {
   css,
   classMap,
   nothing,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 export const navStyles = css`
   nav {

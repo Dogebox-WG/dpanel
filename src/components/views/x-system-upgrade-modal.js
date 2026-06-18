@@ -3,7 +3,7 @@ import {
   html,
   css,
   nothing,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { jobsController } from "/controllers/jobs/index.js";

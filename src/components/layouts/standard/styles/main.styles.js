@@ -1,4 +1,4 @@
-import { css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { css } from '/lib/lit-all.js';
 
 export const mainStyles = css`
   *, *::before, *::after {
@@ -7,12 +7,6 @@ export const mainStyles = css`
   :host {
     display: block;
     overflow: hidden;
-  }
-  @font-face {
-    font-family: 'Comic Neue';
-    src: url('../../vendor/@gfont/Comic_Neue/ComicNeue-Regular.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
   }
 
   .loader-overlay {

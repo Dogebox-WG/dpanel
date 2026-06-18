@@ -3,7 +3,7 @@ import {
   html,
   css,
   classMap,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 import { hookManager } from "/api/hooks.js";
 import { bindToClass } from "/utils/class-bind.js";

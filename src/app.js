@@ -3,11 +3,10 @@ import {
   html,
   nothing,
   classMap,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
-// Add shoelace once. Use components anywhere.
-import { setBasePath } from "/vendor/@shoelace/cdn@2.14.0/utilities/base-path.js";
-import "/vendor/@shoelace/cdn@2.14.0/shoelace.js";
+import "/bootstrap/shoelace.js";
+import "/bootstrap/deform.js";
 
 // Import stylesheets
 import {
@@ -49,9 +48,6 @@ import { isUnauthedRoute, hasFlushParam } from "/utils/url-utils.js";
 
 // Apis
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
-
-// Do this once to set the location of shoelace assets (icons etc..)
-setBasePath("/vendor/@shoelace/cdn@2.14.0/");
 
 // Main web socket channel (singleton)
 import { mainChannel } from "/controllers/sockets/main-channel.js";

@@ -1,11 +1,10 @@
-import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/lib/lit-all.js";
 import { postLogin } from "/api/login/login.js";
 import { store } from "/state/store.js";
 import { showWelcomeModal } from "/components/common/welcome-modal.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 
 // Components
-import "/components/common/dynamic-form/dynamic-form.js";
 import "/components/views/action-change-pass/index.js";
 
 // Render chunks
@@ -179,13 +178,14 @@ class LoginView extends LitElement {
             Incorrect password
           </sl-alert>
 
-          <dynamic-form
+          <de-form
             .fields=${this._loginFields}
             .onSubmit=${this._attemptLogin}
             requireCommit
+            theme="dark"
             style="--submit-btn-width: 100%; --submit-btn-anchor: center;"
           >
-          </dynamic-form>
+          </de-form>
 
           <sl-button variant="text" @click="${this.handleForgotPass}" style="margin-top: 1em;">
             I forgot my password

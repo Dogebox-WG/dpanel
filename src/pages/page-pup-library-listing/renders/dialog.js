@@ -2,7 +2,7 @@ import {
   html,
   choose,
   unsafeHTML,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 import "/components/views/action-dependency-manage/dependency.js";
 import "/components/views/x-pup-update-panel/index.js";
@@ -54,7 +54,7 @@ export function renderDialog() {
 
   const configSchema = buildPupConfig(pkg?.state?.manifest?.config, pkg?.state?.config);
   const configEl = configSchema ? html`
-    <dynamic-form
+    <de-form
       .values=${configSchema.values}
       .fields=${configSchema.fields}
       .onSubmit=${this.submitConfig}
@@ -62,7 +62,7 @@ export function renderDialog() {
       markModifiedFields
       allowDiscardChanges
     >
-    </dynamic-form>
+    </de-form>
   ` : html`<div style="padding: 1em; text-align: center;">Such empty. This pup does not expose any configuration.</div>`;
 
   const isStopped = !this.pupEnabled && statusId !== "running";

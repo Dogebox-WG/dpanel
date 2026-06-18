@@ -1,4 +1,4 @@
-import { html, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, classMap, nothing } from "/lib/lit-all.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
 import "/components/common/job-indicator/index.ts";
 

@@ -4,7 +4,7 @@
     css,
     nothing,
     classMap
-  } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+  } from "/lib/lit-all.js";
 
   import "/components/common/tag-set/tag-set.js";
   import { store } from "/state/store.js";

@@ -1,4 +1,4 @@
-import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, css, classMap, nothing } from "/lib/lit-all.js";
 import { rollbackPup } from "/api/pup-updates/pup-updates.js";
 import { createAlert } from "/components/common/alert.js";
 

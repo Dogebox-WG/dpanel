@@ -7,7 +7,7 @@ import {
   unsafeHTML,
   classMap,
   guard
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import { bindToClass } from "/utils/class-bind.js";
 import * as renderMethods from "./renders/index.js";
 import { store } from "/state/store.js";

@@ -1,5 +1,5 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
-import { themes } from "/components/common/dynamic-form/themes.js";
+import { LitElement, html, css } from "/lib/lit-all.js";
+import { themes } from "/components/common/shoelace-button-themes.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { getIP } from "/api/reflector/get-ip.js";
 import "/components/common/text-loader/text-loader.js";

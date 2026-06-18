@@ -3,7 +3,7 @@ import {
   html,
   css,
   nothing,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import "/components/common/action-row/action-row.js";
 
 import { getProviders } from "/api/providers/providers.js";

@@ -7,8 +7,7 @@ import { defineConfig, type Plugin } from 'vite';
 // without requiring @types/node in the project.
 const abs = (p: string) => new URL(p, import.meta.url).pathname;
 
-const shoelaceVersion = '2.20.1';
-const shoelacePublicPath = `/vendor/@shoelace/cdn@${shoelaceVersion}`;
+const shoelacePublicPath = '/shoelace';
 const shoelaceCdnRoot = join(
   fileURLToPath(new URL('.', import.meta.url)),
   'node_modules/@shoelace-style/shoelace/cdn',

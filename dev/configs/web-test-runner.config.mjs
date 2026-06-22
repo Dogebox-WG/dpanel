@@ -6,8 +6,7 @@ import { playwrightLauncher } from '@web/test-runner-playwright';
 const configDir = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = join(configDir, '../..');
 const rootNodeModules = join(repoRoot, 'node_modules');
-const shoelaceVersion = '2.20.1';
-const shoelacePublicPath = `/vendor/@shoelace/cdn@${shoelaceVersion}`;
+const shoelacePublicPath = '/shoelace';
 const shoelaceCdnRoot = join(rootNodeModules, '@shoelace-style/shoelace/cdn');
 
 export default {

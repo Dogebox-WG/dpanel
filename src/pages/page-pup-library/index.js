@@ -119,6 +119,11 @@ class LibraryView extends LitElement {
     }
   }
 
+  updatePups() {
+    this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    this.requestUpdate();
+  }
+
   handleActionsMenuSelect(event) {
     const selectedItemValue = event.detail.item.value;
     switch (selectedItemValue) {
@@ -144,6 +149,8 @@ class LibraryView extends LitElement {
     }
 
     const SKELS = Array.from({ length: 1 })
+    const totalPages = this.installedList.data ? Math.max(this.installedList.getTotalPages(), 1) : 1;
+    const paginationDisabled = this.busy || this.fetchLoading || this.fetchError || !this.installedList.data;
 
     return html`
       <div class="padded">
@@ -152,12 +159,25 @@ class LibraryView extends LitElement {
         ` : this.renderSectionInstalledBody(ready, SKELS, hasItems) }
       </div>
 
+      <div class="pagination-dock">
+        <paginator-ui
+          ?disabled=${paginationDisabled}
+          @go-next=${this.installedList.nextPage}
+          @go-prev=${this.installedList.previousPage}
+          currentPage=${this.installedList.currentPage}
+          totalPages=${totalPages}
+        ></paginator-ui>
+      </div>
+
     `;
   }
 
   static styles = css`
     :host {
+      --pagination-dock-height: 72px;
+      box-sizing: border-box;
       display: block;
+      padding-bottom: var(--pagination-dock-height);
       width: 100%;
       overflow-x: hidden;
     }
@@ -165,6 +185,26 @@ class LibraryView extends LitElement {
     .padded {
       background: #23252a;
       margin: 1em;
+    }
+
+    .pagination-dock {
+      position: fixed;
+      left: var(--page-margin-left);
+      right: 0;
+      bottom: 0;
+      z-index: 90;
+      height: var(--pagination-dock-height);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      box-sizing: border-box;
+      padding: 0 20px;
+      background: #23252a;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .pagination-dock paginator-ui {
+      width: 100%;
     }
 
     .banner {

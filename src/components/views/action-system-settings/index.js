@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.m
 
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
-import { getKeymaps, setKeymap } from "/api/system/keymaps.js";
+import { setKeymap } from "/api/system/keymaps.js";
 import { getTimezones, setTimezone } from "/api/system/timezones.js";
 import { getDisks, setStorageDisk } from "/api/disks/disks.js";
 import { setHostname } from "/api/system/hostname.js";
@@ -16,6 +16,8 @@ import { store } from "/state/store.js";
 
 // Components and styles
 import { toggledSectionStyles } from "/components/common/toggled-section.js";
+
+const DEFAULT_KEYMAP = "us";
 
 class SystemSettings extends LitElement {
   static styles = [toggledSectionStyles, css`
@@ -76,7 +78,6 @@ class SystemSettings extends LitElement {
       onBack: { type: Object },
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
-      _keymaps: { type: Array },
       _timezones: { type: Array },
       _disks: { type: Array },
       _changes: { type: Object },
@@ -90,11 +91,10 @@ class SystemSettings extends LitElement {
   constructor() {
     super();
     this.onBack = null;
-    this._keymaps = [];
     this._timezones = [];
     this._disks = [];
     this._changes = {
-      keymap: 'us',
+      keymap: DEFAULT_KEYMAP,
       disk: '',
       'device-name': '',
       use_fdn_pup_binary_cache: true,
@@ -119,7 +119,6 @@ class SystemSettings extends LitElement {
   async _fetch() {
     try {
       this._loading = true;
-      this._keymaps = await getKeymaps();
       const rawTimezones = await getTimezones();
       
       // Transform and sort timezones
@@ -281,26 +280,6 @@ class SystemSettings extends LitElement {
               value=${this._changes['device-name']}
               @sl-input=${this._handleInputChange}
             ></sl-input>
-          </div>
-
-          <div class="form-control">
-            <sl-select
-              name="keymap"
-              required
-              label="Select Keyboard Layout" 
-              ?disabled=${this._inflight}
-              data-field="keymap"
-              value=${this._changes.keymap}
-              help-text="For if/when you plug in a physical keyboard"
-              @sl-change=${this._handleInputChange}
-            >
-              ${this._keymaps.map(
-                (keymap) =>
-                  html`<sl-option value=${keymap.id}
-                    >${keymap.label} ${!keymap.label.includes(keymap.id.toUpperCase()) ? `(${keymap.id.toUpperCase()})` : ''}</sl-option
-                  >`,
-              )}
-            </sl-select>
           </div>
 
           <div class="form-control">

@@ -26,6 +26,7 @@ import "/pages/index.js";
 import "/components/common/page-container.js";
 import "/components/views/prompt-welcome/index.js";
 import "/components/views/prompt-system/index.js";
+import "/components/views/x-system-upgrade-modal.js";
 
 // Components
 import "/utils/devtools/debug-panel.js";
@@ -63,6 +64,7 @@ import { pupUpdates } from "/state/pup-updates.js";
 
 // Job WebSocket
 import { jobWebSocket } from "/controllers/sockets/job-channel.js";
+import { jobsController } from "/controllers/jobs/index.js";
 
 class DPanelApp extends LitElement {
   static properties = {
@@ -163,6 +165,7 @@ class DPanelApp extends LitElement {
 
       // Process pups
       if (res) {
+        jobsController.hydrateFromBootstrap(res?.setupFacts);
         this.pkgController.setData(res);
       }
 
@@ -248,6 +251,9 @@ class DPanelApp extends LitElement {
         <welcome-dialog></welcome-dialog>
         <x-debug-panel></x-debug-panel>
         <system-prompt ?open=${showSystemPrompt} task=${taskName}></system-prompt>
+        <x-system-upgrade-modal
+          @refresh-bootstrap-request=${() => this.fetchBootstrap()}
+        ></x-system-upgrade-modal>
       </aside>
     `;
   }

@@ -111,7 +111,6 @@ export const promptStyles = css`
       margin-top: 0;
     }
 
-    .heading-container img,
     .review-container {
       width: 100%;
     }
@@ -126,16 +125,9 @@ export const promptStyles = css`
     margin-bottom: -25px;
   }
 
-  .heading-container img {
-    width: 100px;
-  }
-
   @media (min-width: 576px) {
     .heading-container {
       margin-top: 0;
-      img {
-        width: 300px;
-      }
     }
   }
 

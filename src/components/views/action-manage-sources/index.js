@@ -109,6 +109,7 @@ export class SourceManagerView extends LitElement {
   }
 
   handleAddSourceClick() {
+    this._addSourceInputURL = "";
     this._showAddSourceDialog = true;
   }
 
@@ -132,6 +133,7 @@ export class SourceManagerView extends LitElement {
       }
       // then close the dialog
       this._showAddSourceDialog = false;
+      this._addSourceInputURL = "";
 
     } catch (err) {
       const message = ["Failed to add source.", "<Todo: Show reason>"];
@@ -165,7 +167,7 @@ export class SourceManagerView extends LitElement {
           </sl-input>
 
           <div slot="footer">
-            <sl-button variant="text" @click=${() => this._showAddSourceDialog = false}>Cancel</sl-button>
+            <sl-button variant="text" @click=${() => { this._showAddSourceDialog = false; this._addSourceInputURL = ""; }}>Cancel</sl-button>
             <sl-button variant="primary" ?disabled=${!this._addSourceInputURL} ?loading=${this._addSourceInProgress} @click=${this.handleAddSourceSubmitClick}>
               Add this source
             </sl-button>

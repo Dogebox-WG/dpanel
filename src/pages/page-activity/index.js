@@ -1,7 +1,8 @@
 import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
 import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
-import { clearCompletedJobs } from '/api/jobs/jobs.js';
+import { clearCompletedJobs, deleteJob } from '/api/jobs/jobs.js';
+import { isActiveJobStatus, isFinishedJobStatus } from '/controllers/jobs/status.js';
 import '/components/common/job-progress/index.js';
 
 class JobActivityPage extends LitElement {
@@ -230,14 +231,14 @@ class JobActivityPage extends LitElement {
   
   async handleClearCompleted() {
     const { jobs } = store.jobsContext;
-    const completedCount = jobs.filter(j => ['completed', 'failed', 'cancelled'].includes(j.status)).length;
+    const completedCount = jobs.filter((j) => isFinishedJobStatus(j.status)).length;
     
     if (completedCount === 0) {
-      alert('No completed jobs to clear.');
+      alert('No finished jobs to clear.');
       return;
     }
     
-    const confirmed = confirm(`Clear ${completedCount} completed/failed jobs? This action cannot be undone.`);
+    const confirmed = confirm(`Clear ${completedCount} finished jobs? This includes completed, failed, cancelled, and orphaned jobs.`);
     if (!confirmed) return;
     
     try {
@@ -245,7 +246,7 @@ class JobActivityPage extends LitElement {
       await clearCompletedJobs(0);
       
       // Update local state
-      const remainingJobs = jobs.filter(j => !['completed', 'failed', 'cancelled'].includes(j.status));
+      const remainingJobs = jobs.filter((j) => isActiveJobStatus(j.status));
       store.updateState({
         jobsContext: { jobs: remainingJobs }
       });
@@ -266,16 +267,36 @@ class JobActivityPage extends LitElement {
   handleDateFilter(e) {
     this.dateFilter = e.target.value;
   }
+
+  async handleDeleteJob(e) {
+    const job = e.detail?.job;
+    if (!job?.id) return;
+
+    const confirmed = confirm(`Delete "${job.displayName}"? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteJob(job.id);
+      store.updateState({
+        jobsContext: {
+          jobs: store.jobsContext.jobs.filter(existingJob => existingJob.id !== job.id)
+        }
+      });
+    } catch (err) {
+      console.error('Failed to delete job:', err);
+      alert('Failed to delete job. Please try again.');
+    }
+  }
   
   filterJobs(jobs) {
     let filtered = jobs;
     
     // Apply search filter
     if (this.searchQuery) {
-      filtered = filtered.filter(job =>
-        job.displayName.toLowerCase().includes(this.searchQuery) ||
-        job.summaryMessage.toLowerCase().includes(this.searchQuery) ||
-        (job.errorMessage && job.errorMessage.toLowerCase().includes(this.searchQuery))
+      filtered = filtered.filter((job) =>
+        (job.displayName || '').toLowerCase().includes(this.searchQuery) ||
+        (job.summaryMessage || '').toLowerCase().includes(this.searchQuery) ||
+        (job.errorMessage || '').toLowerCase().includes(this.searchQuery)
       );
     }
     
@@ -336,6 +357,7 @@ class JobActivityPage extends LitElement {
               id="job-${job.id}"
               .job=${job}
               ?initiallyExpanded=${job.id === targetJobId}
+              @job-delete=${this.handleDeleteJob}
             ></job-progress>
           `)}
           
@@ -358,7 +380,7 @@ class JobActivityPage extends LitElement {
     const activeJobs = filteredJobs.filter(j => j.status === 'in_progress');
     const pendingJobs = filteredJobs.filter(j => j.status === 'queued');
     const completedJobs = filteredJobs
-      .filter(j => ['completed', 'failed', 'cancelled'].includes(j.status))
+      .filter((j) => isFinishedJobStatus(j.status))
       .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started));
     
     return html`
@@ -391,6 +413,7 @@ class JobActivityPage extends LitElement {
               <sl-option value="completed">Completed</sl-option>
               <sl-option value="failed">Failed</sl-option>
               <sl-option value="cancelled">Cancelled</sl-option>
+              <sl-option value="orphaned">Orphaned</sl-option>
             </sl-select>
           </div>
           
@@ -427,7 +450,7 @@ class JobActivityPage extends LitElement {
         )}
         
         ${this.renderSection(
-          'Recently Completed Jobs',
+          'Recent Finished Jobs',
           completedJobs,
           this.showCompletedLimit,
           () => this.showMoreCompleted(),

@@ -71,6 +71,7 @@ export function renderSectionInstalledBody(ready, SKELS, hasItems) {
               version=${pkg.state.version}
               logoBase64=${pkg?.assets?.logos?.mainLogoBase64}
               status=${pkg.computed.statusLabel}
+              ?sourceUnavailable=${pkg.computed?.unavailableFromSource || false}
               .upstreamVersions=${pkg.state.manifest?.meta?.upstreamVersions || {}}
               href=${pkg.computed.libraryURL}
               gref=${pkg.computed.pupURL}
@@ -80,14 +81,6 @@ export function renderSectionInstalledBody(ready, SKELS, hasItems) {
         )}
       </div>
       <style>${pupCardGrid}</style>
-
-      <paginator-ui
-        ?disabled=${this.busy}
-        @go-next=${this.installedList.nextPage}
-        @go-prev=${this.installedList.previousPage}
-        currentPage=${this.installedList.currentPage}
-        totalPages=${this.installedList.getTotalPages()}
-      ></paginator-ui>
 
       `: nothing
     }

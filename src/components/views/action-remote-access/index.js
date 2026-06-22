@@ -14,6 +14,7 @@ import {
 } from "/api/sshkeys/sshkeys.js";
 import "/components/common/action-row/action-row.js";
 import { asyncTimeout } from "/utils/timeout.js";
+import { canCopyToClipboard } from "/utils/clipboard.js";
 import { createAlert } from "/components/common/alert.js";
 
 export class RemoteAccessSettings extends LitElement {
@@ -216,6 +217,7 @@ export class RemoteAccessSettings extends LitElement {
   render() {
     const hasKeys = this._ssh_public_keys.length
     const keys = this._ssh_public_keys 
+    const canCopy = canCopyToClipboard();
     return html`
       ${this.hideTitle ? nothing : html`<h1>Remote Access</h1>`}
 
@@ -264,7 +266,9 @@ export class RemoteAccessSettings extends LitElement {
           <div slot="hidden">
             <div class="key-reveal-dropdown">${k.key}</div>
             <div class="key-actions">
-              <sl-copy-button hoist value=${k.key}></sl-copy-button>
+              ${canCopy
+                ? html`<sl-copy-button hoist value=${k.key}></sl-copy-button>`
+                : nothing}
               <sl-icon-button name="trash-fill" label="Trash" @click=${() => this.handleTrash(k.id)}></sl-icon-button>
             </div>
           </div>

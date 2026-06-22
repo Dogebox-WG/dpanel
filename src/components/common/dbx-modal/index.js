@@ -265,7 +265,7 @@ export class DbxModal extends LitElement {
 
     return html`
       <sl-dialog
-        label=""
+        label=${this.title || "Dialog"}
         ?open=${this.open}
         no-header
         class=${dialogClass}

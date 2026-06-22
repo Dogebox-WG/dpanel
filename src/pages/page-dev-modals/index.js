@@ -396,12 +396,11 @@ class DevModalsPage extends LitElement {
               ?open=${this._nestedChildOpen}
               title="Nested confirm"
               subtitle="Nested dialog inside settings shell"
-              primaryLabel="OK"
-              cancelLabel="Cancel"
+              footerLabel="OK"
               @dbx-close=${() => {
                 this._nestedChildOpen = false;
               }}
-              @dbx-primary-click=${() => {
+              @dbx-footer-click=${() => {
                 this._nestedChildOpen = false;
               }}
             ></x-dbx-modal>

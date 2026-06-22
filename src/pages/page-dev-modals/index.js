@@ -234,7 +234,7 @@ class DevModalsPage extends LitElement {
     closeAllGalleryLegacyDialogs();
     this._activeEntryId = entry.id;
     this._afterOpen = true;
-    this._nestedChildOpen = false;
+    this._nestedChildOpen = entry.after?.customKey === "nested";
   }
 
   _handleAfterClose() {
@@ -395,7 +395,7 @@ class DevModalsPage extends LitElement {
             <x-dbx-modal
               ?open=${this._nestedChildOpen}
               title="Nested confirm"
-              subtitle="Child dialog inside settings shell"
+              subtitle="Nested dialog inside settings shell"
               primaryLabel="OK"
               cancelLabel="Cancel"
               @dbx-close=${() => {
@@ -411,10 +411,6 @@ class DevModalsPage extends LitElement {
   }
 
   render() {
-    const activeEntry = this._getActiveEntry();
-    const showNestedTrigger =
-      activeEntry?.after?.customKey === "nested" && this._afterOpen;
-
     return html`
       <div class="padded">
         <h1>Modal gallery</h1>
@@ -423,17 +419,6 @@ class DevModalsPage extends LitElement {
           <code>x-dbx-modal</code> (after). Open one side at a time per row.
           Dismissable modals: X, Escape, and overlay click.
         </p>
-
-        ${showNestedTrigger
-          ? html`
-              <sl-alert open variant="primary" style="margin-bottom:1.5em;">
-                Parent modal is open —
-                <sl-button size="small" @click=${() => (this._nestedChildOpen = true)}>
-                  Open nested child
-                </sl-button>
-              </sl-alert>
-            `
-          : nothing}
 
         ${GALLERY_ENTRIES.map(
           (entry) => html`

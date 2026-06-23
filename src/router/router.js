@@ -60,13 +60,18 @@ export class Router {
   }
 
   handleNavigation(path, options = {}) {
-    const route = this.routes.find((route) => route.regex.test(path));
+    // Match against the pathname only; query string and hash are preserved in
+    // the browser URL (via pushState) for pages to read, but must not affect
+    // route pattern matching (e.g. "/explore?search=foo" should match "/explore").
+    const pathname = path.split(/[?#]/)[0];
+
+    const route = this.routes.find((route) => route.regex.test(pathname));
     if (!route) {
       console.error(`No route found for path: ${path}`);
       return;
     }
 
-    const paramsMatch = route.regex.exec(path);
+    const paramsMatch = route.regex.exec(pathname);
     const params = this.extractParams(route.path, paramsMatch);
     const context = { route, params };
     const commands = {

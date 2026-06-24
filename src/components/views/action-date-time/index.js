@@ -8,6 +8,7 @@ import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { getTimezone, getTimezones, setTimezone } from "/api/system/timezones.js";
 import { formatTimezoneWithOffset, sortTimezonesByCity } from "/utils/timezone-formatter.js";
+import "/bootstrap/deform.js";
 
 export class DateTimeSettings extends LitElement {
   static styles = css`
@@ -45,6 +46,7 @@ export class DateTimeSettings extends LitElement {
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
       _timezones: { type: Array },
+      _timezoneFields: { type: Object },
       _current_timezone: { type: String },
       _changes: { type: Object },
     };
@@ -53,6 +55,7 @@ export class DateTimeSettings extends LitElement {
   constructor() {
     super();
     this._timezones = [];
+    this._timezoneFields = this._buildTimezoneFields();
     this._changes = {};
   }
  
@@ -80,6 +83,7 @@ export class DateTimeSettings extends LitElement {
       // Transform and sort timezones
       const formattedTimezones = rawTimezones.map(tz => formatTimezoneWithOffset(tz));
       this._timezones = sortTimezonesByCity(formattedTimezones);
+      this._timezoneFields = this._buildTimezoneFields();
       
       this._current_timezone = await getTimezone();
       this._changes.timezone = this._current_timezone;
@@ -98,16 +102,16 @@ export class DateTimeSettings extends LitElement {
     }
 
     this._inflight = true;
+    this._timezoneFields = this._buildTimezoneFields();
 
-    // Only input elements that have a name attribute are sent to backend.
-    const formFields = this.shadowRoot.querySelectorAll('sl-input[name], sl-select[name], sl-checkbox[name]');
-    const hasInvalidField = Array.from(formFields).some(field => field.hasAttribute('data-invalid'));
+    const hasInvalidField = !this._isTimezoneFormValid();
 
     await asyncTimeout(2000);
 
     if (hasInvalidField) {
       createAlert('warning', 'Uh oh, invalid data detected.');
       this._inflight = false;
+      this._timezoneFields = this._buildTimezoneFields();
       return;
     }
 
@@ -121,14 +125,50 @@ export class DateTimeSettings extends LitElement {
       createAlert('danger', ['Failed to save config', 'Please refresh and try again'])
     } finally {
       this._inflight = false;
+      this._timezoneFields = this._buildTimezoneFields();
       if (didSucceed) {
         this.handleDialogClose(); 
       }
     }
   }
 
-  _handleTimezoneChange(e) {
-    this._changes.timezone = e.target.value;
+  _handleTimezoneFormChange(change) {
+    if (change.fieldName !== 'timezone') return;
+    this._changes.timezone = change.newValue;
+  }
+
+  _isTimezoneFormValid() {
+    const timezoneForm = this.shadowRoot.querySelector('de-form');
+    const form = timezoneForm?.shadowRoot?.querySelector('form');
+    return !form || timezoneForm.checkValidity(form);
+  }
+
+  _buildTimezoneFields() {
+    return {
+      sections: [
+        {
+          name: 'timezone',
+          fields: [
+            {
+              name: 'timezone',
+              type: 'select',
+              label: 'Timezone',
+              required: true,
+              help: 'Where in the world should your clock be set to',
+              disabled: this._inflight,
+              searchable: true,
+              hoist: true,
+              maxOptionsVisible: 8,
+              options: this._timezones.map((timezone) => ({
+                value: timezone.id,
+                label: timezone.displayLabel,
+                searchText: `${timezone.id} ${timezone.label ?? ''}`,
+              })),
+            },
+          ],
+        },
+      ],
+    };
   }
 
   render() {
@@ -144,23 +184,14 @@ export class DateTimeSettings extends LitElement {
       <h1>Date and Time</h1>
 
       <div class="form-control">
-        <sl-select
-          label="Timezone"
-          required
-          help-text="Where in the world should your clock be set to"
-          name="timezone"
-          value=${this._changes.timezone || this._current_timezone || ''}
-          ?disabled=${this._inflight}
-          @sl-change=${this._handleTimezoneChange}
-          hoist
-        >
-          ${this._timezones.map(
-            (timezone) =>
-              html`<sl-option value=${timezone.id}>
-                ${timezone.displayLabel}
-              </sl-option>`
-          )}
-        </sl-select>
+        <de-form
+          .fields=${this._timezoneFields}
+          .values=${{ timezone: this._changes.timezone || this._current_timezone || '' }}
+          .onChange=${(change) => this._handleTimezoneFormChange(change)}
+          ?markModifiedFields=${false}
+          theme="dark"
+          accent="purple"
+        ></de-form>
       </div>
       <div slot="footer" class="align-end">
         <sl-button variant="primary" ?disabled=${this._inflight} ?loading=${this._inflight} @click=${this._attemptSubmit}>Submit</sl-button>

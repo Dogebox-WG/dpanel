@@ -13,7 +13,7 @@
     "vite": "^7.1.10"
   },
   "dependencies": {
-    "@deform-wg/deform": "1.0.0-rc.2",
+    "@deform-wg/deform": "1.0.0-rc.3",
     "@fnando/sparkline": "^0.3.10",
     "@fontsource/comic-neue": "^5.2.7",
     "@fontsource/montserrat": "^5.2.8",

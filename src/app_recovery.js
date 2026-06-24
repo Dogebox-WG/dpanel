@@ -5,11 +5,10 @@ import {
   classMap,
   choose,
   guard,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
-// Add shoelace once. Use components anywhere.
-import { setBasePath } from "/vendor/@shoelace/cdn@2.14.0/utilities/base-path.js";
-import "/vendor/@shoelace/cdn@2.14.0/shoelace.js";
+import "/bootstrap/shoelace.js";
+import "/bootstrap/deform.js";
 
 // Import stylesheets
 import { appModeStyles } from "/components/layouts/recovery/styles/index.js";
@@ -28,7 +27,6 @@ import "/components/views/confirmation-prompt/index.js";
 import "/pages/page-recovery/index.js";
 
 // Components
-import "/components/common/dynamic-form/dynamic-form.js";
 import "/utils/devtools/debug-panel.js";
 
 // Render chunks
@@ -51,9 +49,6 @@ import { postHostShutdown } from "/api/system/post-host-shutdown.js";
 
 // Main WebSocket channel (singleton)
 import { mainChannel } from "/controllers/sockets/main-channel.js";
-
-// Do this once to set the location of shoelace assets (icons etc..)
-setBasePath("/vendor/@shoelace/cdn@2.14.0/");
 
 const STEP_LOGIN = 0;
 const STEP_INTRO = 1;

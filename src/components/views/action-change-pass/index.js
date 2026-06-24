@@ -1,11 +1,8 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css } from "/lib/lit-all.js";
 import { postChangePass } from "/api/password/change-pass.js";
 import { createAlert } from "/components/common/alert.js";
 import { hash } from "/utils/hash.js"
 import { asyncTimeout } from "/utils/timeout.js";
-
-// Components
-import "/components/common/dynamic-form/dynamic-form.js";
 
 // Render chunks
 import { renderBanner } from "./renders/banner.js";
@@ -236,14 +233,15 @@ class ChangePassView extends LitElement {
               Invalid credentials. Please check your current password or recovery phrase.
             </div>
           ` : ''}
-          <dynamic-form
+          <de-form
             .fields=${this._changePassFields}
             .onSubmit=${this._attemptChangePass}
             .onBack=${this.onBack ? this.handleBackClick : undefined}
             requireCommit
-            theme="purple"
+            theme="dark"
+            accent="purple"
           >
-          </dynamic-form>
+          </de-form>
         </div>
       </div>
     `;

@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing, repeat } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
 import { getStoreListing } from '/api/sources/sources.js';
 import { pkgController } from '/controllers/package/index.js'
 import { PaginationController } from '/components/common/paginator/paginator-controller.js';

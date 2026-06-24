@@ -1,12 +1,10 @@
-import { LitElement, html, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, nothing } from '/lib/lit-all.js';
 import { bindToClass } from '/utils/class-bind.js'
 import { asyncTimeout } from '/utils/timeout.js'
 import { styles } from './pup-snapshot.styles.js';
-import '/components/common/dynamic-form/dynamic-form.js'
 import '/components/common/animated-dots.js'
 import '/components/common/sparkline-chart/sparkline-chart.js'
 import '/components/views/log-viewer/log-viewer.js'
-import * as mockConfig from '/components/common/dynamic-form/mocks/index.js'
 import { pkgController } from '/controllers/package/index.js';
 import { postConfig } from '/api/config/config.js';
 import { createAlert } from '/components/common/alert.js';

@@ -1,4 +1,4 @@
-import { html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { html, css, nothing } from '/lib/lit-all.js';
 import { stopPup, startPup } from '/api/action/action.js';
 import { createAlert } from '/components/common/alert.js';
 import { asyncTimeout } from '/utils/timeout.js'

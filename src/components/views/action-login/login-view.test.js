@@ -31,19 +31,17 @@ describe.skip("LoginView", () => {
     const heading = el.shadowRoot.querySelector("h1");
     expect(heading.textContent).to.equal("Such Login!");
 
-    // DynamicForm
-    const dynamicForm = el.shadowRoot.querySelector("dynamic-form");
-    expect(dynamicForm).to.exist;
+    const deformEl = el.shadowRoot.querySelector("de-form");
+    expect(deformEl).to.exist;
 
-    // DynamicForm contents
-    const inputs = dynamicForm.shadowRoot.querySelectorAll("sl-input");
+    const inputs = deformEl.shadowRoot.querySelectorAll("sl-input");
     expect(inputs.length).to.equal(1);
 
-    const buttons = dynamicForm.shadowRoot.querySelectorAll("sl-button");
+    const buttons = deformEl.shadowRoot.querySelectorAll("sl-button");
     expect(buttons.length).to.equal(1);
   });
 
-  it("_attemtpLogin is called on form submit with typed password as first arg", async () => {
+  it("_attemptLogin is called on form submit with typed password as first arg", async () => {
     // Initialise the component
     const el = await fixture(html`<x-action-login></x-action-login>`);
 
@@ -57,15 +55,14 @@ describe.skip("LoginView", () => {
       return true
     }
 
-    // Elements
-    const dynamicFormEl = el.shadowRoot.querySelector("dynamic-form");
+    const deformEl = el.shadowRoot.querySelector("de-form");
 
     // Type in a password
-    dynamicFormEl.focus("password");
+    deformEl.focus("password");
     await sendKeys({ type: "pa$$w0rD" });
 
     // Wait for key entry and element update.
-    await waitUntil(() => dynamicFormEl._dirty, "form did not become dirty");
+    await waitUntil(() => deformEl._dirty, "form did not become dirty");
 
     // Submit data
     await sendKeys({ press: "Enter" });

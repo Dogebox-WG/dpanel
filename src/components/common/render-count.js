@@ -1,4 +1,4 @@
-import { LitElement, html } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html } from '/lib/lit-all.js';
 
 class RenderCount extends LitElement {
   static properties = {

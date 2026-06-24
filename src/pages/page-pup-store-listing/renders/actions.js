@@ -1,4 +1,4 @@
-import { html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, css, nothing } from "/lib/lit-all.js";
 import "/components/common/version-selector/index.js";
 import { sortVersionsDescending } from "/utils/version.js";
 

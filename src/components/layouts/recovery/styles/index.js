@@ -1,4 +1,4 @@
-import { css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { css } from "/lib/lit-all.js";
 
 export const appModeStyles = css`
   :host {

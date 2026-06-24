@@ -4,7 +4,7 @@ import {
   css,
   choose,
   nothing,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import "/components/common/action-row/action-row.js";
 import "/components/views/action-check-updates/index.js";
 import "/components/views/action-date-time/index.js";

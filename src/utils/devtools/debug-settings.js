@@ -4,7 +4,7 @@ import {
   css,
   classMap,
   nothing
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { store } from "/state/store.js";
 import { mocks } from "/api/mocks.js";

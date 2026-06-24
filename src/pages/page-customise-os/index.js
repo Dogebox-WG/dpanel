@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css, nothing } from '/lib/lit-all.js';
 import { getCustomNix, saveCustomNix, validateCustomNix } from '/api/system/custom-nix.js';
 import { createAlert } from '/components/common/alert.js';
 

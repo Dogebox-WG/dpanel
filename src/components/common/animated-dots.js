@@ -1,4 +1,4 @@
-import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css } from '/lib/lit-all.js';
 
 class AnimatedDots extends LitElement {
   static styles = css`

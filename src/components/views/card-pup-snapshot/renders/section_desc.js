@@ -1,4 +1,4 @@
-import { html, unsafeHTML } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { html, unsafeHTML } from '/lib/lit-all.js';
 
 export function renderSectionDesc() {
   return html`

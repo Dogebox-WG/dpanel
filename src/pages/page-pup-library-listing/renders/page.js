@@ -1,4 +1,4 @@
-import { html, choose, unsafeHTML } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, choose, unsafeHTML } from "/lib/lit-all.js";
 
 export function renderPopoverPage(open_page) {
   const pupContext = this.context.store?.pupContext

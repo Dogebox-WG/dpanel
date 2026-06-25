@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing, repeat } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
 import { getStoreListing } from '/api/sources/sources.js';
 import { pkgController } from '/controllers/package/index.js'
 import { PaginationController } from '/components/common/paginator/paginator-controller.js';
@@ -30,6 +30,8 @@ class StoreView extends LitElement {
       busy: { type: Boolean },
       inspectedPup: { type: String },
       searchValue: { type: String },
+      searchInDescription: { type: Boolean },
+      searchInInterfaces: { type: Boolean },
       _showSourceManagementDialog: { type: Boolean },
       _hasSourceErrors: { type: Boolean }
     }
@@ -42,6 +44,9 @@ class StoreView extends LitElement {
     this.busyQueue = [];
     this.fetchLoading = true;
     this.fetchError = false;
+    this.searchValue = "";
+    this.searchInDescription = false;
+    this.searchInInterfaces = false;
     this.itemsPerPage = 10;
     this.pkgController = pkgController;
     this.packageList = new PaginationController(this, undefined, this.itemsPerPage,{ initialSort });
@@ -65,6 +70,7 @@ class StoreView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.applySearchFromUrl();
     this.pkgController.addObserver(this);
     this.addEventListener('busy-start', this.handleBusyStart.bind(this));
     this.addEventListener('busy-stop', this.handleBusyStop.bind(this));
@@ -74,6 +80,26 @@ class StoreView extends LitElement {
     this.addEventListener('source-change', this.updatePups.bind(this));
     this.fetchBootstrap();
     this.checkForSourceErrors();
+  }
+
+  // Pre-fill the search from URL query params, e.g.
+  //   /explore?search=core-network&interfaces=1&description=1
+  // "interfaces" and "description" accept 1/true/yes (case-insensitive).
+  applySearchFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+
+    const search = params.get('search') ?? params.get('q');
+    if (search !== null) {
+      this.searchValue = search;
+    }
+
+    const isTruthy = (v) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
+    if (params.has('interfaces')) {
+      this.searchInInterfaces = isTruthy(params.get('interfaces'));
+    }
+    if (params.has('description')) {
+      this.searchInDescription = isTruthy(params.get('description'));
+    }
   }
 
   disconnectedCallback() {
@@ -138,7 +164,12 @@ class StoreView extends LitElement {
     try {
       const storeListingRes = await getStoreListing()
       this.pkgController.setStoreData(storeListingRes);
-      this.packageList.setData(this.pkgController.pups.filter(p => p.def));
+      this.packageList.setData(this.pkgController.pups);
+      // setData() clears any active filter, so re-apply a search that was
+      // pre-filled from the URL (or typed) before the data finished loading.
+      if ((this.searchValue || "").trim() !== "") {
+        this.filterPackageList();
+      }
       this.checkForSourceErrors();
     } catch (err) {
       console.error(err);
@@ -168,19 +199,70 @@ class StoreView extends LitElement {
   updated(changedProperties) {
     if (changedProperties.has('pups')) {
       this.packageList.setData(this.pups);
-    }
-    
-    // Existing code for other property changes
-    if (changedProperties.has('searchValue')) {
+      // setData() replaces initial_data and clears any active filter, so a
+      // periodic controller refresh (stats/activity notify) would otherwise
+      // wipe the user's search. Re-apply the current search if one is active.
+      if ((this.searchValue || "").trim() !== "") {
+        this.filterPackageList();
+      }
+    } else if (
+      changedProperties.has('searchValue') ||
+      changedProperties.has('searchInDescription') ||
+      changedProperties.has('searchInInterfaces')
+    ) {
       this.filterPackageList();
     }
   }
 
-  filterPackageList() {
-    if (this.searchValue === "") {
-      this.packageList.setFilter();
+  handleSearchInput(event) {
+    this.searchValue = event.target.value;
+  }
+
+  handleSearchOptionChange(event) {
+    const option = event.target.dataset.option;
+    if (option === 'description') {
+      this.searchInDescription = event.target.checked;
+    } else if (option === 'interfaces') {
+      this.searchInInterfaces = event.target.checked;
     }
-    this.packageList.setFilter((pkg) => pkg?.manifest?.package?.toLowerCase()?.includes(this.searchValue.toLowerCase()));
+  }
+
+  // Collect the searchable text for a pup based on which search options are
+  // currently enabled. Always includes the pup key + display name.
+  getSearchableText(pkg) {
+    const def = pkg?.def;
+    const meta = def?.versions?.[def?.latestVersion]?.meta || {};
+    const version = def?.versions?.[def?.latestVersion] || {};
+
+    const parts = [def?.key || "", meta.name || ""];
+
+    if (this.searchInDescription) {
+      parts.push(
+        meta.shortDescription || meta.descShort || "",
+        meta.longDescription || meta.descLong || "",
+      );
+    }
+
+    if (this.searchInInterfaces) {
+      // Only interfaces this pup provides (not the ones it depends on).
+      (version.interfaces || []).forEach((iface) => parts.push(iface?.name || ""));
+    }
+
+    return parts.join(" ").toLowerCase();
+  }
+
+  filterPackageList() {
+    const query = (this.searchValue || "").trim().toLowerCase();
+
+    // Reset to first page so results aren't hidden on an out-of-range page.
+    this.packageList.currentPage = 1;
+
+    if (query === "") {
+      this.packageList.setFilter();
+      return;
+    }
+
+    this.packageList.setFilter((pkg) => this.getSearchableText(pkg).includes(query));
   }
 
   handleManageSourcesClick() {
@@ -223,9 +305,34 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input class="constrained w55" type="search" size="large" placeholder="Search">
-          <sl-icon name="search" slot="prefix"></sl-icon>
-        </sl-input>
+        <div class="constrained w55 search-inner">
+          <sl-input
+            type="search"
+            size="large"
+            placeholder="Search"
+            clearable
+            .value=${this.searchValue}
+            @sl-input=${this.handleSearchInput}>
+            <sl-icon name="search" slot="prefix"></sl-icon>
+          </sl-input>
+          <div class="search-options">
+            <span class="search-options-label">Also search:</span>
+            <sl-checkbox
+              size="small"
+              data-option="description"
+              ?checked=${this.searchInDescription}
+              @sl-change=${this.handleSearchOptionChange}>
+              Descriptions
+            </sl-checkbox>
+            <sl-checkbox
+              size="small"
+              data-option="interfaces"
+              ?checked=${this.searchInInterfaces}
+              @sl-change=${this.handleSearchOptionChange}>
+              Interfaces Provided
+            </sl-checkbox>
+          </div>
+        </div>
       </div>
 
       ${this.showCategories ? html`
@@ -282,6 +389,27 @@ class StoreView extends LitElement {
         &.w55 { width: 55% }
         &.w80 { width: 80% }
       }
+    }
+
+    .search-inner sl-input {
+      width: 100%;
+    }
+
+    .search-options {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1em;
+      margin-top: 0.6em;
+      padding-left: 0.25em;
+    }
+
+    .search-options-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: bold;
+      color: var(--sl-color-neutral-500);
     }
 
     .tab-wrap {

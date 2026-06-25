@@ -1,5 +1,5 @@
-import { LitElement, html, css } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
-import { sparkline } from '/vendor/@fnando/sparkline@0.3.10/sparkline.js';
+import { LitElement, html, css } from '/lib/lit-all.js';
+import sparkline from '@fnando/sparkline';
 import { generateMockSparklineData } from './mocks/sparkline.mocks.js';
 
 class SparklineChart extends LitElement {

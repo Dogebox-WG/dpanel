@@ -1,4 +1,4 @@
-import { html, choose, unsafeHTML } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, choose, unsafeHTML } from "/lib/lit-all.js";
 import "/components/views/action-dependency-manage/dependency.js";
 import "/components/views/action-interface-list/interface.js";
 

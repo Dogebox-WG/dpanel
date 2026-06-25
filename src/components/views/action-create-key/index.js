@@ -3,7 +3,7 @@ import {
   html,
   nothing,
   classMap,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 // APIs
 import { createKey } from "/api/keys/create-key.js";
@@ -17,11 +17,10 @@ import { createAlert } from "/components/common/alert.js";
 
 // Styles
 import { createKeyStyles } from "./styles.js";
-import { themes } from "/components/common/dynamic-form/themes.js";
+import { themes } from "/components/common/shoelace-button-themes.js";
 
 // Components
 import "/components/common/text-loader/text-loader.js";
-import "/components/common/dynamic-form/dynamic-form.js";
 import { notYet } from "/components/common/not-yet-implemented.js"
 
 // Render chunks
@@ -55,7 +54,6 @@ class CreateKey extends LitElement {
     this.onBack = null;
     this._server_fault = false;
     this._invalid_creds = false;
-    this._form = null;
     this._keyList = [];
     this._keyListLoading = false;
     this._phrase = [];
@@ -71,7 +69,6 @@ class CreateKey extends LitElement {
   }
 
   firstUpdated() {
-    this._form = this.shadowRoot.querySelector("dynamic-form");
     const keyGenDialog = this.shadowRoot.querySelector(
       "sl-dialog#KeyGenDialog",
     );

@@ -1,5 +1,5 @@
 // Supported config field types for pup manifests.
-// These map directly to _render_<type> functions in the dynamic-form component.
+// These map directly to field renderers in the deform `<de-form>` component.
 const SUPPORTED_TYPES = new Set([
   "text", "password", "number", "toggle", "email", "textarea", "select", "checkbox", "radio", "date", "range", "color"
 ]);

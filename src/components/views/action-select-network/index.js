@@ -1,13 +1,12 @@
-import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/lib/lit-all.js";
 import { getNetworks } from "/api/network/get-networks.js";
 import { putNetwork } from "/api/network/set-network.js";
 import { postSetupBootstrap } from "/api/system/post-bootstrap.js";
 
 import { asyncTimeout } from "/utils/timeout.js";
+import debounce from "/utils/debounce.js";
 import { createAlert } from "/components/common/alert.js";
-
-// Components
-import "/components/common/dynamic-form/dynamic-form.js";
+import { testNetwork } from "/api/network/test-network.js";
 
 // Render chunks
 import { renderBanner } from "./renders/banner.js";
@@ -80,7 +79,7 @@ class SelectNetwork extends LitElement {
   }
 
   firstUpdated() {
-    this._form = this.shadowRoot.querySelector("dynamic-form");
+    this._form = this.shadowRoot.querySelector("de-form");
     this._fetchAvailableNetworks();
   }
 
@@ -129,7 +128,7 @@ class SelectNetwork extends LitElement {
             {
               name: "network-pass",
               label: "Network Password",
-              type: "wifiPassword",
+              type: "password",
               required: true,
               passwordToggle: true,
               revealOn: (state) => {
@@ -395,6 +394,31 @@ class SelectNetwork extends LitElement {
     }
   }
 
+  _validateNetworkPassword = debounce(async (change, deform) => {
+    if (change.fieldName !== "network-pass") return;
+
+    const state = deform.getState();
+    const input = deform.shadowRoot?.querySelector('[name=network-pass]');
+    if (!input) return;
+
+    const isHiddenNetwork = state.network?.value === "hidden";
+    const ssid = isHiddenNetwork
+      ? state["network-ssid"]
+      : state.network?.ssid ?? state.network?.label;
+
+    try {
+      await testNetwork({
+        ssid,
+        password: change.newValue,
+        hidden: isHiddenNetwork,
+      });
+      input.setCustomValidity("");
+    } catch {
+      input.setCustomValidity("Connection failed, check password");
+      input.reportValidity();
+    }
+  }, 200);
+
   _renderIcon(name) {
     return html`<sl-icon name=${name}></sl-icon>`;
   }
@@ -422,16 +446,18 @@ class SelectNetwork extends LitElement {
         <div class="padded">
           ${renderBanner()}
           ${this._setNetworkFields ? html`
-            <dynamic-form
+            <de-form
               .fields=${this._setNetworkFields}
               .values=${this._setNetworkValues}
               .onSubmit=${this._attemptSetNetwork}
+              .onChange=${this._validateNetworkPassword}
               .onBack=${this.onBack ? this.handleBackClick : undefined}
               requireCommit
-              theme="yellow"
+              theme="dark"
+              accent="amber"
               style="--submit-btn-width: auto; --submit-btn-anchor: end;"
             >
-            </dynamic-form>
+            </de-form>
             `: nothing }
 
           <div style="margin: 2em 8px">

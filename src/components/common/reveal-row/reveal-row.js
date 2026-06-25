@@ -1,4 +1,4 @@
-import { LitElement, html, css, unsafeCSS } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, unsafeCSS } from "/lib/lit-all.js";
 
 const DEFAULT_COLLAPSED_HEIGHT = "7em";
 

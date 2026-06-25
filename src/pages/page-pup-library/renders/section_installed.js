@@ -1,4 +1,4 @@
-import { html, css, nothing, repeat } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { html, css, nothing, repeat } from '/lib/lit-all.js';
 
 var pupCardGrid = css`
   .pup-card-grid {

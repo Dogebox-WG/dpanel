@@ -6,9 +6,8 @@ import {
   choose,
   unsafeHTML,
   classMap,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import "/components/common/action-row/action-row.js";
-import "/components/common/dynamic-form/dynamic-form.js";
 import "/components/views/x-check/index.js";
 import "/components/common/page-container.js";
 import "/components/common/sparkline-chart/sparkline-chart-v2.js";

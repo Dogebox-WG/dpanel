@@ -1,4 +1,4 @@
-import { html } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { html } from '/lib/lit-all.js';
 
 export function renderSummary() {
   return html`

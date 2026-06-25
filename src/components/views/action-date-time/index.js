@@ -2,7 +2,7 @@ import {
   LitElement,
   html,
   css,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";

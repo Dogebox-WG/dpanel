@@ -15,11 +15,16 @@ export function openDbxModal({
   primaryDisabled = false,
   primaryLoading = false,
   cancelLabel = "",
+  footerTextLabel = "",
+  footerTextDisabled = false,
+  footerTextLoading = false,
   footerLabel = "",
   footerVariant = "primary",
   footerDisabled = false,
   footerLoading = false,
   onPrimaryClick = () => {},
+  onCancelClick = () => {},
+  onFooterTextClick = () => {},
   onFooterClick = () => {},
   onClose = () => {},
   customContent = null,
@@ -35,6 +40,9 @@ export function openDbxModal({
   modal.primaryDisabled = primaryDisabled;
   modal.primaryLoading = primaryLoading;
   modal.cancelLabel = cancelLabel;
+  modal.footerTextLabel = footerTextLabel;
+  modal.footerTextDisabled = footerTextDisabled;
+  modal.footerTextLoading = footerTextLoading;
   modal.footerLabel = footerLabel;
   modal.footerVariant = footerVariant;
   modal.footerDisabled = footerDisabled;
@@ -63,6 +71,14 @@ export function openDbxModal({
   modal.addEventListener("dbx-primary-click", () => {
     onPrimaryClick();
     modal.open = false;
+  });
+
+  modal.addEventListener("dbx-cancel-click", () => {
+    onCancelClick();
+  });
+
+  modal.addEventListener("dbx-footer-text-click", () => {
+    onFooterTextClick();
   });
 
   modal.addEventListener("dbx-footer-click", () => {

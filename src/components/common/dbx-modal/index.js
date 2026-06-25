@@ -4,7 +4,7 @@ import {
   css,
   nothing,
   classMap,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 /**
  * Standard Dogebox modal wrapper around sl-dialog.
@@ -16,6 +16,8 @@ import {
  * Events:
  *   dbx-close — dismissed via X, Escape, overlay, or cancel
  *   dbx-primary-click — primary action button clicked
+ *   dbx-cancel-click — cancel action clicked
+ *   dbx-footer-text-click — footer text action clicked
  *   dbx-footer-click — footer action button clicked
  */
 export class DbxModal extends LitElement {
@@ -31,6 +33,9 @@ export class DbxModal extends LitElement {
     primaryDisabled: { type: Boolean },
     primaryLoading: { type: Boolean },
     cancelLabel: { type: String },
+    footerTextLabel: { type: String, attribute: "footer-text-label" },
+    footerTextDisabled: { type: Boolean, attribute: "footer-text-disabled" },
+    footerTextLoading: { type: Boolean, attribute: "footer-text-loading" },
     footerLabel: { type: String },
     footerVariant: { type: String },
     footerDisabled: { type: Boolean },
@@ -49,6 +54,10 @@ export class DbxModal extends LitElement {
 
     sl-dialog.dbx-modal--wide::part(panel) {
       --width: 99vw;
+    }
+
+    :host(.above-toasts) sl-dialog::part(base) {
+      z-index: 960;
     }
 
     @media (min-width: 576px) {
@@ -107,6 +116,39 @@ export class DbxModal extends LitElement {
       grid-row: 1;
       justify-self: end;
       align-self: start;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border: 0;
+      border-radius: var(--sl-border-radius-medium);
+      background: transparent;
+      color: var(--sl-color-neutral-600);
+      font: inherit;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .dbx-modal__close:hover,
+    .dbx-modal__close:focus-visible {
+      color: var(--sl-color-primary-600);
+    }
+
+    .dbx-modal__close:focus {
+      outline: none;
+    }
+
+    .dbx-modal__close:focus-visible {
+      box-shadow: 0 0 0 var(--sl-focus-ring-width) var(--sl-input-focus-ring-color);
+    }
+
+    .dbx-modal__close sl-icon {
+      width: 1rem;
+      height: 1rem;
     }
 
     .dbx-modal__subtitle {
@@ -162,6 +204,8 @@ export class DbxModal extends LitElement {
 
     .dbx-modal__footer-action {
       display: flex;
+      align-items: center;
+      gap: var(--sl-spacing-medium);
       justify-content: flex-end;
       width: 100%;
     }
@@ -194,7 +238,61 @@ export class DbxModal extends LitElement {
     );
   }
 
+  _getOpenModalStack() {
+    const modals = [];
+    const visit = (node) => {
+      if (!node) return;
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.localName === "x-dbx-modal" && node.open) {
+          modals.push(node);
+        }
+        if (node.shadowRoot) {
+          visit(node.shadowRoot);
+        }
+      }
+
+      for (const child of node.children || []) {
+        visit(child);
+      }
+    };
+
+    visit(document);
+    return modals;
+  }
+
+  _hasOpenModalAbove() {
+    const openModals = this._getOpenModalStack();
+    return openModals.indexOf(this) < openModals.length - 1;
+  }
+
+  _blurActiveControl() {
+    const blurDeep = (root) => {
+      const activeElement = root?.activeElement;
+      if (!activeElement) return false;
+
+      if (activeElement.shadowRoot && blurDeep(activeElement.shadowRoot)) {
+        return true;
+      }
+
+      if (typeof activeElement.blur === "function") {
+        activeElement.blur();
+        return true;
+      }
+
+      return false;
+    };
+
+    blurDeep(this.shadowRoot);
+  }
+
   _handleRequestClose(event) {
+    if (this._hasOpenModalAbove()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (!this.dismissable) {
       event.preventDefault();
       event.stopPropagation();
@@ -217,6 +315,7 @@ export class DbxModal extends LitElement {
   }
 
   _handleCloseClick() {
+    this._blurActiveControl();
     this.open = false;
   }
 
@@ -230,12 +329,28 @@ export class DbxModal extends LitElement {
   }
 
   _handleCancelClick() {
+    this._blurActiveControl();
+    this.dispatchEvent(
+      new CustomEvent("dbx-cancel-click", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
     this.open = false;
   }
 
   _handleFooterClick() {
     this.dispatchEvent(
       new CustomEvent("dbx-footer-click", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  _handleFooterTextClick() {
+    this.dispatchEvent(
+      new CustomEvent("dbx-footer-text-click", {
         bubbles: true,
         composed: true,
       }),
@@ -258,7 +373,8 @@ export class DbxModal extends LitElement {
     const showPrimary = Boolean(this.primaryLabel);
     const showCancel = Boolean(this.cancelLabel);
     const showPrimaryBlock = showPrimary || showCancel;
-    const showFooter = Boolean(this.footerLabel);
+    const showFooterText = Boolean(this.footerTextLabel);
+    const showFooter = showFooterText || Boolean(this.footerLabel);
     const dialogClass = classMap({
       "dbx-modal--wide": this.wide,
     });
@@ -280,12 +396,14 @@ export class DbxModal extends LitElement {
                     ? html`
                         <div class="dbx-modal__title-row">
                           <h1 class="dbx-modal__title">${this.title}</h1>
-                          <sl-icon-button
+                          <button
                             class="dbx-modal__close"
-                            name="x-lg"
-                            label="Close"
+                            type="button"
+                            aria-label="Close"
                             @click=${this._handleCloseClick}
-                          ></sl-icon-button>
+                          >
+                            <sl-icon name="x-lg"></sl-icon>
+                          </button>
                         </div>
                       `
                     : this.title
@@ -331,14 +449,30 @@ export class DbxModal extends LitElement {
         ${showFooter
           ? html`
               <div slot="footer" class="dbx-modal__footer-action">
-                <sl-button
-                  variant=${this.footerVariant}
-                  ?disabled=${this.footerDisabled}
-                  ?loading=${this.footerLoading}
-                  @click=${this._handleFooterClick}
-                >
-                  ${this.footerLabel}
-                </sl-button>
+                ${showFooterText
+                  ? html`
+                      <sl-button
+                        variant="text"
+                        ?disabled=${this.footerTextDisabled}
+                        ?loading=${this.footerTextLoading}
+                        @click=${this._handleFooterTextClick}
+                      >
+                        ${this.footerTextLabel}
+                      </sl-button>
+                    `
+                  : nothing}
+                ${this.footerLabel
+                  ? html`
+                      <sl-button
+                        variant=${this.footerVariant}
+                        ?disabled=${this.footerDisabled}
+                        ?loading=${this.footerLoading}
+                        @click=${this._handleFooterClick}
+                      >
+                        ${this.footerLabel}
+                      </sl-button>
+                    `
+                  : nothing}
               </div>
             `
           : nothing}

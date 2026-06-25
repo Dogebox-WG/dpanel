@@ -1,12 +1,7 @@
-import { html, nothing } from "/lib/lit-all.js";
+import { openDbxModal } from "/components/common/dbx-modal/open-modal.js";
 
 export function createAlert(variant, message, icon = 'info-circle', duration = 0, action, errorDetail) {
   try {
-    if (!document.body.hasAttribute('listener-on-sl-after-hide')) {
-      document.body.addEventListener('sl-after-hide', closeErrorDialog);
-      document.body.setAttribute('listener-on-sl-after-hide', true);
-    }
-
     const alert = document.createElement('sl-alert');
     alert.variant = variant;
     alert.closable = true;
@@ -59,12 +54,6 @@ function escapeHtml(html) {
 }
 
 function createMoreDetailDialog(messageEl, providedError) {
-  // Dialog element
-  const dialog = document.createElement('sl-dialog');
-  dialog.label = 'Error details'
-  dialog.classList.add("error-dialog");
-  dialog.classList.add('above-toasts') // Dialogs usually sit below toasts in terms of z-index. This class styles them to sit above.
-
   const error = (providedError instanceof Error)
     ? providedError
     : new Error(providedError);
@@ -82,30 +71,28 @@ function createMoreDetailDialog(messageEl, providedError) {
 
   // Dialog body content
   const content = document.createElement('div');
-  content.innerHTML = `
-  <pre style="text-wrap: wrap; font-size: var(--sl-font-size-small); padding: 1em; background: #333;">${messageEl}</pre>
-  <pre style="text-wrap: wrap; font-size: var(--sl-font-size-small); padding: 1em; background: #a300ff70; margin-bottom: 0;">${errorMessage}</pre>
-  <pre style="font-size: var(--sl-font-size-x-small); padding: 1em; background: #c700ff21; overflow-x: scroll; margin-top: 0;">${error.stack}</pre>
-  `
-  dialog.appendChild(content);
+  const message = document.createElement('pre');
+  message.style.cssText = "text-wrap: wrap; font-size: var(--sl-font-size-small); padding: 1em; background: #333;";
+  message.innerHTML = messageEl;
 
-  // Dialog footer
-  const footer = document.createElement('div');
-  footer.slot = "footer"
-  footer.innerHTML = `<sl-button class="close">Close</sl-button>`
-  dialog.appendChild(footer)
+  const detail = document.createElement('pre');
+  detail.style.cssText = "text-wrap: wrap; font-size: var(--sl-font-size-small); padding: 1em; background: #a300ff70; margin-bottom: 0;";
+  detail.textContent = errorMessage;
 
-  // Close handling
-  const closeButton = dialog.querySelector('sl-button.close');
-  closeButton.addEventListener('click', () => dialog.hide());
+  const stack = document.createElement('pre');
+  stack.style.cssText = "font-size: var(--sl-font-size-x-small); padding: 1em; background: #c700ff21; overflow-x: scroll; margin-top: 0;";
+  stack.textContent = error.stack ?? "";
 
-  document.body.append(dialog);
-  dialog.show();
-}
+  content.append(message, detail, stack);
 
-// Responsible for cleaning up the DOM after closing an error dialog
-function closeErrorDialog(e) {
-  if (e.target.classList.contains('error-dialog')) {
-    e.target.remove();
-  }
+  let modal;
+  modal = openDbxModal({
+    title: "Error details",
+    footerLabel: "Close",
+    onFooterClick: () => {
+      modal.open = false;
+    },
+    customContent: content,
+  });
+  modal.classList.add("error-dialog", "above-toasts");
 }

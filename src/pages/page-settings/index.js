@@ -6,6 +6,7 @@ import {
   nothing,
 } from "/lib/lit-all.js";
 import "/components/common/action-row/action-row.js";
+import "/components/common/dbx-modal/index.js";
 import "/components/views/action-check-updates/index.js";
 import "/components/views/action-date-time/index.js";
 import "/components/views/action-language/index.js";
@@ -99,7 +100,7 @@ class SettingsPage extends LitElement {
     this.showImportLogs = false;
     this.systemLogs = [];
     this.showImportLogsModal = false;
-  }x
+  }
 
   onJobsUpdate(state) {
     if (
@@ -129,10 +130,20 @@ class SettingsPage extends LitElement {
   }
 
   handleMenuClick = (event, el) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     const dialogName = el.getAttribute("name");
     store.updateState({ dialogContext: { name: dialogName }});
     const router = getRouter();
     router.go(`/settings/${dialogName}`, { replace: true });
+  };
+
+  handleSettingsPageClick = (event, el) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    store.updateState({ dialogContext: { name: null }});
+    const router = getRouter();
+    router.go(el.getAttribute("href") || el.getAttribute("data-route"));
   };
 
   async handleImportBlockchain() {
@@ -204,10 +215,10 @@ class SettingsPage extends LitElement {
             <h3>General</h3>
           </div>
           <div class="list-wrap">
-            <action-row prefix="info-circle" label="Version" href="/settings/versions" .trigger=${this.handleMenuClick}>
+            <action-row prefix="info-circle" name="versions" label="Version" href="/settings/versions" .trigger=${this.handleMenuClick}>
               View version details
             </action-row>
-            <action-row prefix="arrow-repeat" ?dot=${updateAvailable} label="Updates" href="/settings/updates" ?disabled=${this.isSystemUpdateLocked}>
+            <action-row prefix="arrow-repeat" name="updates" ?dot=${updateAvailable} label="Updates" href="/settings/updates" ?disabled=${this.isSystemUpdateLocked} .trigger=${this.handleMenuClick}>
               ${this.updatesRowDescription}
             </action-row>
           </div>
@@ -221,19 +232,24 @@ class SettingsPage extends LitElement {
             <action-row prefix="wifi" label="Wifi" @click=${notYet}>
               Add or remove Wifi networks
             </action-row>
-            <action-row prefix="key" label="Remote Access" href="/settings/remote-access">
+            <action-row prefix="key" name="remote-access" label="Remote Access" href="/settings/remote-access" .trigger=${this.handleMenuClick}>
               Manage SSH settings and keys
             </action-row>
             <action-row prefix="usb-drive-fill" name="import-blockchain" label="Import Blockchain" .trigger=${this.handleMenuClick}>
               Import existing Dogecoin Core blockchain data from external drive
             </action-row>
-            <action-row prefix="keyboard" name="keyboard-layout" label="Keyboard Layout" href="/settings/keyboard-layout">
+            <action-row prefix="keyboard" name="keyboard-layout" label="Keyboard Layout" href="/settings/keyboard-layout" .trigger=${this.handleMenuClick}>
               Choose the right layout for your keyboard
             </action-row>
-            <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time">
+            <action-row prefix="clock" name="date-time" label="Date and Time" href="/settings/date-time" .trigger=${this.handleMenuClick}>
               Where are we?  What time is it?
             </action-row>
-            <action-row prefix="code-slash" label="Customise OS" href="/settings/customise-os">
+            <action-row
+              prefix="code-slash"
+              label="Customise OS"
+              href="/settings/customise-os"
+              .trigger=${this.handleSettingsPageClick}
+            >
               Add custom NixOS configuration (Tailscale, VPN, etc)
             </action-row>
           </div>
@@ -270,38 +286,66 @@ class SettingsPage extends LitElement {
             </action-row>
       </div>
 
-      <sl-dialog no-header
-        ?open=${hasSettingsDialog} @sl-request-close=${this.handleDialogClose}>
-        ${choose(dialog.name, [
-          ["updates", () => html`<x-action-check-updates></x-action-check-updates>`],
-          ["remote-access", () => html`<x-action-remote-access></x-action-remote-access>`],
-          ["versions", () => renderVersionsDialog(store, this.handleDialogClose)],
-          ["import-blockchain", () => this.renderImportBlockchainDialog()],
-          ["language", () => html`<x-action-language></x-action-language>`],
-          ["keyboard-layout", () => html`<x-action-language></x-action-language>`],
-          ["date-time", () => html`<x-action-date-time></x-action-date-time>`],
-        ])}
-      </sl-dialog>
+      ${this.renderSettingsDialog(dialog.name, hasSettingsDialog)}
 
-      <sl-dialog label="Import Blockchain Progress" 
-        ?open=${this.showImportLogsModal} 
-        @sl-request-close=${this.handleImportLogsModalClose}
-        @sl-hide=${this.handleImportLogsModalClose}
-        style="--width: 80vw; --height: 80vh;">
-        <div style="padding: 0.5em;">
+      <x-dbx-modal
+        ?open=${this.showImportLogsModal}
+        title="Import Blockchain Progress"
+        panel-width="80vw"
+        @dbx-close=${() => this.handleImportLogsModalClose()}
+      >
+        <div slot="custom" style="padding: 0.5em;">
           <p style="margin: 0 0 0.25em 0;">Importing Dogecoin Core blockchain data. This process may take a long time depending on the blockchain size.</p>
           <div class="log-viewer-container">
             <x-activity-log .logs=${this.systemLogs} name="import-blockchain"></x-activity-log>
           </div>
         </div>
-      </sl-dialog>
+      </x-dbx-modal>
+    `;
+  }
+
+  renderSettingsDialog(dialogName, open) {
+    const dialogTitle = {
+      updates: "System Updates",
+      "remote-access": "Remote Access",
+      versions: "Versions",
+      "import-blockchain": "Import Dogecoin Core Blockchain Data",
+      language: "Keyboard Layout",
+      "keyboard-layout": "Keyboard Layout",
+      "date-time": "Date and Time",
+    }[dialogName] ?? "Settings";
+
+    const isImportBlockchain = dialogName === "import-blockchain";
+
+    return html`
+      <x-dbx-modal
+        ?open=${open}
+        title=${dialogTitle}
+        footer-text-label=${isImportBlockchain ? "Cancel" : ""}
+        footerLabel=${isImportBlockchain ? "Start Import Process" : ""}
+        footerVariant="primary"
+        ?footerLoading=${this.inflight_import_blockchain}
+        ?footerDisabled=${this.inflight_import_blockchain}
+        @dbx-close=${() => this.handleDialogClose()}
+        @dbx-footer-text-click=${() => this.handleDialogClose()}
+        @dbx-footer-click=${() => this.handleImportBlockchain()}
+      >
+        ${choose(dialogName, [
+          ["updates", () => html`<x-action-check-updates slot="custom" hide-title></x-action-check-updates>`],
+          ["remote-access", () => html`<x-action-remote-access slot="custom" hide-title></x-action-remote-access>`],
+          ["versions", () => html`<div slot="custom">${renderVersionsDialog(store)}</div>`],
+          ["import-blockchain", () => html`<div slot="custom">${this.renderImportBlockchainDialog()}</div>`],
+          ["language", () => html`<x-action-language slot="custom" hide-title @sl-request-close=${() => this.handleDialogClose()}></x-action-language>`],
+          ["keyboard-layout", () => html`<x-action-language slot="custom" hide-title @sl-request-close=${() => this.handleDialogClose()}></x-action-language>`],
+          ["date-time", () => html`<x-action-date-time slot="custom" hide-title @sl-request-close=${() => this.handleDialogClose()}></x-action-date-time>`],
+        ])}
+      </x-dbx-modal>
     `;
   }
 
   renderImportBlockchainDialog() {
     return html`
       <div style="padding: 1em;">
-        <h3>Import Dogecoin Core Blockchain Data</h3>
         <p>This feature allows you to import existing Dogecoin Core blockchain data from an external drive, which can significantly speed up the initial synchronization process.</p>
         
         <div style="margin: 1em 0;">
@@ -331,29 +375,23 @@ class SettingsPage extends LitElement {
           </ul>
         </div>
       </div>
-      <sl-button slot="footer" variant="primary" @click=${this.handleImportBlockchain} ?loading=${this.inflight_import_blockchain} ?disabled=${this.inflight_import_blockchain}>Start Import Process</sl-button>
-      <sl-button slot="footer" variant="neutral" @click=${this.handleDialogClose}>Cancel</sl-button>
     `;
   }
 }
 
 customElements.define("x-page-settings", SettingsPage);
 
-function renderVersionsDialog(store, closeFn) {
+function renderVersionsDialog(store) {
   const { dbxVersion, gitCommit, gitDirty } = store.getContext('app')
   const displayVersion = dbxVersion || 'Unknown'
   
   return html`
-    <div style="text-align: center;">
-      <h1>Versions</h1>
-
+    <div>
       <div style="text-align: left; margin: 1em 0;">
         <h2 style="margin: 0 0 0.5em 0;">Dogebox</h2>
         <p style="margin: 0 0 0.5em 0;"><strong>Version:</strong> ${displayVersion}</p>
         ${gitCommit ? html`<p style="margin: 0;"><strong>Git commit:</strong> ${gitCommit}${gitDirty ? ' (dirty)' : ''}</p>` : ''}
       </div>
-
-      <sl-button variant="text" @click=${closeFn}>Dismiss</sl-button>
     </div>
   `
 }

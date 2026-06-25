@@ -148,6 +148,7 @@ class ActionRow extends LitElement {
     .body-wrap {
       position: relative;
       height: var(--row-height, 62px);
+      box-sizing: border-box;
       padding-bottom: 2px;
       flex: 1 0 auto; /* Grow to fill the space, no shrink, basis auto */
       display: flex;
@@ -197,6 +198,7 @@ class ActionRow extends LitElement {
     .suffix-wrap {
       position: relative;
       height: 100%;
+      box-sizing: border-box;
       max-width: 48px;
       flex: 0 1 auto; /* Do not grow, can shrink, basis auto */
       display: flex;
@@ -211,6 +213,11 @@ class ActionRow extends LitElement {
   `;
 
   handleClick = (e) => {
+    if (e.__actionRowHandled) {
+      return;
+    }
+    e.__actionRowHandled = true;
+
     if (this.expandable) {
       this.expand = !this.expand;
       this.dispatchEvent(
@@ -276,7 +283,7 @@ class ActionRow extends LitElement {
     `;
     return html`
       ${this.href
-        ? html` <a class="anchor" href="${this.href}" target="${this.target}">${el}</a> `
+        ? html` <a class="anchor" href="${this.href}" target="${this.target}" @click=${this.handleClick}>${el}</a> `
         : el}
     `;
   }

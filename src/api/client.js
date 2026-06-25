@@ -95,8 +95,24 @@ export default class ApiClient extends ReactiveClass {
     }
 
     if (!response.ok) {
-      console.warn('Unsuccessful respose', { status: response.status })
-      throw new Error(response.error || `Request failed with error code: ${response.status}`);
+      let errorMessage = `Request failed with error code: ${response.status}`;
+      try {
+        const text = await response.text();
+        if (text) {
+          const errorBody = JSON.parse(text);
+          if (errorBody?.error?.message) {
+            errorMessage = errorBody.error.message;
+          } else if (typeof errorBody?.error === 'string') {
+            errorMessage = errorBody.error;
+          } else if (errorBody?.message) {
+            errorMessage = errorBody.message;
+          }
+        }
+      } catch {
+        // Keep the status-based fallback when the body isn't JSON.
+      }
+      console.warn('Unsuccessful respose', { status: response.status, errorMessage });
+      throw new Error(errorMessage);
     }
 
     // Parse JSON body

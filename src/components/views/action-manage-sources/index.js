@@ -6,6 +6,16 @@ import { addSource, removeSource } from "/api/sources/manage.js";
 import { doBootstrap } from "/api/bootstrap/bootstrap.js";
 import { refreshStoreListing } from "/api/sources/sources.js";
 
+function formatErrorMessage(err) {
+  if (!err) return "Unknown error";
+  if (typeof err === "string") return err;
+  if (err instanceof Error) return err.message;
+  if (typeof err?.error === "string") return err.error;
+  if (err?.error?.message) return err.error.message;
+  if (err?.message) return err.message;
+  return String(err);
+}
+
 export class SourceManagerView extends LitElement {
 
   static get properties() {
@@ -98,10 +108,11 @@ export class SourceManagerView extends LitElement {
       }
 
     } catch (err) {
-      console.log('ERROR', err);
-      const message = ["Source removal failed", "<Todo: Show reason>"];
+      const reason = formatErrorMessage(err);
+      const message = ["Source removal failed", reason];
       const action = { text: "View details" };
-      createAlert("danger", message, "emoji-frown", null, action, new Error(err));
+      const error = err instanceof Error ? err : new Error(reason);
+      createAlert("danger", message, "emoji-frown", null, action, error);
     } finally {
       this._sourceRemovaInProgress = false;
       this._selectedSourceId = null;
@@ -136,9 +147,11 @@ export class SourceManagerView extends LitElement {
       this._addSourceInputURL = "";
 
     } catch (err) {
-      const message = ["Failed to add source.", "<Todo: Show reason>"];
+      const reason = formatErrorMessage(err);
+      const message = ["Failed to add source.", reason];
       const action = { text: "View details" };
-      createAlert("danger", message, "emoji-frown", null, action, new Error(err));
+      const error = err instanceof Error ? err : new Error(reason);
+      createAlert("danger", message, "emoji-frown", null, action, error);
     } finally {
       this._addSourceInProgress = false;
     }

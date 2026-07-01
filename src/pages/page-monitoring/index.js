@@ -719,21 +719,30 @@ class MonitoringPage extends LitElement {
     // Use stats metrics if available, otherwise create placeholders from manifest
     const metricsToShow = visibleMetrics
       .map(metricName => {
+        const manifestMetric = manifestMetrics.find(m => m.name === metricName);
+        let metric = null;
+
         // If pup is running, use actual stats
         if (isRunning && pup.stats?.metrics) {
-          return pup.stats.metrics.find(m => m.name === metricName);
+          metric = pup.stats.metrics.find(m => m.name === metricName);
         }
+
         // Otherwise, create placeholder from manifest
-        const manifestMetric = manifestMetrics.find(m => m.name === metricName);
-        if (manifestMetric) {
-          return {
+        if (!metric && manifestMetric) {
+          metric = {
             name: manifestMetric.name,
             label: manifestMetric.label,
             type: manifestMetric.type,
             values: []
           };
         }
-        return null;
+
+        if (!metric) return null;
+
+        return {
+          ...metric,
+          label: metric.label || manifestMetric?.label || manifestMetric?.name || metric.name,
+        };
       })
       .filter(Boolean);
 
@@ -764,12 +773,17 @@ class MonitoringPage extends LitElement {
         </div>
         <div class="metrics-container ${hasMany ? 'scrollable' : ''}">
           ${metricsToShow.map(metric => html`
-            <x-metric .metric=${{
-              name: metric.name,
-              label: metric.label,
-              type: metric.type,
-              values: metric.values || []
-            }}></x-metric>
+            <div class="metric-container">
+              <div class="metric-label" title=${metric.label || metric.name || ''}>
+                ${metric.label ?? metric.name ?? ''}
+              </div>
+              <x-metric .metric=${{
+                name: metric.name,
+                label: metric.label,
+                type: metric.type,
+                values: metric.values || []
+              }}></x-metric>
+            </div>
           `)}
         </div>
         ${this.editMode ? html`
@@ -1378,11 +1392,27 @@ class MonitoringPage extends LitElement {
       flex-wrap: wrap;
     }
 
-    .metrics-container x-metric {
+    .metrics-container .metric-container {
+      display: flex;
+      flex-direction: column;
       flex: 0 1 auto;
+      width: 200px;
       min-width: 0;
-      max-width: 200px;
-      height: auto;
+    }
+
+    .metrics-container .metric-label {
+      font-size: var(--metric-label-size, 0.8rem);
+      font-weight: 600;
+      color: #07ffae;
+      margin: 0 0 0.35rem 0;
+      user-select: text;
+      flex: 0 0 auto;
+    }
+
+    .metrics-container x-metric {
+      flex: 1 1 auto;
+      width: 100%;
+      min-width: 0;
       --metric-padding: 0.5em;
       --metric-sparkline-height: 60px;
       --metric-label-size: 0.8rem;
@@ -1400,7 +1430,7 @@ class MonitoringPage extends LitElement {
       padding-bottom: 1.5rem;
     }
 
-    .metrics-container.scrollable x-metric {
+    .metrics-container.scrollable .metric-container {
       scroll-snap-align: start;
       flex-shrink: 0;
     }

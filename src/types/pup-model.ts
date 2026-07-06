@@ -28,23 +28,40 @@ export interface PupDefinitionVersion {
 }
 
 /**
- * A store-listing pup definition (an entry of a source's `pups` map from
- * GET /sources/store), as enriched by pkgController.handleSourcesResponse
- * with its lookup key and owning source.
+ * A raw store-listing pup entry (a value of a source's `pups` map from
+ * GET /sources/store), before pkgController enriches it with its lookup key
+ * and owning source.
  */
-export interface PupDefinition {
-  key?: string;
+export interface StoreListingPupData {
   name?: string;
   latestVersion?: string;
   logoBase64?: string;
   icon?: string;
   versions?: Record<string, PupDefinitionVersion>;
-  source?: {
-    id: string;
-    name?: string;
-    location?: string;
-    type?: string;
-  };
+  [key: string]: unknown;
+}
+
+/** A single source entry of the GET /sources/store response map. */
+export interface SourceData {
+  name?: string;
+  location?: string;
+  type?: string;
+  error?: string | null;
+  pups?: Record<string, StoreListingPupData>;
+  [key: string]: unknown;
+}
+
+/** The GET /sources/store response, keyed by source id. */
+export type SourceMap = Record<string, SourceData>;
+
+/**
+ * A store-listing pup definition, as enriched by
+ * pkgController.handleSourcesResponse with its lookup key and owning source
+ * (the source's own data minus its `pups` map).
+ */
+export interface PupDefinition extends StoreListingPupData {
+  key?: string;
+  source?: { id: string } & Omit<SourceData, "pups">;
 }
 
 /** The enriched pup model held in pkgController.pups. */

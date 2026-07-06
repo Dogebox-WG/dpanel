@@ -1,6 +1,35 @@
 import { html, nothing } from "/lib/lit-all.js";
 import "/components/views/confirmation-prompt/index.js";
 
+type SlDialogEl = HTMLElement & {
+  label: string;
+  noHeader: boolean;
+  show: () => void;
+  hide: () => void;
+};
+
+type ConfirmationPromptEl = HTMLElement & {
+  title: string;
+  description: string;
+  topButtonText: string;
+  topButtonVariant: string;
+  bottomButtonText: string;
+  bottomButtonVariant: string;
+  topButtonClick: () => void;
+  bottomButtonClick: () => void;
+};
+
+export interface AreYouSureOptions {
+  title?: string;
+  description?: string;
+  topButtonText?: string;
+  topButtonVariant?: string;
+  topButtonClick?: () => void;
+  bottomButtonText?: string;
+  bottomButtonVariant?: string;
+  bottomButtonClick?: () => void;
+}
+
 export function areYouSure({ 
   title = 'Are you sure?',
   description = '',
@@ -10,20 +39,20 @@ export function areYouSure({
   bottomButtonText = 'Cancel',
   bottomButtonVariant = 'text',
   bottomButtonClick = () => {}
-}) {
+}: AreYouSureOptions) {
   if (!document.body.hasAttribute('listener-on-confirmation-dialog')) {
     document.body.addEventListener('sl-after-hide', closeConfirmationDialog);
-    document.body.setAttribute('listener-on-confirmation-dialog', true);
+    document.body.setAttribute('listener-on-confirmation-dialog', 'true');
   }
 
   // Dialog element
-  const dialog = document.createElement('sl-dialog');
+  const dialog = document.createElement('sl-dialog') as SlDialogEl;
   dialog.classList.add("confirmation-dialog");
   dialog.label = '';
   dialog.noHeader = true;
 
   // Create confirmation prompt
-  const confirmationPrompt = document.createElement('x-confirmation-prompt');
+  const confirmationPrompt = document.createElement('x-confirmation-prompt') as ConfirmationPromptEl;
   confirmationPrompt.title = title;
   confirmationPrompt.description = description;
   confirmationPrompt.topButtonText = topButtonText;
@@ -47,8 +76,9 @@ export function areYouSure({
   dialog.show();
 }
 
-function closeConfirmationDialog(e) {
-  if (e.target.classList.contains('confirmation-dialog')) {
-    e.target.remove();
+function closeConfirmationDialog(e: Event) {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains('confirmation-dialog')) {
+    target.remove();
   }
 }

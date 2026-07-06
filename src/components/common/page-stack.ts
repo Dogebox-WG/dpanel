@@ -6,6 +6,8 @@ class PageStack extends LitElement {
 
   static properties = {}
 
+  stack: unknown[];
+
   constructor() {
     super();
     this.stack = [];

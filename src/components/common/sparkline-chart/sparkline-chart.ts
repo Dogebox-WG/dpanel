@@ -2,6 +2,16 @@ import { LitElement, html, css } from '/lib/lit-all.js';
 import sparkline from '@fnando/sparkline';
 import { generateMockSparklineData } from './mocks/sparkline.mocks.js';
 
+interface SparklinePoint {
+  date: string;
+  value: number;
+}
+
+interface SparklineOptions {
+  onmousemove?: (event: MouseEvent, datapoint: SparklinePoint | undefined) => void;
+  onmouseout?: (event?: Event) => void;
+}
+
 class SparklineChart extends LitElement {
   static properties = {
     data: { type: Array },
@@ -9,6 +19,13 @@ class SparklineChart extends LitElement {
     disabled: { type: Boolean },
     mock: { type: Boolean }
   };
+
+  declare data: SparklinePoint[];
+  declare label: string | undefined;
+  declare disabled: boolean | undefined;
+  declare mock: boolean | undefined;
+  dataToUse: SparklinePoint[];
+  options: SparklineOptions;
 
   static styles = css`
     :host {
@@ -54,8 +71,9 @@ class SparklineChart extends LitElement {
     this.options = {
       onmousemove: (event, datapoint) => {
         if (this.disabled || !datapoint) return;
-        const tooltip = this.shadowRoot.querySelector('.tooltip');
-        
+        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
+        if (!tooltip) return;
+
         tooltip.style.display = 'block';
         tooltip.textContent = `${datapoint.date}: ${datapoint.value}%`;
         tooltip.style.top = `${event.offsetY}px`;
@@ -63,7 +81,8 @@ class SparklineChart extends LitElement {
       },
       onmouseout: () => {
         if (this.disabled) return;
-        const tooltip = this.shadowRoot.querySelector('.tooltip');
+        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
+        if (!tooltip) return;
         tooltip.style.display = 'none';
       }
     };
@@ -86,22 +105,22 @@ class SparklineChart extends LitElement {
     `;
   }
 
-  handleMouseMove(event) {
+  handleMouseMove(event: MouseEvent) {
     // Delegate to sparkline's mousemove handler if options are set
     if (this.options.onmousemove) {
-      const datapoint = this.dataToUse[event.detail.index];
+      const datapoint = this.dataToUse[(event as MouseEvent & { detail: { index: number } }).detail.index];
       this.options.onmousemove(event, datapoint);
     }
   }
 
-  handleMouseOut(event) {
+  handleMouseOut(event: Event) {
     // Delegate to sparkline's mouseout handler if options are set
     if (this.options.onmouseout) {
       this.options.onmouseout(event);
     }
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('data') || changedProperties.has('mock')) {
       this.drawSparkline();
     }
@@ -115,9 +134,10 @@ class SparklineChart extends LitElement {
       this.dataToUse = generateMockSparklineData(mockDataCount);
     }
 
-    const svg = this.shadowRoot.querySelector('svg[part="sparkline-svg"]');
+    const svg = this.shadowRoot?.querySelector('svg[part="sparkline-svg"]');
+    if (!svg) return;
     // Pass options to the sparkline function
-    sparkline(svg, this.dataToUse, this.options);
+    sparkline(svg as SVGSVGElement, this.dataToUse, this.options);
   }
 }
 

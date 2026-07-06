@@ -5,6 +5,9 @@ class RenderCount extends LitElement {
     message: { type: String, reflect: true }
   }
 
+  renderCount: number;
+  declare message: string;
+
   constructor() {
     super();
     this.renderCount = 0;

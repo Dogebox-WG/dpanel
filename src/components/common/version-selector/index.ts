@@ -8,6 +8,8 @@ import {
  * Version Selector Component
  * A reusable dropdown for selecting versions with automatic "latest" marking
  */
+type VersionItem = string | { version: string };
+
 class VersionSelector extends LitElement {
   static get properties() {
     return {
@@ -19,6 +21,13 @@ class VersionSelector extends LitElement {
       placeholder: { type: String },
     };
   }
+
+  declare versions: VersionItem[];
+  declare selectedVersion: string;
+  declare latestVersion: string;
+  declare disabled: boolean;
+  declare size: string;
+  declare placeholder: string;
 
   constructor() {
     super();
@@ -40,12 +49,12 @@ class VersionSelector extends LitElement {
     this.removeEventListener("sl-hide", this._handleHide);
   }
 
-  _handleHide(e) {
+  _handleHide(e: Event) {
     e.stopPropagation();
   }
 
-  _handleChange(e) {
-    const value = e.target.value;
+  _handleChange(e: Event) {
+    const value = (e.target as HTMLInputElement).value;
     this.dispatchEvent(new CustomEvent('version-change', {
       detail: { version: value },
       bubbles: true,
@@ -56,7 +65,7 @@ class VersionSelector extends LitElement {
   /**
    * Get version string from version item (handles both string and object)
    */
-  _getVersionString(version) {
+  _getVersionString(version: VersionItem): string {
     return typeof version === 'string' ? version : version.version;
   }
 

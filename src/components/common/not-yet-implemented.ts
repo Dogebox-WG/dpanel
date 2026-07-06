@@ -1,16 +1,22 @@
 import { html, nothing } from "/lib/lit-all.js";
 
-export function notYet(event) {
+type SlDialogEl = HTMLElement & {
+  label: string;
+  show: () => void;
+  hide: () => void;
+};
+
+export function notYet(event?: Event) {
   event && event.preventDefault && event.preventDefault();
   event && event.stopPropagation && event.stopPropagation();
 
   if (!document.body.hasAttribute('listener-on-not-yet-dialog')) {
     document.body.addEventListener('sl-after-hide', closeNotYetDialog);
-    document.body.setAttribute('listener-on-not-yet-dialog', true);
+    document.body.setAttribute('listener-on-not-yet-dialog', 'true');
   }
 
   // Dialog element
-  const dialog = document.createElement('sl-dialog');
+  const dialog = document.createElement('sl-dialog') as SlDialogEl;
   dialog.classList.add("not-yet-dialog");
   dialog.label = ''
 
@@ -31,15 +37,16 @@ export function notYet(event) {
 
   // Close handling
   const closeButton = dialog.querySelector('sl-button.close');
-  closeButton.addEventListener('click', () => dialog.hide());
+  closeButton?.addEventListener('click', () => dialog.hide());
 
   document.body.append(dialog);
   dialog.show();
 }
 
 // Responsible for cleaning up the DOM after closing an error dialog
-function closeNotYetDialog(e) {
-  if (e.target.classList.contains('not-yet-dialog')) {
-    e.target.remove();
+function closeNotYetDialog(e: Event) {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains('not-yet-dialog')) {
+    target.remove();
   }
 }

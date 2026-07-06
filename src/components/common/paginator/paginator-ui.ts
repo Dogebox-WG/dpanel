@@ -39,6 +39,12 @@ class PaginatorUI extends LitElement {
     `;
   }
 
+  declare currentPage: number;
+  declare totalPages: number;
+  declare onNext: (() => void) | undefined;
+  declare onPrev: (() => void) | undefined;
+  declare disabled: boolean | undefined;
+
   constructor() {
     super();
     this.currentPage = 1;

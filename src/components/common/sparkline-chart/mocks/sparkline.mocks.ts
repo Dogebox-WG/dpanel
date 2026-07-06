@@ -1,5 +1,5 @@
-export function generateMockSparklineData(count) {
-  const items = [];
+export function generateMockSparklineData(count: number) {
+  const items: { date: string; value: number }[] = [];
   const startDate = new Date();
 
   for (let i = 0; i < count; i++) {

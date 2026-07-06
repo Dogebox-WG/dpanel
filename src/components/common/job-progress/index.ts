@@ -3,6 +3,13 @@ import { timeAgo, formatDateTime } from '/utils/time-format.js';
 import { isDeletableJobStatus } from '/controllers/jobs/status.js';
 import { store } from '/state/store.js';
 import '/components/views/x-log-viewer/index.js';
+import type { JobRecord } from '/types/jobs';
+
+/** Accepts real JobRecords and looser mock jobs (numeric ids). */
+type JobLike = Partial<Omit<JobRecord, 'id'>> & {
+  id?: string | number;
+  displayName?: string;
+};
 
 class JobProgress extends LitElement {
   static properties = {
@@ -10,6 +17,11 @@ class JobProgress extends LitElement {
     expanded: { type: Boolean },
     initiallyExpanded: { type: Boolean }
   };
+
+  declare job: JobLike | undefined;
+  declare expanded: boolean;
+  declare initiallyExpanded: boolean;
+  _didAutoExpand: boolean;
   
   static styles = css`
     :host {
@@ -302,7 +314,7 @@ class JobProgress extends LitElement {
     this._didAutoExpand = false;
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('job')) {
       this._didAutoExpand = false;
     }
@@ -312,14 +324,14 @@ class JobProgress extends LitElement {
     }
   }
   
-  toggleExpanded(e) {
+  toggleExpanded(e: Event) {
     e.stopPropagation();
     this.expanded = !this.expanded;
   }
   
   
-  getStatusIcon(status) {
-    const icons = {
+  getStatusIcon(status: string | undefined) {
+    const icons: Record<string, string> = {
       in_progress: 'arrow-repeat',
       completed: 'check-circle-fill',
       failed: 'exclamation-triangle-fill',
@@ -327,10 +339,10 @@ class JobProgress extends LitElement {
       queued: 'clock',
       cancelled: 'x-circle'
     };
-    return icons[status] || 'question-circle';
+    return icons[status ?? ''] || 'question-circle';
   }
 
-  handleDeleteClick(e) {
+  handleDeleteClick(e: Event) {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent('job-delete', {
       detail: { job: this.job },
@@ -366,7 +378,7 @@ class JobProgress extends LitElement {
             <div class="job-percentage">${isIndeterminate ? '...' : `${progress}%`}</div>
           </div>
 
-          ${isDeletableJobStatus(status) ? html`
+          ${status && isDeletableJobStatus(status) ? html`
             <div class="job-actions">
               <sl-icon-button
                 name="trash"

@@ -10,6 +10,10 @@ class TagSet extends LitElement {
     }
   }
 
+  declare tags: Record<string, unknown> | undefined;
+  declare max: number | undefined;
+  declare highlight: boolean | undefined;
+
   render() {
     if (!this.tags || typeof this.tags !== 'object' || Object.keys(this.tags).length === 0) {
       return nothing;

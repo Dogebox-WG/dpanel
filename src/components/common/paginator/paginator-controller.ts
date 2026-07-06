@@ -1,5 +1,25 @@
-export class PaginationController {
-  constructor(host, data = [], itemsPerPage = 10, options) {
+interface PaginationHost {
+  requestUpdate(): void;
+}
+
+export interface PaginationOptions<T> {
+  initialSort?: (a: T, b: T) => number;
+}
+
+export class PaginationController<T = unknown> {
+  host: PaginationHost;
+  data: T[];
+  initial_data: T[];
+  itemsPerPage: number;
+  currentPage: number;
+  options?: PaginationOptions<T>;
+
+  constructor(
+    host: PaginationHost,
+    data: T[] = [],
+    itemsPerPage = 10,
+    options?: PaginationOptions<T>,
+  ) {
     this.host = host;
     this.data = data;
     this.initial_data = data;
@@ -8,7 +28,7 @@ export class PaginationController {
     this.options = options;
   }
 
-  setData(newData) {
+  setData(newData: T[]) {
     if (this?.options?.initialSort) {
       const sorted = newData.sort(this.options.initialSort)
       this.data = sorted;
@@ -36,17 +56,17 @@ export class PaginationController {
     }
   }
 
-  getCurrentPageData() {
+  getCurrentPageData(): T[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const endIndex = startIndex + this.itemsPerPage;
     return this.data.slice(startIndex, endIndex);
   }
 
-  getTotalPages() {
+  getTotalPages(): number {
     return Math.ceil(this.data.length / this.itemsPerPage);
   }
 
-  setCurrentPage(page) {
+  setCurrentPage(page: number) {
     const totalPages = this.getTotalPages();
     if (page >= 1 && page <= totalPages) {
       this.currentPage = page;
@@ -54,7 +74,7 @@ export class PaginationController {
     }
   }
 
-  setFilter(filterFn) {
+  setFilter(filterFn?: ((item: T) => boolean) | null) {
     if (!filterFn) {
       this.data = this.initial_data;
       this.host.requestUpdate();

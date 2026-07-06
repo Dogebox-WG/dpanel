@@ -68,6 +68,10 @@ class RevealRow extends LitElement {
     }
   `;
 
+  declare label: string;
+  declare expanded: boolean;
+  declare hasOverflow: boolean;
+
   constructor() {
     super();
     this.label = "";
@@ -95,7 +99,7 @@ class RevealRow extends LitElement {
   }
 
   updateOverflowState() {
-    const bodyWrap = this.shadowRoot.querySelector(".body-wrap");
+    const bodyWrap = this.shadowRoot?.querySelector(".body-wrap") as HTMLElement | null;
     if (!bodyWrap) return;
 
     // Read the CSS variable incase it's been overridden, otherwise use the default.

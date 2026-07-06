@@ -1,17 +1,30 @@
 import { html, nothing } from "/lib/lit-all.js";
 
+type SlDialogEl = HTMLElement & {
+  label: string;
+  noHeader: boolean;
+  show: () => void;
+  hide: () => void;
+};
+
+export interface InstructionOptions {
+  img?: string;
+  text?: string;
+  subtext?: string;
+}
+
 export function instruction({ 
   img = '',
   text = '',
   subtext = ''
-}) {
+}: InstructionOptions) {
   if (!document.body.hasAttribute('listener-on-instruction-dialog')) {
     document.body.addEventListener('sl-after-hide', closeInstructionDialog);
-    document.body.setAttribute('listener-on-instruction-dialog', true);
+    document.body.setAttribute('listener-on-instruction-dialog', 'true');
   }
 
   // Dialog element
-  const dialog = document.createElement('sl-dialog');
+  const dialog = document.createElement('sl-dialog') as SlDialogEl;
   dialog.classList.add("instruction-dialog");
   dialog.label = '';
   dialog.noHeader = true;
@@ -50,8 +63,9 @@ export function instruction({
   dialog.show();
 }
 
-function closeInstructionDialog(e) {
-  if (e.target.classList.contains('instruction-dialog')) {
-    e.target.remove();
+function closeInstructionDialog(e: Event) {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains('instruction-dialog')) {
+    target.remove();
   }
 }

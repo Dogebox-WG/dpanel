@@ -10,6 +10,10 @@ class PageBanner extends LitElement {
     }
   }
 
+  declare title: string;
+  declare subtitle: string;
+  declare desc: string;
+
   constructor() {
     super();
     this.title = "";

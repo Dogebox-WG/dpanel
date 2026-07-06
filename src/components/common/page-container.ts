@@ -93,6 +93,14 @@ class PageContainer extends LitElement {
     router: { type: Object },
   }
 
+  declare pageTitle: string;
+  declare pageAction: string;
+  declare previousPath: string;
+  declare upwardPath: string;
+  declare transitioning: boolean;
+  declare router: { go: (path: string) => void } | null;
+  context: StoreSubscriber;
+
   constructor() {
     super();
     this.pageTitle = "";
@@ -110,11 +118,11 @@ class PageContainer extends LitElement {
     }, 50);
   }
 
-  async handleBackClick(e) {
+  async handleBackClick(e?: Event) {
     history.back();
   }
 
-  handleMenuClick(e) {
+  handleMenuClick(e?: Event) {
     store.updateState({ appContext: { menuVisible: !store.appContext.menuVisible }})
     this.dispatchEvent(new CustomEvent('menu-toggle-request', {
       detail: {},
@@ -123,8 +131,8 @@ class PageContainer extends LitElement {
     }));
   }
 
-  selectActionIcon(action) {
-    const actions = {
+  selectActionIcon(action: string) {
+    const actions: Record<string, string> = {
       back: "chevron-left",
       close: "x-lg"
     }
@@ -133,7 +141,7 @@ class PageContainer extends LitElement {
 
   render() {
     const { pageTitle, pageAction, handleBackClick, handleMenuClick } = this;
-    const { updateAvailable } = store.getContext('sys');
+    const updateAvailable = store.getContext('sys')?.updateAvailable;
     const showMenuDot = updateAvailable
 
     const pageActionEl = !pageAction ? nothing : html`
@@ -173,7 +181,12 @@ class PageContainer extends LitElement {
   }
 }
 
-function navigateBack(store, router) {
+interface NavigateBackStore {
+  appContext: { pathStack: string[]; upwardPathname?: string };
+  updateState: (partial: unknown) => void;
+}
+
+function navigateBack(store: NavigateBackStore, router: { go: (path: string) => void }) {
   // Retrieve path stack from the store
   const pathStack = store.appContext.pathStack;
 

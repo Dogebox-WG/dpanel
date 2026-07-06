@@ -10,6 +10,12 @@ class TextLoader extends LitElement {
     };
   }
 
+  declare texts: string[];
+  declare endText: string;
+  declare loop: boolean;
+  declare loopEnd: boolean | undefined;
+  currentTextIndex: number;
+
   constructor() {
     super();
     this.texts = [];
@@ -48,15 +54,16 @@ class TextLoader extends LitElement {
     `;
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has("texts")) {
       this.startAnimation();
     }
   }
 
   startAnimation() {
-    const textElement = this.shadowRoot.getElementById("animated-text");
-    const container = this.shadowRoot.getElementById("text-container");
+    const textElement = this.shadowRoot!.getElementById("animated-text");
+    const container = this.shadowRoot!.getElementById("text-container");
+    if (!textElement || !container) return;
 
     let count = 0;
     const updateText = () => {

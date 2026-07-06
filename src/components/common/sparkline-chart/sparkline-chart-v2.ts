@@ -2,6 +2,21 @@ import { LitElement, html, css } from '/lib/lit-all.js';
 import sparkline from '@fnando/sparkline';
 import { generateMockSparklineData } from './mocks/sparkline.mocks.js';
 
+/** A normalized chart point; ts is epoch ms, seconds, or a date string. */
+interface SparkPoint {
+  value: number;
+  ts?: number | string | null;
+}
+
+/** What the sparkline lib hands to onmousemove (loosely shaped). */
+type SparkDatapoint = number | (SparkPoint & { index?: number; y?: number; n?: number });
+
+interface SparklineV2Options {
+  onmousemove: (event: MouseEvent, datapoint: SparkDatapoint | null | undefined) => void;
+  onmouseout: () => void;
+  interactive: boolean;
+}
+
 class SparklineChart extends LitElement {
   static properties = {
     // accept real JS values only (no attribute deserialization)
@@ -11,6 +26,16 @@ class SparklineChart extends LitElement {
     disabled: { type: Boolean },
     mock: { type: Boolean }
   };
+
+  declare data: unknown;
+  declare label: string | undefined;
+  declare disabled: boolean | undefined;
+  declare mock: boolean | undefined;
+  _timestamps: (number | string | null)[];
+  /** Synthesized timestamp spacing (ms) when data has no timestamps. */
+  _fallbackStepMs: number;
+  options: SparklineV2Options;
+  resizeObserver: ResizeObserver;
 
   static styles = css`
     :host {
@@ -78,7 +103,7 @@ class SparklineChart extends LitElement {
     this.options = {
       onmousemove: (event, datapoint) => {
         if (this.disabled || datapoint == null) return;
-        const tooltip = this.shadowRoot.querySelector('.tooltip');
+        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
         if (!tooltip) return;
 
         const val =
@@ -87,7 +112,9 @@ class SparklineChart extends LitElement {
             : (datapoint.value ?? datapoint.y ?? datapoint.n);
 
         const idx =
-          datapoint && Number.isInteger(datapoint.index) ? datapoint.index : 0;
+          typeof datapoint === 'object' && Number.isInteger(datapoint.index)
+            ? datapoint.index as number
+            : 0;
 
         const ts = this._timestamps?.[idx];
         const tsLabel = this._fmtTs(ts);
@@ -121,7 +148,7 @@ class SparklineChart extends LitElement {
       },
       onmouseout: () => {
         if (this.disabled) return;
-        const tooltip = this.shadowRoot.querySelector('.tooltip');
+        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
         if (tooltip) tooltip.style.display = 'none';
       },
       interactive: true
@@ -158,7 +185,7 @@ class SparklineChart extends LitElement {
     `;
   }
 
-  updated(changed) {
+  updated(changed: Map<PropertyKey, unknown>) {
     super.updated(changed);
     if (changed.has('data') || changed.has('mock')) {
       setTimeout(() => this.drawSparkline(), 0);
@@ -167,23 +194,23 @@ class SparklineChart extends LitElement {
 
   drawSparkline() {
     // Normalize into [{ value, ts? }, ...]
-    const toPoints = (arrLike) => {
+    const toPoints = (arrLike: unknown): SparkPoint[] => {
       if (!arrLike) return [];
       if (typeof arrLike === 'string') {
         try { arrLike = JSON.parse(arrLike); } catch { /* ignore */ }
       }
 
-      const points = [];
+      const points: SparkPoint[] = [];
       const tsKeys = ['ts','time','timestamp','date','t'];
 
-      const pickTs = (obj) => {
+      const pickTs = (obj: Record<string, unknown> | null | undefined) => {
         if (!obj) return undefined;
         const k = tsKeys.find(k => obj[k] != null);
         return k ? obj[k] : undefined;
       };
 
-      for (const item of Array.from(arrLike)) {
-        let v, tVal;
+      for (const item of Array.from(arrLike as Iterable<unknown>)) {
+        let v: unknown, tVal: unknown;
 
         if (Array.isArray(item) && item.length >= 2) {
           // [timestamp, value]
@@ -191,10 +218,11 @@ class SparklineChart extends LitElement {
           v = item[1];
         } else if (item && typeof item === 'object') {
           // { value, ts/time/timestamp/... }
-          const key = ['value','v','n','val','y','x'].find(k => item[k] != null);
-          v = key ? item[key] : item;
-          tVal = pickTs(item);
-          if (tVal == null && item.meta) tVal = pickTs(item.meta);
+          const record = item as Record<string, unknown>;
+          const key = ['value','v','n','val','y','x'].find(k => record[k] != null);
+          v = key ? record[key] : item;
+          tVal = pickTs(record);
+          if (tVal == null && record.meta) tVal = pickTs(record.meta as Record<string, unknown>);
         } else {
           // primitive number/string
           v = item;
@@ -203,8 +231,8 @@ class SparklineChart extends LitElement {
         if (typeof v === 'string') v = v.replace(/[,\s%]/g, '');
         const n = Number(v);
         if (Number.isFinite(n)) {
-          const p = { value: n };
-          if (tVal != null) p.ts = tVal;
+          const p: SparkPoint = { value: n };
+          if (tVal != null) p.ts = tVal as number | string;
           points.push(p);
         }
       }
@@ -216,7 +244,7 @@ class SparklineChart extends LitElement {
       ? toPoints(generateMockSparklineData(10))
       : toPoints(this.data);
 
-    const svg = this.shadowRoot.querySelector('svg[part="sparkline-svg"]');
+    const svg = this.shadowRoot?.querySelector('svg[part="sparkline-svg"]') as SVGSVGElement | null;
     if (!svg) return;
 
     // Clear and compute concrete size the lib can read (width/height attributes)
@@ -264,7 +292,7 @@ class SparklineChart extends LitElement {
     }
   }
 
-  _fmtTs(ts) {
+  _fmtTs(ts: number | string | null | undefined): string {
     if (ts == null || ts === '') return 'n/a';
     // If numeric-ish, decide seconds vs ms
     if (typeof ts === 'number' || (typeof ts === 'string' && ts.trim !== undefined && ts.trim() !== '' && !isNaN(Number(ts)))) {

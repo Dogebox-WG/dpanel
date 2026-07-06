@@ -18,6 +18,19 @@ class ActionRow extends LitElement {
     };
   }
 
+  declare label: string;
+  declare prefix: string;
+  declare suffix: string;
+  declare trigger: ((e: Event, row: ActionRow) => void) | false;
+  declare variant: string | undefined;
+  declare loading: boolean | undefined;
+  declare href: string;
+  declare target: string;
+  declare disabled: boolean;
+  declare expandable: boolean;
+  declare expand: boolean;
+  declare dot: boolean | undefined;
+
   constructor() {
     super();
     this.label = "";
@@ -210,7 +223,7 @@ class ActionRow extends LitElement {
     }
   `;
 
-  handleClick = (e) => {
+  handleClick = (e: Event) => {
     if (this.expandable) {
       this.expand = !this.expand;
       this.dispatchEvent(

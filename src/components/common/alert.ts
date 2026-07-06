@@ -1,13 +1,37 @@
 import { html, nothing } from "/lib/lit-all.js";
 
-export function createAlert(variant, message, icon = 'info-circle', duration = 0, action, errorDetail) {
+type SlAlertEl = HTMLElement & {
+  variant: string;
+  closable: boolean;
+  duration: number;
+  toast: () => void;
+};
+
+type SlDialogEl = HTMLElement & {
+  label: string;
+  show: () => void;
+  hide: () => void;
+};
+
+export interface AlertAction {
+  text?: string;
+}
+
+export function createAlert(
+  variant: string,
+  message: string | string[],
+  icon = 'info-circle',
+  duration = 0,
+  action?: AlertAction,
+  errorDetail?: unknown,
+) {
   try {
     if (!document.body.hasAttribute('listener-on-sl-after-hide')) {
       document.body.addEventListener('sl-after-hide', closeErrorDialog);
-      document.body.setAttribute('listener-on-sl-after-hide', true);
+      document.body.setAttribute('listener-on-sl-after-hide', 'true');
     }
 
-    const alert = document.createElement('sl-alert');
+    const alert = document.createElement('sl-alert') as SlAlertEl;
     alert.variant = variant;
     alert.closable = true;
     if (duration) {
@@ -39,35 +63,35 @@ export function createAlert(variant, message, icon = 'info-circle', duration = 0
     if (action) {
       try {
         const anchor = alert.querySelector("a.more")
-        anchor.addEventListener("click", (e) => { e.preventDefault(); createMoreDetailDialog(messageEl, errorDetail) })
+        anchor?.addEventListener("click", (e) => { e.preventDefault(); createMoreDetailDialog(messageEl, errorDetail) })
       } catch (err) {
         console.error(err);
       }
     }
     alert.toast();
   } catch (alertError) {
-    console.warn('Failed to produce alert', { ...arguments });
+    console.warn('Failed to produce alert', { variant, message, icon, duration, action, errorDetail });
     console.error(alertError)
   }
 }
 
 // Utility function to escape HTML
-function escapeHtml(html) {
+function escapeHtml(html: string): string {
   const div = document.createElement('div');
   div.textContent = html;
   return div.innerHTML;
 }
 
-function createMoreDetailDialog(messageEl, providedError) {
+function createMoreDetailDialog(messageEl: string, providedError: unknown) {
   // Dialog element
-  const dialog = document.createElement('sl-dialog');
+  const dialog = document.createElement('sl-dialog') as SlDialogEl;
   dialog.label = 'Error details'
   dialog.classList.add("error-dialog");
   dialog.classList.add('above-toasts') // Dialogs usually sit below toasts in terms of z-index. This class styles them to sit above.
 
   const error = (providedError instanceof Error)
     ? providedError
-    : new Error(providedError);
+    : new Error(String(providedError));
 
   // Remove leading "Error:" if present
   const errorMessage = error.message.replace(/^Error:\s*/, '');
@@ -97,15 +121,16 @@ function createMoreDetailDialog(messageEl, providedError) {
 
   // Close handling
   const closeButton = dialog.querySelector('sl-button.close');
-  closeButton.addEventListener('click', () => dialog.hide());
+  closeButton?.addEventListener('click', () => dialog.hide());
 
   document.body.append(dialog);
   dialog.show();
 }
 
 // Responsible for cleaning up the DOM after closing an error dialog
-function closeErrorDialog(e) {
-  if (e.target.classList.contains('error-dialog')) {
-    e.target.remove();
+function closeErrorDialog(e: Event) {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains('error-dialog')) {
+    target.remove();
   }
 }

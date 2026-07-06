@@ -149,6 +149,11 @@ class WelcomeModal extends LitElement {
     };
   }
 
+  declare open: boolean;
+  declare onClose: () => void;
+  declare selectedOption: string | null;
+  declare isInstalling: boolean;
+
   constructor() {
     super();
     this.open = false;
@@ -159,9 +164,9 @@ class WelcomeModal extends LitElement {
 
   firstUpdated() {
     // Prevent closing when clicking outside
-    const dialog = this.shadowRoot.querySelector('sl-dialog');
-    dialog.addEventListener('sl-request-close', (event) => {
-      if (event.detail.source === 'overlay') {
+    const dialog = this.shadowRoot?.querySelector('sl-dialog');
+    dialog?.addEventListener('sl-request-close', (event: Event) => {
+      if ((event as CustomEvent<{ source: string }>).detail.source === 'overlay') {
         event.preventDefault();
       }
     });
@@ -171,7 +176,7 @@ class WelcomeModal extends LitElement {
     try {
       await postWelcomeComplete();
       
-      if (this.selectedOption !== 'custom') {
+      if (this.selectedOption && this.selectedOption !== 'custom') {
         await postInstallPupCollection(this.selectedOption);
       }
       
@@ -181,7 +186,7 @@ class WelcomeModal extends LitElement {
     }
   }
 
-  handleOptionSelect(option) {
+  handleOptionSelect(option: string) {
     this.selectedOption = option;
   }
 
@@ -285,18 +290,19 @@ customElements.define('x-welcome-modal', WelcomeModal);
 export function showWelcomeModal() {
   if (!document.body.hasAttribute('listener-on-welcome-dialog')) {
     document.body.addEventListener('sl-after-hide', closeWelcomeDialog);
-    document.body.setAttribute('listener-on-welcome-dialog', true);
+    document.body.setAttribute('listener-on-welcome-dialog', 'true');
   }
 
-  const dialog = document.createElement('x-welcome-modal');
+  const dialog = document.createElement('x-welcome-modal') as WelcomeModal;
   dialog.open = true;
   dialog.onClose = () => dialog.open = false;
   
   document.body.append(dialog);
 }
 
-function closeWelcomeDialog(event) {
-  if (event.target.tagName.toLowerCase() === 'x-welcome-modal') {
-    event.target.remove();
+function closeWelcomeDialog(event: Event) {
+  const target = event.target as HTMLElement;
+  if (target.tagName.toLowerCase() === 'x-welcome-modal') {
+    target.remove();
   }
 }

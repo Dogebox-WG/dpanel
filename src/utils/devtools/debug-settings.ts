@@ -17,6 +17,10 @@ import {
   clearMockPups,
 } from "/api/sidebar-pups/sidebar-pups.mocks.js";
 import { compareVersions } from "/utils/version.js";
+import type { MockDescriptor } from "/api/client.js";
+import type { NetworkContext } from "/state/store.js";
+import type { MockPupUpdatesConfig } from "/api/pup-updates/pup-updates.mocks.js";
+import type { MockSidebarConfig } from "/api/sidebar-pups/sidebar-pups.mocks.js";
 
 class DebugSettingsDialog extends LitElement {
   static properties = {
@@ -25,6 +29,13 @@ class DebugSettingsDialog extends LitElement {
     _sidebarPupsConfig: { type: Object },
     _newVersionInput: { type: String },
   };
+
+  context: StoreSubscriber;
+  isOpen: boolean;
+  mockOptions: MockDescriptor[];
+  _pupUpdateConfig: MockPupUpdatesConfig;
+  _sidebarPupsConfig: MockSidebarConfig;
+  _newVersionInput: string;
 
   constructor() {
     super();
@@ -45,8 +56,8 @@ class DebugSettingsDialog extends LitElement {
     this._newVersionInput = '';
   }
 
-  get groupedOptions() {
-    return this.mockOptions.reduce((acc, option) => {
+  get groupedOptions(): Record<string, MockDescriptor[]> {
+    return this.mockOptions.reduce((acc: Record<string, MockDescriptor[]>, option) => {
       if (!acc[option.group]) {
         acc[option.group] = [];
       }
@@ -105,35 +116,34 @@ class DebugSettingsDialog extends LitElement {
     super.connectedCallback();
 
     // Prevent the dialog from closing when the user clicks on the overlay
-    const dialog = this.shadowRoot.querySelector(".dialog-deny-close");
     this.addEventListener("sl-request-close", this.denyClose);
   }
 
-  handleToggle(event) {
-    const changes = { networkContext: {} };
-    changes.networkContext[event.target.name] = event.target.checked;
+  handleToggle(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const changes = { networkContext: { [target.name]: target.checked } as Partial<NetworkContext> };
     store.updateState(changes);
   }
 
-  handleInput(event) {
-    const changes = { networkContext: {} };
-    changes.networkContext[event.target.name] = event.target.value;
+  handleInput(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const changes = { networkContext: { [target.name]: target.value } as unknown as Partial<NetworkContext> };
     store.updateState(changes);
   }
 
-  handleMockToggle(event) {
-    const changes = { networkContext: {} };
-    const uniqueMockID = `mock::${event.target.getAttribute('group')}::${event.target.getAttribute('name')}::${event.target.getAttribute('method')}`
-    changes.networkContext[uniqueMockID] = event.target.checked;
+  handleMockToggle(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const uniqueMockID = `mock::${target.getAttribute('group')}::${target.getAttribute('name')}::${target.getAttribute('method')}`
+    const changes = { networkContext: { [uniqueMockID]: target.checked } as Partial<NetworkContext> };
     store.updateState(changes);
   }
 
   toggleExpandable() {
-    this.shadowRoot.querySelector('.expandable').classList.toggle('hidden');
+    this.shadowRoot?.querySelector('.expandable')?.classList.toggle('hidden');
   }
 
   // Pup Updates Mock Config handlers
-  handlePupUpdateConfigChange(field, value) {
+  handlePupUpdateConfigChange(field: keyof MockPupUpdatesConfig, value: unknown) {
     this._pupUpdateConfig = { ...this._pupUpdateConfig, [field]: value };
     saveMockConfig(this._pupUpdateConfig);
   }
@@ -156,7 +166,7 @@ class DebugSettingsDialog extends LitElement {
     this._newVersionInput = '';
   }
 
-  handleRemoveVersion(version) {
+  handleRemoveVersion(version: string) {
     const versions = this._pupUpdateConfig.availableVersions.filter(v => v.version !== version);
     this._pupUpdateConfig = { ...this._pupUpdateConfig, availableVersions: versions };
     saveMockConfig(this._pupUpdateConfig);
@@ -167,15 +177,15 @@ class DebugSettingsDialog extends LitElement {
     this._pupUpdateConfig = getMockConfig();
   }
 
-  handleAddSidebarPups(count) {
+  handleAddSidebarPups(count: number) {
     this._sidebarPupsConfig = addMockPups(count);
   }
 
-  handleRenameSidebarPup(id, name) {
+  handleRenameSidebarPup(id: string, name: string) {
     this._sidebarPupsConfig = renameMockPup(id, name);
   }
 
-  handleRemoveSidebarPup(id) {
+  handleRemoveSidebarPup(id: string) {
     this._sidebarPupsConfig = removeMockPup(id);
   }
 
@@ -238,7 +248,7 @@ class DebugSettingsDialog extends LitElement {
                                 style="flex: 1;"
                                 value=${pup.name}
                                 ?disabled=${!networkContext.useMocks}
-                                @sl-change=${(e) => this.handleRenameSidebarPup(pup.id, e.target.value)}
+                                @sl-change=${(e: Event) => this.handleRenameSidebarPup(pup.id, (e.target as HTMLInputElement).value)}
                               ></sl-input>
                               <sl-icon-button
                                 name="x-lg"
@@ -263,7 +273,7 @@ class DebugSettingsDialog extends LitElement {
                         size="small"
                         value=${this._pupUpdateConfig.currentVersion}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e) => this.handlePupUpdateConfigChange('currentVersion', e.target.value)}
+                        @sl-change=${(e: Event) => this.handlePupUpdateConfigChange('currentVersion', (e.target as HTMLInputElement).value)}
                       ></sl-input>
                     </div>
                     
@@ -273,7 +283,7 @@ class DebugSettingsDialog extends LitElement {
                         size="small"
                         value=${this._pupUpdateConfig.latestVersion}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e) => this.handlePupUpdateConfigChange('latestVersion', e.target.value)}
+                        @sl-change=${(e: Event) => this.handlePupUpdateConfigChange('latestVersion', (e.target as HTMLInputElement).value)}
                       ></sl-input>
                     </div>
                     
@@ -282,7 +292,7 @@ class DebugSettingsDialog extends LitElement {
                         size="small"
                         ?checked=${this._pupUpdateConfig.updateAvailable}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e) => this.handlePupUpdateConfigChange('updateAvailable', e.target.checked)}
+                        @sl-change=${(e: Event) => this.handlePupUpdateConfigChange('updateAvailable', (e.target as HTMLInputElement).checked)}
                       >Update Available</sl-switch>
                     </div>
                     
@@ -312,8 +322,8 @@ class DebugSettingsDialog extends LitElement {
                         style="flex: 1;"
                         value=${this._newVersionInput}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-input=${(e) => this._newVersionInput = e.target.value}
-                        @keydown=${(e) => e.key === 'Enter' && this.handleAddVersion()}
+                        @sl-input=${(e: Event) => this._newVersionInput = (e.target as HTMLInputElement).value}
+                        @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this.handleAddVersion()}
                       ></sl-input>
                       <sl-button size="small" ?disabled=${!networkContext.useMocks} @click=${this.handleAddVersion}>Add</sl-button>
                     </div>
@@ -322,7 +332,7 @@ class DebugSettingsDialog extends LitElement {
                   </div>
                 </div>
               </div>
-              <small>Important: Changes require <a href="" @click=${(e) => { e.preventDefault(); window.location.reload()}}>refresh</a> to kick in</small>
+              <small>Important: Changes require <a href="" @click=${(e: Event) => { e.preventDefault(); window.location.reload()}}>refresh</a> to kick in</small>
             </div>
           </div>
 
@@ -471,18 +481,20 @@ class DebugSettingsDialog extends LitElement {
   }
 
   disconnectedCallback() {
-    dialog = this.shadowRoot.querySelector(".dialog-deny-close");
-    dialog.removeEventListener("sl-request-close", this.denyClose);
+    // The listener was added on the host element in connectedCallback, so
+    // remove it from the host too. (Previously this assigned to an
+    // undeclared `dialog` variable, which threw at runtime.)
+    this.removeEventListener("sl-request-close", this.denyClose);
     super.disconnectedCallback();
   }
 
-  denyClose = (event) => {
-    if (event.detail.source === "overlay") {
+  denyClose = (event: Event) => {
+    if ((event as CustomEvent<{ source: string }>).detail.source === "overlay") {
       event.preventDefault();
     }
   };
 
-  handleSubmit(event) {
+  handleSubmit(event: Event) {
     // Prevent the form from submitting
     event.preventDefault();
   }
@@ -517,6 +529,15 @@ class MockOption extends LitElement {
       onChange: { type: Object }
     }
   }
+
+  declare name: string;
+  method?: string;
+  group?: string;
+  checked?: boolean;
+  disabled?: boolean;
+  onChange?: (event: Event) => void;
+  tagColors: Record<string, string>;
+
   constructor() {
     super()
     this.tagColors = {

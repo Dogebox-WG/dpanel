@@ -15,11 +15,24 @@ import { isActiveJobStatus } from '/controllers/jobs/status.js';
 import { pupUpdates } from '/state/pup-updates.js';
 import { store } from '/state/store.js';
 
+interface LogEntry {
+  type: string;
+  args: unknown[];
+}
+
 class DebugPanel extends LitElement {
   static properties = {
     isVisible: { type: Boolean },
     _hook_bump_version: { type: Boolean },
   };
+
+  isVisible: boolean;
+  _hook_bump_version?: boolean;
+  logMessages: LogEntry[];
+
+  // Bound in via bindToClass(devToolFunctions, this) in the constructor.
+  declare emitSyntheticSystemProgress: () => void;
+  declare emitSyntheticUpdateAvailable: () => void;
 
   static styles = css`
     :host {
@@ -115,25 +128,33 @@ class DebugPanel extends LitElement {
     };
   }
 
+  // Disconnect custom listeners when the element is removed to avoid memory
+  // leaks. (There were previously two disconnectedCallback definitions; the
+  // second silently replaced this one, so the keydown listener leaked.)
   disconnectedCallback() {
     document.removeEventListener("keydown", this.toggleVisibility);
     super.disconnectedCallback();
+    // console.log = this.originalConsoleLog;
+    // console.info = this.originalConsoleInfo;
+    // console.error = this.originalConsoleError;
   }
 
-  toggleVisibility = (event, force) => {
+  toggleVisibility = (event: KeyboardEvent | null, force?: "open" | "close") => {
     if (!event && force === "close") {
       this.isVisible = false;
     }
     if (!event && force === "open") {
       this.isVisible = true;
     }
-    if (!force && event.ctrlKey && event.key === "l") {
+    if (!force && event && event.ctrlKey && event.key === "l") {
       this.isVisible = !this.isVisible;
     }
   };
 
   showSettingsDialog() {
-    this.shadowRoot.querySelector("debug-settings-dialog").openDialog();
+    const dialog = this.shadowRoot?.querySelector("debug-settings-dialog") as
+      (HTMLElement & { openDialog: () => void }) | null;
+    dialog?.openDialog();
   }
 
   handleBumpVersionToggle() {
@@ -173,7 +194,7 @@ class DebugPanel extends LitElement {
       });
       alert.innerHTML = `
         <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-        Failed to check for updates: ${error.message}
+        Failed to check for updates: ${(error as Error).message}
       `;
       document.body.appendChild(alert);
       alert.toast();
@@ -227,9 +248,11 @@ class DebugPanel extends LitElement {
     ];
     
     const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
-    
-    if (window.__jobWS) {
-      window.__jobWS.createMockJob(randomJob.displayName);
+
+    const jobWS = (window as unknown as Record<string, unknown>).__jobWS as
+      { createMockJob: (displayName: string) => void } | undefined;
+    if (jobWS) {
+      jobWS.createMockJob(randomJob.displayName);
     } else {
       alert('Job WebSocket not initialized. Make sure "Network Mocks" is enabled.');
     }
@@ -242,7 +265,7 @@ class DebugPanel extends LitElement {
     }
 
     try {
-      const result = await createOrphanedJobCandidate();
+      const result = await createOrphanedJobCandidate() as { job?: { id?: string } } | undefined;
       const alert = Object.assign(document.createElement('sl-alert'), {
         variant: 'success',
         duration: 5000,
@@ -263,7 +286,7 @@ class DebugPanel extends LitElement {
       });
       alert.innerHTML = `
         <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-        Failed to create orphaned job candidate: ${error.message}
+        Failed to create orphaned job candidate: ${(error as Error).message}
       `;
       document.body.appendChild(alert);
       alert.toast();
@@ -366,14 +389,6 @@ class DebugPanel extends LitElement {
         <debug-settings-dialog></debug-settings-dialog>
       </div>
     `;
-  }
-
-  // Disconnect custom methods when element is removed to avoid memory leaks
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    // console.log = this.originalConsoleLog;
-    // console.info = this.originalConsoleInfo;
-    // console.error = this.originalConsoleError;
   }
 }
 

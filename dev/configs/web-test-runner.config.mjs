@@ -13,7 +13,7 @@ const shoelaceCdnRoot = join(rootNodeModules, '@shoelace-style/shoelace/cdn');
 
 export default {
   rootDir: '../src/',
-  files: ['../src/components/**/*.test.*'],
+  files: ['../src/**/*.test.*'],
   concurrentBrowsers: 1,
   concurrency: 2,
   nodeResolve: {

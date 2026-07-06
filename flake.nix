@@ -5,7 +5,9 @@
     playwright.url  = "github:pietdevries94/playwright-web-flake";
 
     dogeboxd-src = {
-      url = "github:Dogebox-WG/dogeboxd/feat/proto";
+      # Pinned to the DTO schema branch while it is in review; move to main
+      # once dogeboxd PRs land.
+      url = "github:Dogebox-WG/dogeboxd/feature/dto-protos";
       flake = false;
     };
 

@@ -78,6 +78,7 @@ export default defineConfig({
       '/lib': abs('./src/lib'),
       '/bootstrap': abs('./src/bootstrap'),
       '/gen': abs('./src/gen'),
+      '/types': abs('./src/types'),
     },
   },
 });

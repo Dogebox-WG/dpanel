@@ -1,10 +1,12 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { esbuildPlugin } from '@web/dev-server-esbuild';
 import { playwrightLauncher } from '@web/test-runner-playwright';
 
 const configDir = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = join(configDir, '../..');
+const srcRoot = join(repoRoot, 'src');
 const rootNodeModules = join(repoRoot, 'node_modules');
 const shoelacePublicPath = '/shoelace';
 const shoelaceCdnRoot = join(rootNodeModules, '@shoelace-style/shoelace/cdn');
@@ -18,7 +20,23 @@ export default {
     exportConditions: ['production', 'default', 'import'],
     moduleDirs: [rootNodeModules, join(configDir, '../node_modules')],
   },
+  // Transpile TypeScript modules (e.g. /state/store.impl.ts) the same way
+  // Vite does for the app build.
+  plugins: [esbuildPlugin({ ts: true, target: 'es2020' })],
   middleware: [
+    // Match Vite's resolver: imports written with a .js extension may point
+    // at TypeScript sources (e.g. /api/transport.js -> src/api/transport.ts).
+    function tsSourceMiddleware(context, next) {
+      const [url, query] = context.url.split('?');
+      if (url.startsWith('/') && url.endsWith('.js')) {
+        const jsPath = join(srcRoot, normalize(url));
+        const tsPath = jsPath.slice(0, -3) + '.ts';
+        if (!existsSync(jsPath) && existsSync(tsPath)) {
+          context.url = url.slice(0, -3) + '.ts' + (query ? `?${query}` : '');
+        }
+      }
+      return next();
+    },
     function shoelaceAssetsMiddleware(context, next) {
       const url = context.url.split('?')[0];
       if (!url.startsWith(shoelacePublicPath)) {

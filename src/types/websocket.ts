@@ -29,12 +29,17 @@ export interface JobsBootstrap {
   jobs: JobRecord[];
 }
 
-/** Job lifecycle events emitted by dogeboxd's JobManager. */
+/**
+ * Job lifecycle events emitted by dogeboxd's JobManager. job:cancelled has
+ * no backend emission path today but matches the cancelled JobStatus and is
+ * emitted by the dev mock socket.
+ */
 export type JobLifecycleChangeType =
   | "job:created"
   | "job:updated"
   | "job:completed"
   | "job:failed"
+  | "job:cancelled"
   | "job:orphaned"
   | "job:deleted";
 
@@ -54,7 +59,9 @@ export type MainChannelMessage =
   // for check-updates and initial bootstrap); narrow at the call site.
   | Change<"action", unknown>
   | Change<"progress", ActionProgress>
-  | Change<"prompt", { name: string }>
+  // Synthetic client-side prompt event; carries `name` at the top level
+  // rather than in `update` (see the demoSystemPrompt mock runner).
+  | { type: "prompt"; name: string; seq?: number; ts?: number; error?: string }
   | Change<"system-update-available", unknown>
   | Change<"recovery", string>
   | Change<"pup-updates-checked", PupUpdatesCheckedEvent>

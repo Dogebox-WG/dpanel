@@ -43,6 +43,9 @@ export interface NetworkContext {
   reflectorToken: string;
   // Toggled from the devtools debug settings panel.
   includePreReleaseSystemUpdates?: boolean;
+  logBootstrapUpdates?: boolean;
+  demoInstallPup?: boolean;
+  demoPupLifecycle?: boolean;
 }
 
 /**

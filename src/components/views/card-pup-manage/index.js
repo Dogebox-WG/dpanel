@@ -105,7 +105,7 @@
     static styles = css`
       :host {
         --icon-size: 72px;
-        --row-height: 114px;
+        --row-height: 133px;
       }
 
       a, button {
@@ -121,7 +121,7 @@
       .pup-card-wrap {
         display: flex;
         flex-direction: row;
-        margin-bottom: 1em;
+        margin-bottom: 0em;
         width: 100%;
         padding: 1em;
         box-sizing: border-box;

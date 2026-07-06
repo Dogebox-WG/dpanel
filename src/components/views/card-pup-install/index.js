@@ -155,7 +155,7 @@ class PupInstallCard extends LitElement {
   static styles = css`
     :host {
       --icon-size: 72px;
-      --row-height: 114px;
+      --row-height: 133px;
     }
 
     a, button {
@@ -176,7 +176,7 @@ class PupInstallCard extends LitElement {
       position: relative;
       display: flex;
       flex-direction: row;
-      margin-bottom: 1em;
+      margin-bottom: 0em;
       width: 100%;
       padding: 1em;
       box-sizing: border-box;

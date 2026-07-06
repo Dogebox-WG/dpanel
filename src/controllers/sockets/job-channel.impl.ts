@@ -77,7 +77,8 @@ class JobWebSocketService {
     });
 
     ws.on("message", (event) => {
-      const message = JSON.parse(event.data) as JobChannelMessage;
+      // The mock always attaches a payload to "message" events.
+      const message = JSON.parse(event!.data) as JobChannelMessage;
       this.handleMessage(message);
     });
 

@@ -46,6 +46,8 @@ export interface NetworkContext {
   logBootstrapUpdates?: boolean;
   demoInstallPup?: boolean;
   demoPupLifecycle?: boolean;
+  /** Dynamic per-endpoint mock toggles (`mock::group::name::method`). */
+  [mockToggle: `mock::${string}`]: boolean | undefined;
 }
 
 /**

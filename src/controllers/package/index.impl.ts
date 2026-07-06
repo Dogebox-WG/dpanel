@@ -803,11 +803,14 @@ class PkgController {
     }*/
 
     const update = data?.update as ProgressUpdate | undefined;
+    // Backend is inconsistent in its use of pupID vs PupID vs pupId, and
+    // system actions marshal pupID as an empty string, so treat any falsy id
+    // as a system update.
     const id =
-      update?.pupID ??
-      update?.PupID ??
-      update?.pupId ??
-      "system"; //Backend is inconsistent in its use of pupID vs PupID vs pupId
+      update?.pupID ||
+      update?.PupID ||
+      update?.pupId ||
+      "system";
 
     if (this.activityIndex[id]) {
       // Prior acitivity exists for id, add more.

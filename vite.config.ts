@@ -13,6 +13,27 @@ const shoelaceCdnRoot = join(
   'node_modules/@shoelace-style/shoelace/cdn',
 );
 
+// During the TypeScript migration, modules keep importing with .js
+// extensions while the underlying sources move to .ts one batch at a time.
+// Resolve a .js specifier to its .ts sibling when only the .ts file exists.
+function tsSourceFallbackPlugin(): Plugin {
+  return {
+    name: 'ts-source-fallback',
+    async resolveId(source, importer, options) {
+      if (!source.endsWith('.js')) return null;
+      const resolved = await this.resolve(source, importer, {
+        ...options,
+        skipSelf: true,
+      });
+      if (resolved) return resolved;
+      return this.resolve(source.slice(0, -3) + '.ts', importer, {
+        ...options,
+        skipSelf: true,
+      });
+    },
+  };
+}
+
 function shoelaceAssetsPlugin(): Plugin {
   return {
     name: 'shoelace-assets',
@@ -47,7 +68,7 @@ export default defineConfig({
   root: 'src',
   // Static files are served at /static/* (copied into dist/ on build).
   publicDir: 'static',
-  plugins: [shoelaceAssetsPlugin()],
+  plugins: [tsSourceFallbackPlugin(), shoelaceAssetsPlugin()],
   server: {
     port: 9090,
     host: 'localhost',

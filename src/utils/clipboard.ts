@@ -1,4 +1,4 @@
-export function canCopyToClipboard(win = window) {
+export function canCopyToClipboard(win: Window = window): boolean {
   if (!win || !win.isSecureContext) {
     return false;
   }

@@ -5,10 +5,10 @@
 
 /**
  * Get the GMT offset for a timezone
- * @param {string} ianaId - IANA timezone identifier (e.g., "Australia/Adelaide")
- * @returns {string} Formatted GMT offset (e.g., "GMT +10:30")
+ * @param ianaId - IANA timezone identifier (e.g., "Australia/Adelaide")
+ * @returns Formatted GMT offset (e.g., "GMT +10:30")
  */
-function getGMTOffset(ianaId) {
+function getGMTOffset(ianaId: string): string {
   try {
     const date = new Date();
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -26,7 +26,7 @@ function getGMTOffset(ianaId) {
     // Fallback: calculate offset manually
     const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
     const tzDate = new Date(date.toLocaleString('en-US', { timeZone: ianaId }));
-    const offsetMinutes = (tzDate - utcDate) / (1000 * 60);
+    const offsetMinutes = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
     const hours = Math.floor(Math.abs(offsetMinutes) / 60);
     const minutes = Math.abs(offsetMinutes) % 60;
     const sign = offsetMinutes >= 0 ? '+' : '-';
@@ -42,10 +42,15 @@ function getGMTOffset(ianaId) {
 }
 
 
+interface TimezoneCityRegion {
+  city: string;
+  region: string;
+}
+
 /**
  * Mapping of specific timezone IDs to proper city/country names
  */
-const timezoneNameMapping = {
+const timezoneNameMapping: Record<string, TimezoneCityRegion> = {
   // Europe - map to countries
   'Europe/Lisbon': { city: 'Lisbon', region: 'Portugal' },
   'Europe/London': { city: 'London', region: 'United Kingdom' },
@@ -410,10 +415,10 @@ const timezoneNameMapping = {
 
 /**
  * Extract city and region from IANA timezone ID
- * @param {string} ianaId - IANA timezone identifier
- * @returns {{city: string, region: string}} Parsed city and region
+ * @param ianaId - IANA timezone identifier
+ * @returns Parsed city and region
  */
-function parseTimezoneId(ianaId) {
+function parseTimezoneId(ianaId: string): TimezoneCityRegion {
   // Handle special cases
   if (ianaId === 'UTC' || ianaId === 'GMT') {
     return { city: ianaId, region: '' };
@@ -434,10 +439,10 @@ function parseTimezoneId(ianaId) {
 
 /**
  * Format a timezone ID into a human-readable label
- * @param {string} ianaId - IANA timezone identifier (e.g., "Australia/Adelaide")
- * @returns {string} Formatted label (e.g., "Adelaide, Australia (GMT +10:30)")
+ * @param ianaId - IANA timezone identifier (e.g., "Australia/Adelaide")
+ * @returns Formatted label (e.g., "Adelaide, Australia (GMT +10:30)")
  */
-export function formatTimezoneLabel(ianaId) {
+export function formatTimezoneLabel(ianaId: string): string {
   const { city, region } = parseTimezoneId(ianaId);
   const offset = getGMTOffset(ianaId);
   
@@ -448,12 +453,26 @@ export function formatTimezoneLabel(ianaId) {
   return `${city}, ${region} (${offset})`;
 }
 
+/** Timezone entry as returned by the system API. */
+export interface TimezoneOption {
+  id?: string;
+  label: string;
+}
+
+/** Timezone entry enhanced with a display label and sortable city name. */
+export interface FormattedTimezone {
+  id: string;
+  label: string;
+  displayLabel: string;
+  city: string;
+}
+
 /**
  * Transform a timezone object with formatted display label
- * @param {{id: string, label: string}} timezone - Timezone object from API
- * @returns {{id: string, label: string, displayLabel: string, city: string}} Enhanced timezone object
+ * @param timezone - Timezone object from API
+ * @returns Enhanced timezone object
  */
-export function formatTimezoneWithOffset(timezone) {
+export function formatTimezoneWithOffset(timezone: TimezoneOption): FormattedTimezone {
   const { id, label } = timezone;
   const displayLabel = formatTimezoneLabel(id || label);
   const { city } = parseTimezoneId(id || label);
@@ -468,10 +487,10 @@ export function formatTimezoneWithOffset(timezone) {
 
 /**
  * Sort timezones alphabetically by city name
- * @param {Array} timezones - Array of timezone objects with city property
- * @returns {Array} Sorted array of timezones
+ * @param timezones - Array of timezone objects with city property
+ * @returns Sorted array of timezones
  */
-export function sortTimezonesByCity(timezones) {
+export function sortTimezonesByCity(timezones: FormattedTimezone[]): FormattedTimezone[] {
   return [...timezones].sort((a, b) => {
     const cityA = (a.city || '').toLowerCase();
     const cityB = (b.city || '').toLowerCase();

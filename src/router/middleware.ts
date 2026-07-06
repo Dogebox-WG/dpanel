@@ -3,8 +3,9 @@ import { store } from "/state/store.js";
 import { pkgController } from "/controllers/package/index.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { getStoreListing } from "/api/sources/sources.js";
+import type { RouteContext, RouteCommands } from "./router.js";
 
-export async function loadPup(context, commands) {
+export async function loadPup(context: RouteContext, commands: RouteCommands): Promise<void> {
   const pupId = context.params.pupid;
   const sourceId = context.params.sourceid;
   const pupName = decodeURIComponent(context.params.pupname);
@@ -55,6 +56,7 @@ export async function loadPup(context, commands) {
       store.updateState({
         pupContext: { ready: true, result: 404 },
       });
+      return;
     }
 
     // Return happy result
@@ -69,7 +71,7 @@ export async function loadPup(context, commands) {
   }
 }
 
-export function isAuthed(context, commands) {
+export function isAuthed(context: RouteContext, commands: RouteCommands): undefined {
   if (store.networkContext.token) {
     return undefined;
   } else {
@@ -77,12 +79,12 @@ export function isAuthed(context, commands) {
   }
 }
 
-export function performLogout(context, commands) {
+export function performLogout(context: RouteContext, commands: RouteCommands): never {
   store.updateState({ networkContext: { token: null } });
   return commands.redirect("/login");
 }
 
-export function asPage(context, commands) {
+export function asPage(context: RouteContext, commands: RouteCommands): void {
   if (context.route.dynamicTitle) {
     context.route.pageTitle = decodeURIComponent(context.params.pupname);
     context.route.pageAction = "back";
@@ -95,22 +97,25 @@ export function asPage(context, commands) {
   } = context.route;
 
   // Create instance of page-container
-  const PageContainer = customElements.get("page-container");
-  const pageContainer = new PageContainer();
+  const PageContainer = customElements.get("page-container")!;
+  const pageContainer = new PageContainer() as HTMLElement & {
+    pageTitle?: string;
+    pageAction?: string;
+  };
 
   // Set properties on the page-container per the route definition.
   pageContainer.pageTitle = pageTitle;
   pageContainer.pageAction = pageAction;
 
   // Wrap route component in page-container.
-  const childComponent = new ComponentClass();
+  const childComponent = new ComponentClass!();
   pageContainer.appendChild(childComponent);
 
   // Override route component withly newly wrapped component
   context.route.componentInstance = pageContainer;
 }
 
-export function withDialog(context, commands) {
+export function withDialog(context: RouteContext, commands: RouteCommands): void {
   store.updateState({
     dialogContext: { name: context?.params?.dialog },
   });

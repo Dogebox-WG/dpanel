@@ -1,27 +1,61 @@
+import type {
+  PupManifestConfigField,
+  PupManifestConfigFields,
+  PupManifestConfigFieldType,
+} from "/types/manifest";
+
 // Supported config field types for pup manifests.
 // These map directly to field renderers in the deform `<de-form>` component.
-const SUPPORTED_TYPES = new Set([
-  "text", "password", "number", "toggle", "email", "textarea", "select", "checkbox", "radio", "date", "range", "color"
+const SUPPORTED_TYPES = new Set<PupManifestConfigFieldType>([
+  "text", "password", "number", "toggle", "email", "textarea", "select", "checkbox", "radio", "date", "range", "color",
 ]);
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "on"]);
 
-export function buildPupConfig(manifestConfig, storedValues = {}) {
+/** A field descriptor consumed by the deform `<de-form>` renderer. */
+export interface DeformField {
+  type: PupManifestConfigFieldType;
+  label: string;
+  name: string;
+  required: boolean;
+  placeholder?: string;
+  help?: string;
+  helpText?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface DeformSection {
+  name: string;
+  label: string;
+  fields: DeformField[];
+}
+
+export interface PupConfig {
+  fields: { sections: DeformSection[] };
+  values: Record<string, string | boolean>;
+}
+
+export function buildPupConfig(
+  manifestConfig: PupManifestConfigFields | null | undefined,
+  storedValues: Record<string, unknown> = {},
+): PupConfig | null {
   if (!manifestConfig || !Array.isArray(manifestConfig.sections)) {
     return null;
   }
 
-  const sections = [];
-  const values = {};
+  const sections: DeformSection[] = [];
+  const values: Record<string, string | boolean> = {};
 
   manifestConfig.sections.forEach((section) => {
-    const sectionFields = [];
+    const sectionFields: DeformField[] = [];
     (section.fields || []).forEach((field) => {
       if (!SUPPORTED_TYPES.has(field.type)) {
         return;
       }
 
-      const dynamicField = {
+      const dynamicField: DeformField = {
         type: field.type,
         label: field.label || field.name,
         name: field.name,
@@ -66,7 +100,10 @@ export function buildPupConfig(manifestConfig, storedValues = {}) {
   };
 }
 
-function normalizeFieldValue(field, storedValue) {
+function normalizeFieldValue(
+  field: PupManifestConfigField,
+  storedValue: unknown,
+): string | boolean {
   const value = storedValue ?? field.default;
 
   switch (field.type) {
@@ -81,7 +118,7 @@ function normalizeFieldValue(field, storedValue) {
       return Boolean(value);
 
     case "number":
-    case "range":
+    case "range": {
       if (value === undefined || value === null || value === "") {
         return "";
       }
@@ -92,6 +129,7 @@ function normalizeFieldValue(field, storedValue) {
 
       const parsed = Number(value);
       return Number.isFinite(parsed) ? String(parsed) : "";
+    }
 
     case "text":
     case "password":
@@ -108,5 +146,3 @@ function normalizeFieldValue(field, storedValue) {
       return String(value);
   }
 }
-
-

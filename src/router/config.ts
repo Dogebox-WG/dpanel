@@ -5,8 +5,9 @@ import {
   withDialog,
   performLogout,
 } from "./middleware.js";
+import type { RouteDefinition } from "./router.js";
 
-export const routes = [
+export const routes: RouteDefinition[] = [
   // {
   //   path: "/",
   //   component: "x-page-home",

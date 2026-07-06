@@ -7,6 +7,7 @@ import { getTimezones, setTimezone } from "/api/system/timezones.js";
 import { getDisks, setStorageDisk } from "/api/disks/disks.js";
 import { setHostname } from "/api/system/hostname.js";
 import { formatTimezoneWithOffset, sortTimezonesByCity } from "/utils/timezone-formatter.js";
+import { buildTimezoneFields } from "/utils/timezone-fields.js";
 
 // Render chunks
 import { renderBanner } from "./banner.js";
@@ -19,6 +20,7 @@ import { toggledSectionStyles } from "/components/common/toggled-section.js";
 import "/bootstrap/deform.js";
 
 const DEFAULT_KEYMAP = "us";
+const TIMEZONE_FIELD_LABEL = 'Select Timezone';
 
 class SystemSettings extends LitElement {
   static styles = [toggledSectionStyles, css`
@@ -94,7 +96,7 @@ class SystemSettings extends LitElement {
     super();
     this.onBack = null;
     this._timezones = [];
-    this._timezoneFields = this._buildTimezoneFields();
+    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
     this._disks = [];
     this._changes = {
       keymap: DEFAULT_KEYMAP,
@@ -127,7 +129,7 @@ class SystemSettings extends LitElement {
       // Transform and sort timezones
       const formattedTimezones = rawTimezones.map(tz => formatTimezoneWithOffset(tz));
       this._timezones = sortTimezonesByCity(formattedTimezones);
-      this._timezoneFields = this._buildTimezoneFields();
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
       
       this._disks = await getDisks();
 
@@ -156,7 +158,7 @@ class SystemSettings extends LitElement {
 
   async _attemptSubmit() {
     this._inflight = true;
-    this._timezoneFields = this._buildTimezoneFields();
+    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
 
     // Only input elements that have a name attribute are sent to backend.
     const formFields = this.shadowRoot.querySelectorAll('sl-input[name], sl-select[name], sl-checkbox[name]');
@@ -167,7 +169,7 @@ class SystemSettings extends LitElement {
     if (hasInvalidField) {
       createAlert('warning', 'Uh oh, invalid data detected.');
       this._inflight = false;
-      this._timezoneFields = this._buildTimezoneFields();
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
       return;
     }
 
@@ -194,7 +196,7 @@ class SystemSettings extends LitElement {
       createAlert('danger', ['Failed to save config', 'Please refresh and try again'])
     } finally {
       this._inflight = false;
-      this._timezoneFields = this._buildTimezoneFields();
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
       if (didSucceed) {
         await this.onSuccess(); 
       }
@@ -226,34 +228,6 @@ class SystemSettings extends LitElement {
     const timezoneForm = this.shadowRoot.querySelector('de-form');
     const form = timezoneForm?.shadowRoot?.querySelector('form');
     return !form || timezoneForm.checkValidity(form);
-  }
-
-  _buildTimezoneFields() {
-    return {
-      sections: [
-        {
-          name: 'timezone',
-          fields: [
-            {
-              name: 'timezone',
-              type: 'select',
-              label: 'Select Timezone',
-              required: true,
-              help: 'Where in the world should your clock be set to',
-              disabled: this._inflight,
-              searchable: true,
-              hoist: true,
-              maxOptionsVisible: 8,
-              options: this._timezones.map((timezone) => ({
-                value: timezone.id,
-                label: timezone.displayLabel,
-                searchText: `${timezone.id} ${timezone.label ?? ''}`,
-              })),
-            },
-          ],
-        },
-      ],
-    };
   }
 
   _checkDiskFlags({ diskName }) {

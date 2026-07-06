@@ -8,6 +8,7 @@ import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 import { getTimezone, getTimezones, setTimezone } from "/api/system/timezones.js";
 import { formatTimezoneWithOffset, sortTimezonesByCity } from "/utils/timezone-formatter.js";
+import { buildTimezoneFields } from "/utils/timezone-fields.js";
 import "/bootstrap/deform.js";
 
 export class DateTimeSettings extends LitElement {
@@ -55,7 +56,7 @@ export class DateTimeSettings extends LitElement {
   constructor() {
     super();
     this._timezones = [];
-    this._timezoneFields = this._buildTimezoneFields();
+    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
     this._changes = {};
   }
  
@@ -83,7 +84,7 @@ export class DateTimeSettings extends LitElement {
       // Transform and sort timezones
       const formattedTimezones = rawTimezones.map(tz => formatTimezoneWithOffset(tz));
       this._timezones = sortTimezonesByCity(formattedTimezones);
-      this._timezoneFields = this._buildTimezoneFields();
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
       
       this._current_timezone = await getTimezone();
       this._changes.timezone = this._current_timezone;
@@ -102,7 +103,7 @@ export class DateTimeSettings extends LitElement {
     }
 
     this._inflight = true;
-    this._timezoneFields = this._buildTimezoneFields();
+    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
 
     const hasInvalidField = !this._isTimezoneFormValid();
 
@@ -111,7 +112,7 @@ export class DateTimeSettings extends LitElement {
     if (hasInvalidField) {
       createAlert('warning', 'Uh oh, invalid data detected.');
       this._inflight = false;
-      this._timezoneFields = this._buildTimezoneFields();
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
       return;
     }
 
@@ -125,7 +126,7 @@ export class DateTimeSettings extends LitElement {
       createAlert('danger', ['Failed to save config', 'Please refresh and try again'])
     } finally {
       this._inflight = false;
-      this._timezoneFields = this._buildTimezoneFields();
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
       if (didSucceed) {
         this.handleDialogClose(); 
       }
@@ -141,34 +142,6 @@ export class DateTimeSettings extends LitElement {
     const timezoneForm = this.shadowRoot.querySelector('de-form');
     const form = timezoneForm?.shadowRoot?.querySelector('form');
     return !form || timezoneForm.checkValidity(form);
-  }
-
-  _buildTimezoneFields() {
-    return {
-      sections: [
-        {
-          name: 'timezone',
-          fields: [
-            {
-              name: 'timezone',
-              type: 'select',
-              label: 'Timezone',
-              required: true,
-              help: 'Where in the world should your clock be set to',
-              disabled: this._inflight,
-              searchable: true,
-              hoist: true,
-              maxOptionsVisible: 8,
-              options: this._timezones.map((timezone) => ({
-                value: timezone.id,
-                label: timezone.displayLabel,
-                searchText: `${timezone.id} ${timezone.label ?? ''}`,
-              })),
-            },
-          ],
-        },
-      ],
-    };
   }
 
   render() {

@@ -5,9 +5,27 @@ import { getResponse, postResponse } from "./updates.mocks.js";
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
+export interface PackageUpdate {
+  version: string;
+  summary?: string;
+  releaseURL?: string;
+  long?: string;
+}
+
+export interface UpdatablePackage {
+  name: string;
+  currentVersion: string;
+  latestUpdate: string;
+  updates: PackageUpdate[];
+}
+
+export interface CheckForUpdatesResponse {
+  packages: Record<string, UpdatablePackage>;
+}
+
 export async function checkForUpdates() {
   const preRelease = store.networkContext?.includePreReleaseSystemUpdates;
-  const res = await client.get(`/system/updates${preRelease ? "?includePreReleases=true" : ""}`, {
+  const res = await client.get<CheckForUpdatesResponse>(`/system/updates${preRelease ? "?includePreReleases=true" : ""}`, {
     noLogoutRedirect: true,
     mock: getResponse,
   });
@@ -15,7 +33,7 @@ export async function checkForUpdates() {
 }
 
 export async function commenceUpdate(pkg: string, version: string) {
-  const res = await client.post(`/system/update`, {
+  const res = await client.post<{ success?: boolean; id?: string }>(`/system/update`, {
     package: pkg,
     version
   }, {

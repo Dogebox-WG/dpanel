@@ -5,8 +5,13 @@ import { getResponse, postResponse } from "./keymaps.mocks.js";
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
+export interface Keymap {
+  id: string;
+  label: string;
+}
+
 export async function getKeymap() {
-  const res = await client.get(`/system/keymap`, {
+  const res = await client.get<string>(`/system/keymap`, {
     noLogoutRedirect: true,
     mock: getResponse,
   });
@@ -14,7 +19,7 @@ export async function getKeymap() {
 }
 
 export async function getKeymaps() {
-  const res = await client.get(`/system/keymaps`, {
+  const res = await client.get<Keymap[]>(`/system/keymaps`, {
     noLogoutRedirect: true,
     mock: getResponse,
   });

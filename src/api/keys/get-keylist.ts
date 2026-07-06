@@ -5,7 +5,12 @@ import { getResponse } from "./get-keylist.mocks.js";
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
+export interface KeyRecord {
+  type?: string;
+  created?: number;
+}
+
 export async function getKeylist() {
-  const res = await client.get(`/keys`, { mock: getResponse });
+  const res = await client.get<{ keys?: KeyRecord[] }>(`/keys`, { mock: getResponse });
   return res;
 }

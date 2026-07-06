@@ -8,7 +8,7 @@ import {
 const client = new ApiClient(store.networkContext.apiBaseUrl)
 
 export async function createKey(password: string) {
-  const res = await client.post<{ token?: string }>(`/keys/create-master`, { password }, { mock: postResponse });
+  const res = await client.post<{ token?: string; success?: boolean; error?: unknown; seedPhrase?: string[] }>(`/keys/create-master`, { password }, { mock: postResponse });
   if (res && res.token) {
     store.updateState({ networkContext: { token: res.token }})
   }

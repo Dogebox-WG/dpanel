@@ -11,6 +11,6 @@ export async function getIP(reflectorToken: string) {
     externalAPI: true
   })
 
-  const res = await client.get(`/${reflectorToken}`, { mock: getResponse });
+  const res = await client.get<{ ip?: string }>(`/${reflectorToken}`, { mock: getResponse });
   return res
 }

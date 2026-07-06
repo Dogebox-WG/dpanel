@@ -21,7 +21,8 @@ export function createAlert(
   variant: string,
   message: string | string[],
   icon = 'info-circle',
-  duration = 0,
+  // Callers pass null to mean "no auto-hide".
+  duration: number | null = 0,
   action?: AlertAction,
   errorDetail?: unknown,
 ) {

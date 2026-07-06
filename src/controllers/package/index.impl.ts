@@ -22,7 +22,9 @@ export interface ChangeMeta {
 
 export interface PkgObserver {
   pupId?: string;
-  requestUpdate(options?: Record<string, unknown>): void;
+  // Loose signature so LitElement.requestUpdate(name?, oldValue?, options?)
+  // satisfies the interface directly.
+  requestUpdate(options?: unknown): void;
   updatePups?(): void;
 }
 

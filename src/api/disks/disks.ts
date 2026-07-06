@@ -10,8 +10,30 @@ import {
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
+/** Suitability verdict for one use of a disk (install target or mass storage). */
+export interface DiskSuitabilityVerdict {
+  usable?: boolean;
+  sizeOK?: boolean;
+}
+
+export interface DiskSuitability {
+  install?: DiskSuitabilityVerdict;
+  storage?: DiskSuitabilityVerdict;
+  isAlreadyUsed?: boolean;
+}
+
+export interface Disk {
+  name: string;
+  size?: number;
+  sizePretty?: string;
+  path?: string;
+  label?: string;
+  bootMedia?: boolean;
+  suitability?: DiskSuitability;
+}
+
 export async function getDisks() {
-  const res = await client.get(`/system/disks`, {
+  const res = await client.get<Disk[]>(`/system/disks`, {
     mock: getResponse,
     noLogoutRedirect: true,
   });
@@ -19,7 +41,7 @@ export async function getDisks() {
 }
 
 export async function getInstallDisks() {
-  const res = await client.get(`/system/install-disks`, {
+  const res = await client.get<Disk[]>(`/system/install-disks`, {
     mock: getInstallResponse,
     noLogoutRedirect: true,
   });

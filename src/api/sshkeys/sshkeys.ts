@@ -11,8 +11,18 @@ import {
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
+export interface SSHPublicKey {
+  id: string;
+  key: string;
+  dateAdded?: string;
+}
+
+export interface SSHState {
+  enabled?: boolean;
+}
+
 export async function getSSHPublicKeys() {
-  const res = await client.get(`/system/ssh/keys`, { mock: getSSHPublicKeysResponse });
+  const res = await client.get<{ keys?: SSHPublicKey[] }>(`/system/ssh/keys`, { mock: getSSHPublicKeysResponse });
   return res;
 }
 
@@ -32,6 +42,6 @@ export async function setSSHState(state: { enabled: boolean }) {
 }
 
 export async function getSSHState(state?: unknown) {
-  const res = await client.get(`/system/ssh/state`, { mock: getSSHStateResponse });
+  const res = await client.get<SSHState>(`/system/ssh/state`, { mock: getSSHStateResponse });
   return res;
 }

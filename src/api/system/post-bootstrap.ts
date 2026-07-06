@@ -8,6 +8,6 @@ import {
 const client = new ApiClient(store.networkContext.apiBaseUrl)
 
 export async function postSetupBootstrap(body: unknown) {
-  const res = await client.post(`/system/bootstrap`, body, { mock: postResponse });
+  const res = await client.post<{ jobId?: string; error?: unknown }>(`/system/bootstrap`, body, { mock: postResponse });
   return res
 }

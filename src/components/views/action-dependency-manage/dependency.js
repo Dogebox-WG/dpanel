@@ -3,11 +3,12 @@ import {
   html,
   css,
   nothing,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import "/components/common/action-row/action-row.js";
 
 import { getProviders } from "/api/providers/providers.js";
 import { pkgController } from "/controllers/package/index.js";
+import { getRouter } from "/router/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
 
@@ -53,24 +54,73 @@ class DependencyList extends LitElement {
   }
 
   handleProviderSelection(event, dependency) {
-    // selected an installed pup or installable?
-    const isInstallable = event.detail.item.value.startsWith('pupId::')
+    event.stopPropagation();
 
-    if (!isInstallable) {
-      window.open(window.location.origin + "/explore", "_blank");
-      return
+    const value = event.detail?.item?.value;
+    if (!value) return;
+
+    // Installed pups use pupId::; store-only pups use sourceLocation::.
+    const isInstalledPup = value.startsWith("pupId::");
+
+    if (!isInstalledPup) {
+      const exploreUrl = this.getExploreUrlForProviderValue(value);
+      getRouter()?.go(exploreUrl);
+      return;
     }
 
-    // When installable, allow it to be set.
-    const pupId = event.detail.item.value.split('::')[1]
-    const { pup } = pkgController.getPupMaster({ pupId });
-
-    const providerInfo = this.possible_providers.find(p => p.interface === dependency.interfaceName);
+    const pupId = value.split("::")[1];
+    const providerInfo = this.possible_providers.find(
+      (p) => p.interface === dependency.interfaceName,
+    );
     if (providerInfo) {
       providerInfo.currentProvider = pupId;
     }
 
     this.requestUpdate();
+  }
+
+  // Parse sourceLocation::url::pupName=name menu values into an explore URL.
+  getExploreUrlForProviderValue(value) {
+    if (!value.startsWith("sourceLocation::")) {
+      return "/explore";
+    }
+
+    const parts = value.split("::");
+    const sourceLocation = parts[1];
+    const pupNamePart = parts.find((p) => p.startsWith("pupName="));
+    const pupName = pupNamePart?.split("=")[1];
+
+    if (pupName && sourceLocation) {
+      const sources = pkgController.getSourceList?.() || [];
+      const match = sources.find((s) => s.location === sourceLocation);
+      if (match?.sourceId) {
+        return `/explore/${match.sourceId}/${encodeURIComponent(pupName)}`;
+      }
+    }
+
+    return "/explore";
+  }
+
+  handleExploreClick(event, interfaceName) {
+    event.stopPropagation();
+    const targetPath = "/explore";
+    const params = new URLSearchParams();
+    if (interfaceName) {
+      params.set("search", interfaceName);
+      params.set("interfaces", "1");
+    }
+    const query = params.toString();
+    const targetUrl = query ? `${targetPath}?${query}` : targetPath;
+    const router = getRouter();
+    router?.go(targetPath);
+    window.history.replaceState({}, "", targetUrl);
+  }
+
+  handleStoreListingClick(event, url) {
+    event.stopPropagation();
+    if (url) {
+      getRouter()?.go(url);
+    }
   }
 
   async refreshProviders() {
@@ -93,14 +143,22 @@ class DependencyList extends LitElement {
 
   toInstallableProviderObj(pupId) {
     const { pup } = pkgController.getPupMaster({ pupId });
-    const out = {
+    if (!pup?.state) {
+      return {
+        pupId,
+        pupName: pupId,
+        sourceName: "",
+        sourceLocation: "",
+        version: "",
+      };
+    }
+    return {
       pupId: pup.state.id,
       pupName: pup.state.manifest.meta.name,
       sourceName: pup.state.source.name,
       sourceLocation: pup.state.source.location,
-      version: pup.state.version
-    }
-    return out;
+      version: pup.state.version,
+    };
   }
 
   renderPermissionGroups(groups) {
@@ -127,7 +185,7 @@ class DependencyList extends LitElement {
           name=${pup.pupName}
           location=${pup.sourceLocation}
           version=${pup.version}>
-        </x-pup-item>
+        </x-puplibrary-item>
       `
     }
   }
@@ -221,7 +279,7 @@ class DependencyList extends LitElement {
                           name=${provider.pupName}
                           location=${provider.sourceLocation}
                           version=${provider.version}>
-                        </x-pup-item>
+                        </x-puplibrary-item>
                       </sl-menu-item>
                     `) : nothing
                   }
@@ -236,7 +294,7 @@ class DependencyList extends LitElement {
                           name=${provider.pupName}
                           location=${provider.sourceLocation}
                           version=${provider.pupVersion}>
-                        </x-pup-item>
+                        </x-pupstore-item>
                       </sl-menu-item>
                     `) : nothing
                   }
@@ -257,35 +315,42 @@ class DependencyList extends LitElement {
             <sl-divider></sl-divider>
 
             <span class="label" style="margin-bottom:0.25em;">Default Provider</span>
-            ${this.renderDefaultProvider(providerInfo)}
+            ${this.renderDefaultProvider(dependency, providerInfo)}
 
             <sl-divider></sl-divider>
 
             <span class="label" style="margin-bottom:0.25em;">Other Providers</span>
-            <sl-button variant="text" target="_blank" class="link-button-left">
+            <sl-button variant="text" class="link-button-left" @click=${(e) => this.handleExploreClick(e, dependency.interfaceName)}>
               <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
               Browse the Pup Store for compatible Pups
             </sl-button>
 
           ` : html`
             <span class="label" style="margin-bottom:0.25em;">Default Provider</span>
-            <small>
-              <sl-tag slot="suffix">
-                ${providerInfo && providerInfo.DefaultProvider ? 
-                  `${providerInfo.DefaultProvider.pupName} (${providerInfo.DefaultProvider.sourceLocation})` : 
-                  'No default provider'
-                }
-              </sl-tag>
-            </small>              
-            <sl-button variant="text" target="_blank" class="link-button-left">
-              <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
-              View in Pup Store
-            </sl-button>
+            ${(() => {
+              const defaultProvider = this.getDefaultProvider(dependency, providerInfo);
+              const display = this.getDefaultProviderDisplay(defaultProvider);
+              const storeUrl = this.getProviderStoreUrl(defaultProvider);
+
+              return html`
+                <small>
+                  <sl-tag slot="suffix">
+                    ${display || 'No default provider'}
+                  </sl-tag>
+                </small>
+                ${storeUrl ? html`
+                  <sl-button variant="text" class="link-button-left" @click=${(e) => this.handleStoreListingClick(e, storeUrl)}>
+                    <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
+                    View in Pup Store
+                  </sl-button>
+                ` : nothing}
+              `;
+            })()}
 
             <sl-divider></sl-divider>
 
             <span class="label" style="margin-bottom:0.25em;">Other Providers</span>
-            <sl-button variant="text" target="_blank" class="link-button-left">
+            <sl-button variant="text" class="link-button-left" @click=${(e) => this.handleExploreClick(e, dependency.interfaceName)}>
               <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
               Browse the Pup Store for compatible Pups
             </sl-button>
@@ -295,39 +360,69 @@ class DependencyList extends LitElement {
     `;
   }
 
-  renderDefaultProvider(providerInfo) {
-    const defaultProvider = this.getDefaultProviderDisplay(providerInfo)
+  renderDefaultProvider(dependency, providerInfo) {
+    const defaultProvider = this.getDefaultProvider(dependency, providerInfo);
+    const display = this.getDefaultProviderDisplay(defaultProvider);
 
-    if (!defaultProvider) return html`
+    if (!display) return html`
       <small>No default provider.</small>
     `
+
+    const storeUrl = this.getProviderStoreUrl(defaultProvider);
 
     return html`
       <small>
         <sl-tag slot="suffix" size="small">
-          ${defaultProvider}
+          ${display}
         </sl-tag>
       </small>
 
-      <sl-button variant="text" target="_blank" class="link-button-left">
-        <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
-        View in Pup Store
-      </sl-button>
+      ${storeUrl ? html`
+        <sl-button variant="text" class="link-button-left" @click=${(e) => this.handleStoreListingClick(e, storeUrl)}>
+          <sl-icon name="box-arrow-up-right" slot="suffix"></sl-icon>
+          View in Pup Store
+        </sl-button>
+      ` : nothing}
     `
   }
 
-  getDefaultProviderDisplay(providerInfo) {
-    if (!providerInfo || !providerInfo.DefaultProvider) {
+  getDefaultProvider(dependency, providerInfo) {
+    const fromApi = providerInfo?.DefaultProvider;
+    if (fromApi?.pupName && fromApi?.sourceLocation) {
+      return fromApi;
+    }
+
+    // Explore view (no editMode / no pupId) reads deps from the store manifest
+    // only — the providers API is never called, so fall back to manifest source.
+    const fromManifest = dependency?.source;
+    if (fromManifest?.pupName && fromManifest?.sourceLocation) {
+      return fromManifest;
+    }
+
+    return null;
+  }
+
+  getDefaultProviderDisplay(provider) {
+    if (!provider?.pupName || !provider?.sourceLocation) {
       return false;
     }
-    
-    const { pupName, sourceLocation } = providerInfo.DefaultProvider;
-    
-    if (pupName && sourceLocation) {
-      return `${pupName} (${sourceLocation})`;
-    }
-    
-    return false;
+
+    return `${provider.pupName} (${provider.sourceLocation})`;
+  }
+
+  // Resolve a /explore/:sourceid/:pupname URL for a provider entry that only
+  // carries sourceLocation + pupName. Returns null when the source is not
+  // present in the local sources index (e.g. source not added on this dogebox).
+  getProviderStoreUrl(provider) {
+    if (!provider) return null;
+    const { pupName, sourceLocation } = provider;
+    if (!pupName || !sourceLocation) return null;
+
+    const sources = pkgController.getSourceList?.() || [];
+    const match = sources.find(s => s.location === sourceLocation);
+    if (!match || !match.sourceId) return null;
+
+    return `/explore/${match.sourceId}/${encodeURIComponent(pupName)}`;
   }
 
   render() {

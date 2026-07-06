@@ -1,4 +1,4 @@
-import { html, css, nothing, guard } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { html, css, nothing, guard } from '/lib/lit-all.js';
 
 export function renderSectionConfig() {
   const isActiveTab = this.activeTab === 'config';
@@ -16,16 +16,15 @@ export function renderSectionConfig() {
 
       ${isActiveTab && hasConfig ? html`
         ${guard([this.options, this.config], () => html`
-          <dynamic-form
+          <de-form
             .values=${this.options}
             .fields=${this.config}
             .onSubmit=${this.submitConfig}
-            .onError=${this.displayConfigUpdateErr}
             requireCommit
             markModifiedFields
             allowDiscardChanges
           >
-          </dynamic-form>
+          </de-form>
         `)}
       ` : nothing }
     </sl-tab-panel>

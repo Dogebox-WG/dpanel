@@ -1,4 +1,4 @@
-import { html, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, nothing } from "/lib/lit-all.js";
 
 export function createAlert(variant, message, icon = 'info-circle', duration = 0, action, errorDetail) {
   try {

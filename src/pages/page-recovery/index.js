@@ -1,5 +1,5 @@
-import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
-import { themes } from "/components/common/dynamic-form/themes.js";
+import { LitElement, html, css, nothing } from "/lib/lit-all.js";
+import { themes } from "/components/common/shoelace-button-themes.js";
 import { store } from "/state/store.js";
 import { notYet } from "/components/common/not-yet-implemented.js"
 import "/components/views/x-launcher-button/index.js";

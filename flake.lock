@@ -3,11 +3,11 @@
     "dogeboxd-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1771907648,
-        "narHash": "sha256-o9r8Tg+nbOJHfV39VjKCpE0HE4uIKPqzGtnufXxK19o=",
+        "lastModified": 1772081753,
+        "narHash": "sha256-/g0N2x3opcwbjvtE0O1/t4BlgAAFUFFk9lRSCP9fbnI=",
         "owner": "Dogebox-WG",
         "repo": "dogeboxd",
-        "rev": "6332fb6f29ea580584eef382b02a51630db3d382",
+        "rev": "02952e307d6424d225f46736c186b9f99bfbacd1",
         "type": "github"
       },
       "original": {
@@ -55,11 +55,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1771714954,
-        "narHash": "sha256-nhZJPnBavtu40/L2aqpljrfUNb2rxmWTmSjK2c9UKds=",
+        "lastModified": 1781509190,
+        "narHash": "sha256-uJZs9Di8I6ciTp6jiojj0HzlNpBkud8ax5aT/O5aJkw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "afbbf774e2087c3d734266c22f96fca2e78d3620",
+        "rev": "d6df3513510aa548c83868fd22bfddd0a8c0a0d4",
         "type": "github"
       },
       "original": {
@@ -103,11 +103,11 @@
     "protovalidate-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1771426165,
-        "narHash": "sha256-YGqdbmIFcaIi5WX7j4ifnK6po3YJ6Wy0dAY14Eq5GOU=",
+        "lastModified": 1779894334,
+        "narHash": "sha256-QzD+VE7Myz5Plg4tFs2w05r2rDgn5EVkHhjyC+rw2uI=",
         "owner": "bufbuild",
         "repo": "protovalidate",
-        "rev": "cb78a6b7343910d526c355b792eaebeb4ce9bd48",
+        "rev": "90182160b60c546a704befcee2958ac0f6a73868",
         "type": "github"
       },
       "original": {

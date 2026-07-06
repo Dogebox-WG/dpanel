@@ -12,7 +12,7 @@ export const getResponse = {
           {
             version: "v0.3.2-beta.4",
             summary: "Update for Dogeboxd / DKM / DPanel",
-            releaseURL: "https://github.com/dogeorg/dogebox/releases/tag/v0.3.2-beta.4",
+            releaseURL: "https://github.com/Dogebox-WG/dogebox/releases/tag/v0.3.2-beta.4",
             long: "",
           },
         ],

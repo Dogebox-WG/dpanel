@@ -2,7 +2,7 @@ import {
   LitElement,
   html,
   choose,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import { promptStyles } from "./styles.js";
 import { store } from "/state/store.js";
 import "./tasks/index.js";
@@ -79,7 +79,6 @@ class SystemPrompt extends LitElement {
       <div class="outer">
         <div class="inner">
           <div class="heading-container">
-            <img src="/static/img/prompt_b.png" />
             <div class="more-container">
               <hr />
               <a href="#" @click=${this.handleWhyClick}

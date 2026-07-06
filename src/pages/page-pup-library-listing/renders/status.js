@@ -1,10 +1,11 @@
-import { html, css, classMap, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, css, classMap, nothing } from "/lib/lit-all.js";
 import { rollbackPup } from "/api/pup-updates/pup-updates.js";
 import { createAlert } from "/components/common/alert.js";
 
 export function renderStatus(labels, pkg, rollbackAvailable = false) {
   let { statusId, statusLabel, installationId, installationLabel } = labels;
   const isInstallationLoadingStatus = ["uninstalling", "purging", "upgrading"].includes(installationId)
+  const unavailableFromSource = pkg?.computed?.unavailableFromSource;
 
   const styles = css`
     :host {
@@ -54,6 +55,13 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
       color: rgba(255, 255, 255, 0.7);
       font-size: 0.9rem;
     }
+
+    .status-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      width: fit-content;
+    }
   `
 
   const [ brokenReason, isRecoverable ] = getBrokenReason(pkg)
@@ -77,6 +85,12 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
         ? html`<span class="status-label ${installationId}">${installationLabel}</span>`
         : html`<span class="status-label ${statusId}">${statusLabel}</span>`
     }
+
+    ${unavailableFromSource ? html`
+      <div class="status-badges">
+        <sl-tag pill variant="warning">Unavailable from Source</sl-tag>
+      </div>
+    ` : nothing}
 
     ${installationId === "broken"
       ? html`

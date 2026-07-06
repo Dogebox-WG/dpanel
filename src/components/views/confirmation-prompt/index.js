@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/lib/lit-all.js";
 
 export class ConfirmationPrompt extends LitElement {
   static get properties() {

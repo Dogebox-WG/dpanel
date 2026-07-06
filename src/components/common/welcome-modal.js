@@ -1,5 +1,5 @@
-import { html, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
-import { LitElement, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { html, nothing } from "/lib/lit-all.js";
+import { LitElement, css } from "/lib/lit-all.js";
 import { postWelcomeComplete } from "/api/system/post-welcome-complete.js";
 import { postInstallPupCollection } from "/api/system/post-install-pup-collection.js";
 

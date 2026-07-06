@@ -1,4 +1,4 @@
-import { css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { css } from "/lib/lit-all.js";
 
 export const createKeyStyles = css`
   :host {
@@ -88,10 +88,17 @@ export const createKeyStyles = css`
     justify-content: center;
   }
 
+  .phrase-grid:not(.blur) sl-tag::part(base) {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
   .phrase-grid sl-tag span.order {
     color: var(--sl-color-neutral-400);
     position: absolute;
     left: 1rem;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .phrase-grid.blur sl-tag span.term {

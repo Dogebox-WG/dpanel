@@ -1,11 +1,8 @@
-import { LitElement, html, css } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css } from "/lib/lit-all.js";
 import { postChangePass } from "/api/password/change-pass.js";
 import { createAlert } from "/components/common/alert.js";
 import { hash } from "/utils/hash.js"
 import { asyncTimeout } from "/utils/timeout.js";
-
-// Components
-import "/components/common/dynamic-form/dynamic-form.js";
 
 // Render chunks
 import { renderBanner } from "./renders/banner.js";
@@ -31,6 +28,7 @@ class ChangePassView extends LitElement {
     h1 {
       font-family: "Comic Neue", sans-serif;
     }
+
   `;
 
   static get properties() {
@@ -44,6 +42,7 @@ class ChangePassView extends LitElement {
       refreshAfterChange: { type: Boolean },
       retainHash: { type: Boolean },
       noSubmit: { type: Boolean },
+      onBack: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
     };
@@ -59,6 +58,7 @@ class ChangePassView extends LitElement {
     this.refreshAfterChange = false;
     this.retainHash = false;
     this.noSubmit = false;
+    this.onBack = null;
     this.fieldDefaults = {};
     this._server_fault = false;
     this._invalid_creds = false;
@@ -217,6 +217,12 @@ class ChangePassView extends LitElement {
     }
   }
 
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
+    }
+  }
+
   render() {
     return html`
       <div class="page">
@@ -227,13 +233,15 @@ class ChangePassView extends LitElement {
               Invalid credentials. Please check your current password or recovery phrase.
             </div>
           ` : ''}
-          <dynamic-form
+          <de-form
             .fields=${this._changePassFields}
             .onSubmit=${this._attemptChangePass}
+            .onBack=${this.onBack ? this.handleBackClick : undefined}
             requireCommit
-            theme="purple"
+            theme="dark"
+            accent="purple"
           >
-          </dynamic-form>
+          </de-form>
         </div>
       </div>
     `;

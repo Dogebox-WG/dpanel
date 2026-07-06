@@ -3,7 +3,7 @@ import {
   html,
   nothing,
   classMap,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 // APIs
 import { createKey } from "/api/keys/create-key.js";
@@ -12,15 +12,15 @@ import { getMockList } from "/api/keys/get-keylist.mocks.js";
 
 // Utils
 import { asyncTimeout } from "/utils/timeout.js";
+import { canCopyToClipboard } from "/utils/clipboard.js";
 import { createAlert } from "/components/common/alert.js";
 
 // Styles
 import { createKeyStyles } from "./styles.js";
-import { themes } from "/components/common/dynamic-form/themes.js";
+import { themes } from "/components/common/shoelace-button-themes.js";
 
 // Components
 import "/components/common/text-loader/text-loader.js";
-import "/components/common/dynamic-form/dynamic-form.js";
 import { notYet } from "/components/common/not-yet-implemented.js"
 
 // Render chunks
@@ -34,6 +34,7 @@ class CreateKey extends LitElement {
   static get properties() {
     return {
       showSuccessAlert: { type: Boolean },
+      onBack: { type: Object },
       _authenticationRequired: { type: Boolean },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
@@ -42,7 +43,7 @@ class CreateKey extends LitElement {
       _keyReady: { type: Boolean },
       _revealPhrase: { type: Boolean },
       _termsChecked: { type: Boolean },
-      _phrase: { type: String },
+      _phrase: { type: Array },
       onSuccess: { type: Object },
     };
   }
@@ -50,12 +51,12 @@ class CreateKey extends LitElement {
   constructor() {
     super();
     this._authenticationRequired = false;
+    this.onBack = null;
     this._server_fault = false;
     this._invalid_creds = false;
-    this._form = null;
     this._keyList = [];
     this._keyListLoading = false;
-    this._phrase = "";
+    this._phrase = [];
     this.onSuccess = null;
     this.showSuccessAlert = false;
     this.label = "Create your key";
@@ -68,7 +69,6 @@ class CreateKey extends LitElement {
   }
 
   firstUpdated() {
-    this._form = this.shadowRoot.querySelector("dynamic-form");
     const keyGenDialog = this.shadowRoot.querySelector(
       "sl-dialog#KeyGenDialog",
     );
@@ -151,10 +151,6 @@ class CreateKey extends LitElement {
     this._revealPhrase = true;
   }
 
-  handleCopyButtonClick() {
-    this.shadowRoot.querySelector("#PhraseCopyBtn").click();
-  }
-
   handlePhraseCloseClick() {
     const dialog = this.shadowRoot.querySelector("#KeyGenDialog");
     this._revealPhrase = false;
@@ -166,10 +162,19 @@ class CreateKey extends LitElement {
     this.handleSuccess();
   }
 
+  handleBackClick = () => {
+    if (this.onBack) {
+      this.onBack();
+    }
+  }
+
   render() {
     const emptyPhrase =
       "one two three four five six seven eight nine ten eleven twelve".split(" ");
-    const phrase = this._phrase || [];
+    const phrase = Array.isArray(this._phrase) ? this._phrase : [];
+    const canCopy = canCopyToClipboard();
+    const canCopyPhrase = canCopy && this._revealPhrase && phrase.length > 0;
+    const phraseCopyValue = phrase.join(" ");
 
     const phraseGridClasses = classMap({
       "phrase-grid": true,
@@ -217,12 +222,15 @@ class CreateKey extends LitElement {
           <sl-icon name="eye-slash"></sl-icon>
         </sl-button>
 
-        <sl-button variant="text">
-          <sl-copy-button id="PhraseCopyBtn" value=${this._phrase}
-            ><span slot="copy-icon"
-              >Copy to clipboard &nbsp;<sl-icon name="copy"></sl-icon></span
-          ></sl-copy-button>
-        </sl-button>
+        ${canCopyPhrase
+          ? html`
+              <sl-copy-button id="PhraseCopyBtn" value=${phraseCopyValue}>
+                <span slot="copy-icon">
+                  Copy to clipboard &nbsp;<sl-icon name="copy"></sl-icon>
+                </span>
+              </sl-copy-button>
+            `
+          : nothing}
       </div>
 
       <div class="phraseFooter">
@@ -310,7 +318,17 @@ class CreateKey extends LitElement {
               ${!this._keyListLoading && !hasMasterKey
                 ? html`
                     ${emptyKey}
-                    <div style="text-align: right;">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem;">
+                      ${this.onBack
+                        ? html`
+                            <sl-button
+                              variant="default"
+                              @click=${this.handleBackClick}
+                            >
+                              Back
+                            </sl-button>
+                          `
+                        : html`<span></span>`}
                       <sl-button
                         id="GenKeyBtn"
                         @click=${this.handleGenKeyClick}
@@ -325,7 +343,17 @@ class CreateKey extends LitElement {
                 ? html`
                     ${masterKeyEl}
                     <sl-divider></sl-divider>
-                    <div style="text-align: right;">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem;">
+                      ${this.onBack
+                        ? html`
+                            <sl-button
+                              variant="default"
+                              @click=${this.handleBackClick}
+                            >
+                              Back
+                            </sl-button>
+                          `
+                        : html`<span></span>`}
                       <sl-button
                         @click=${this._handleContinueClick}
                         class="pink"

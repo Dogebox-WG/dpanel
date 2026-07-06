@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css, nothing } from '/lib/lit-all.js';
 import { getCustomNix, saveCustomNix, validateCustomNix } from '/api/system/custom-nix.js';
 import { createAlert } from '/components/common/alert.js';
 
@@ -434,7 +434,7 @@ class PageCustomiseOS extends LitElement {
           <div class="banner-left">
             <div class="banner-subtitle">Edit your custom NixOS configuration below</div>
             ${!this.warningsDismissed ? html`
-              <div class="banner-warning">⚠️ Warning: Invalid configuration may prevent your system from booting - If you break something, edit /etc/nixos/dogebox/custom.nix manually via ssh</div>
+              <div class="banner-warning">⚠️ Warning: Invalid configuration may prevent your system from booting - If you break something, edit /opt/dogebox/nix/custom.nix manually via ssh</div>
               <div class="banner-warning">Is someone asking you to edit this file? They are probably trying to scam you</div>
               <div class="banner-warning">To dismiss this warning, add #i-know-what-im-doing to the beginning of the file</div>
             ` : nothing}

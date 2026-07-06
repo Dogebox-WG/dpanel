@@ -198,7 +198,6 @@ class PupUpdates {
       for (const pupId in updateInfo) {
         // Pass updateInfo to hasUpdate so it checks against new data, not stale store data
         const hasUpdate = this.hasUpdate(pupId, false, updateInfo);
-        console.log(`[PupUpdates] hasUpdate(${pupId}): ${hasUpdate}, info:`, updateInfo[pupId]);
         if (hasUpdate) {
           totalUpdatesAvailable++;
         }

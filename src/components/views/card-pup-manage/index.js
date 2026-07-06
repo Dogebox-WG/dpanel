@@ -4,7 +4,7 @@
     css,
     nothing,
     classMap
-  } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+  } from "/lib/lit-all.js";
 
   import "/components/common/tag-set/tag-set.js";
   import { store } from "/state/store.js";
@@ -25,6 +25,7 @@
         href: { type: String },
         gref: { type: String },
         upstreamVersions: { type: Object },
+        sourceUnavailable: { type: Boolean },
       };
     }
 
@@ -76,6 +77,9 @@
                   ${this.hasUpdate ? html`
                     <sl-badge variant="primary" pill pulse>Update Available</sl-badge>
                   ` : nothing}
+                  ${this.sourceUnavailable ? html`
+                    <sl-badge variant="warning" pill>Unavailable from Source</sl-badge>
+                  ` : nothing}
                 </span>
                 <x-tag-set .tags=${upstreamVersions} highlight max=1></x-tag-set>
                 <span class=${statusClassMap}>${status}</span>
@@ -101,7 +105,7 @@
     static styles = css`
       :host {
         --icon-size: 72px;
-        --row-height: 114px;
+        --row-height: 133px;
       }
 
       a, button {
@@ -117,7 +121,7 @@
       .pup-card-wrap {
         display: flex;
         flex-direction: row;
-        margin-bottom: 1em;
+        margin-bottom: 0em;
         width: 100%;
         padding: 1em;
         box-sizing: border-box;

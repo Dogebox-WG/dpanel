@@ -3,7 +3,7 @@ import {
   html,
   css,
   nothing,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 import "/components/common/tag-set/tag-set.js";
 import { store } from "/state/store.js";
@@ -155,7 +155,7 @@ class PupInstallCard extends LitElement {
   static styles = css`
     :host {
       --icon-size: 72px;
-      --row-height: 114px;
+      --row-height: 133px;
     }
 
     a, button {
@@ -176,7 +176,7 @@ class PupInstallCard extends LitElement {
       position: relative;
       display: flex;
       flex-direction: row;
-      margin-bottom: 1em;
+      margin-bottom: 0em;
       width: 100%;
       padding: 1em;
       box-sizing: border-box;
@@ -313,7 +313,7 @@ class PupInstallCard extends LitElement {
       font-size: 0.85rem;
       color: #b5a1ff;
     }
-    span.source sl-icon { position: relative; top: 2px; }
+    span.source sl-icon { position: relative; top: -1px; }
   `;
 }
 

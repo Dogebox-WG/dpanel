@@ -1,4 +1,4 @@
-import { html, css, nothing, repeat } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { html, css, nothing, repeat } from '/lib/lit-all.js';
 
 var pupCardGrid = css`
   .pup-card-grid {
@@ -73,14 +73,6 @@ export function renderSectionBody(ready, SKELS, hasItems) {
         `})}
       </div>
       <style>${pupCardGrid}</style>
-
-      <paginator-ui
-        ?disabled=${this.busy}
-        @go-next=${this.packageList.nextPage}
-        @go-prev=${this.packageList.previousPage}
-        currentPage=${this.packageList.currentPage}
-        totalPages=${this.packageList.getTotalPages()}
-      ></paginator-ui>
 
       `: nothing
     }

@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+import { LitElement, html, css, nothing } from "/lib/lit-all.js";
 import { createAlert } from "/components/common/alert.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { pkgController } from "/controllers/package/index.js";
@@ -109,6 +109,7 @@ export class SourceManagerView extends LitElement {
   }
 
   handleAddSourceClick() {
+    this._addSourceInputURL = "";
     this._showAddSourceDialog = true;
   }
 
@@ -132,6 +133,7 @@ export class SourceManagerView extends LitElement {
       }
       // then close the dialog
       this._showAddSourceDialog = false;
+      this._addSourceInputURL = "";
 
     } catch (err) {
       const message = ["Failed to add source.", "<Todo: Show reason>"];
@@ -165,7 +167,7 @@ export class SourceManagerView extends LitElement {
           </sl-input>
 
           <div slot="footer">
-            <sl-button variant="text" @click=${() => this._showAddSourceDialog = false}>Cancel</sl-button>
+            <sl-button variant="text" @click=${() => { this._showAddSourceDialog = false; this._addSourceInputURL = ""; }}>Cancel</sl-button>
             <sl-button variant="primary" ?disabled=${!this._addSourceInputURL} ?loading=${this._addSourceInProgress} @click=${this.handleAddSourceSubmitClick}>
               Add this source
             </sl-button>

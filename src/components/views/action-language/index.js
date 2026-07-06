@@ -2,7 +2,7 @@ import {
   LitElement,
   html,
   css,
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 
 import { asyncTimeout } from "/utils/timeout.js";
 import { createAlert } from "/components/common/alert.js";
@@ -74,7 +74,9 @@ export class LanguageSettings extends LitElement {
   async _fetch() {
     try {
       this._loading = true;
-      this._keymaps = await getKeymaps();
+      const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+      const keymaps = await getKeymaps();
+      this._keymaps = [...keymaps].sort((a, b) => collator.compare(a.label, b.label));
       this._current_keymap = await getKeymap();
       this._changes.keymap = this._current_keymap;
 
@@ -136,7 +138,7 @@ export class LanguageSettings extends LitElement {
     }
     
     return html`
-      <h1>Language</h1>
+      <h1>Keyboard Layout</h1>
 
       <div class="form-control">
 
@@ -144,11 +146,11 @@ export class LanguageSettings extends LitElement {
               name="keymap"
               
               required
-              label="Keymap" 
+              label="Keyboard Layout" 
               ?disabled=${this._inflight}
               data-field="keymap"
               value=${this._current_keymap}
-              help-text="What keyboard layout do you have?"
+              help-text="Choose the layout for your physical keyboard"
               hoist
               @sl-change=${this._handleKeymapInputChange}
             >

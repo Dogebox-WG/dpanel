@@ -19,7 +19,7 @@ class Store {
     };
     this.networkContext = this.networkContext || {
       apiBaseUrl: `${window.location.protocol}//${window.location.hostname}:3000`,
-      wsApiBaseUrl: `ws://${window.location.hostname}:3000`,
+      wsApiBaseUrl: `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.hostname}:3000`,
       overrideBaseUrl: false,
       overrideSocketBaseUrl: false,
       useMocks: false,
@@ -65,6 +65,7 @@ class Store {
     };
     this.jobsContext = {
       jobs: [],
+      initialized: false,
       loading: false,
       error: null,
     };

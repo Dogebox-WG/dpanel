@@ -4,7 +4,7 @@ import {
   css,
   classMap,
   nothing
-} from "/vendor/@lit/all@3.1.2/lit-all.min.js";
+} from "/lib/lit-all.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { store } from "/state/store.js";
 import { mocks } from "/api/mocks.js";
@@ -444,6 +444,16 @@ class DebugSettingsDialog extends LitElement {
               @sl-change=${this.handleInput}>
               Override reflector host
             </sl-input>
+          </div>
+
+          <div class="form-control">
+            <sl-switch
+              name="includePreReleaseSystemUpdates"
+              help-text="When enabled, pre-release versions appear in system updates"
+              .checked=${networkContext.includePreReleaseSystemUpdates}
+              @sl-change=${this.handleToggle}>
+                Include Pre-Release System Updates
+            </sl-switch>
           </div>
 
           <div class="form-control">

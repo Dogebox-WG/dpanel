@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing, classMap } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css, nothing, classMap } from '/lib/lit-all.js';
 import { store } from "/state/store.js";
 import { StoreSubscriber } from "/state/subscribe.js";
 import { asyncTimeout } from "/utils/timeout.js";

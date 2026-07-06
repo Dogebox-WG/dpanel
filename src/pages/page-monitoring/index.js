@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from '/vendor/@lit/all@3.1.2/lit-all.min.js';
+import { LitElement, html, css, nothing } from '/lib/lit-all.js';
 import { getSystemStats } from '/api/monitoring/system.js';
 import { getAvailableServices } from '/api/monitoring/services.js';
 import { pkgController } from '/controllers/package/index.js';
@@ -525,8 +525,9 @@ class MonitoringPage extends LitElement {
   renderEditButton() {
     return html`
       <div class="edit-button-container">
-        <sl-button 
+        <sl-button
           variant=${this.editMode ? 'primary' : 'default'}
+          class="edit-mode-toggle ${this.editMode ? 'can-save' : ''}"
           size="small"
           @click=${this.handleEditModeToggle}
         >
@@ -541,9 +542,14 @@ class MonitoringPage extends LitElement {
     if (!this.editMode) return nothing;
 
     return html`
-      <button class="add-fab" @click=${this.handleAddClick}>
-        <sl-icon name="plus-lg"></sl-icon>
-      </button>
+      <div class="add-fab-container">
+        <sl-tooltip content="Add components">
+          <button class="add-fab" @click=${this.handleAddClick}>
+            <sl-icon name="plus-lg"></sl-icon>
+            <span class="add-fab-label">Add</span>
+          </button>
+        </sl-tooltip>
+      </div>
     `;
   }
 
@@ -1039,11 +1045,39 @@ class MonitoringPage extends LitElement {
       z-index: 100;
     }
 
+    .edit-mode-toggle::part(base) {
+      background: rgba(7, 255, 174, 0.08);
+      border-color: rgba(7, 255, 174, 0.3);
+      color: #07ffae;
+    }
+
+    .edit-mode-toggle::part(base):hover {
+      background: rgba(7, 255, 174, 0.14);
+      border-color: rgba(7, 255, 174, 0.5);
+      color: #07ffae;
+    }
+
+    .edit-mode-toggle.can-save::part(base) {
+      background: #07ffae;
+      border-color: #07ffae;
+      color: #000;
+    }
+
+    .edit-mode-toggle.can-save::part(base):hover {
+      background: #25ffb9;
+      border-color: #25ffb9;
+      color: #000;
+    }
+
     /* Add FAB */
-    .add-fab {
+    .add-fab-container {
       position: fixed;
       bottom: 2rem;
       right: 2rem;
+      z-index: 100;
+    }
+
+    .add-fab {
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -1051,42 +1085,41 @@ class MonitoringPage extends LitElement {
       border: none;
       cursor: pointer;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(7, 255, 174, 0.4);
+      gap: 0.1rem;
+      padding: 0;
       transition: all 0.2s ease;
-      z-index: 100;
-    }
-
-    .add-fab:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(7, 255, 174, 0.6);
-    }
-
-    .add-fab:active {
-      transform: scale(1.05);
     }
 
     .add-fab sl-icon {
-      font-size: 1.5rem;
-      color: #000;
+      font-size: 1.35rem;
+    }
+
+    .add-fab-label {
+      font-family: 'Comic Neue', sans-serif;
+      font-size: 0.7rem;
+      font-weight: bold;
+      line-height: 1;
     }
 
     /* Dashboard Tabs */
     .dashboard-tabs-container {
-      margin-bottom: 1rem;
+      margin-bottom: 0;
       margin-top: 3rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .dashboard-tabs {
+      --dashboard-tab-height: 41px;
       display: flex;
       gap: 0.5rem;
       align-items: center;
       overflow-x: auto;
       overflow-y: hidden;
       scrollbar-width: thin;
-      padding-bottom: 0.5rem;
+      padding-bottom: 0;
     }
 
     .dashboard-tabs::-webkit-scrollbar {
@@ -1117,6 +1150,7 @@ class MonitoringPage extends LitElement {
       font-family: 'Comic Neue', sans-serif;
       font-size: 0.9rem;
       color: var(--sl-color-neutral-400);
+      margin-bottom: -1px;
     }
 
     .dashboard-tab:hover {
@@ -1187,7 +1221,7 @@ class MonitoringPage extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.5rem 0.75rem;
+      padding: 0;
       background: rgba(255, 255, 255, 0.02);
       border: 1px dashed rgba(255, 255, 255, 0.2);
       border-bottom: none;
@@ -1195,6 +1229,10 @@ class MonitoringPage extends LitElement {
       cursor: pointer;
       transition: all 0.2s ease;
       color: var(--sl-color-neutral-400);
+      margin-bottom: -1px;
+      width: var(--dashboard-tab-height);
+      height: var(--dashboard-tab-height);
+      box-sizing: border-box;
     }
 
     .add-dashboard-btn:hover {
@@ -1627,18 +1665,18 @@ class MonitoringPage extends LitElement {
 
     .empty-icon {
       font-size: 3rem;
-      color: var(--sl-color-neutral-500);
+      color: var(--sl-color-neutral-600);
       margin-bottom: 1rem;
     }
 
     .empty-state h3 {
       font-family: 'Comic Neue', sans-serif;
-      color: var(--sl-color-neutral-300);
+      color: var(--sl-color-neutral-600);
       margin: 0 0 0.5rem 0;
     }
 
     .empty-state p {
-      color: var(--sl-color-neutral-500);
+      color: var(--sl-color-neutral-600);
       margin: 0 0 1.5rem 0;
       max-width: 400px;
     }

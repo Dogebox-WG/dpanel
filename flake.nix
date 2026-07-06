@@ -34,6 +34,11 @@
           shellHook = ''
             export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
             export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+
+            if [ ! -d node_modules/@deform-wg/deform ]; then
+              echo "Installing root npm dependencies..."
+              npm install
+            fi
           '';
         };
 
@@ -69,7 +74,7 @@
 
           meta = with pkgs.lib; {
             description = "Dogebox control panel web interface";
-            homepage = "https://github.com/dogeorg/dpanel";
+            homepage = "https://github.com/Dogebox-WG/dpanel";
             license = licenses.mit;
           };
         };
@@ -84,6 +89,36 @@
               --override-input dogeboxd-src "path:$(realpath ../dogeboxd)?rev=$(git -C ../dogeboxd log -1 --pretty=format:%H)" \
               --no-write-lock-file
           '';
+        };
+
+        packages.test = pkgs.writeShellApplication {
+          name = "dpanel-test";
+          runtimeInputs = [ pkgs.nodejs_24 pkgs.playwright-test ];
+          text = ''
+            set -euo pipefail
+
+            if [ ! -f package.json ] || [ ! -d dev ]; then
+              echo "Run dpanel-test from the dpanel repository root." >&2
+              exit 1
+            fi
+
+            if [ ! -d node_modules/@deform-wg/deform ]; then
+              echo "Installing root npm dependencies..."
+              npm install
+            fi
+
+            cd dev
+            npm install
+
+            export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+            export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+            exec npm test
+          '';
+        };
+
+        apps.test = {
+          type = "app";
+          program = "${self.packages.${system}.test}/bin/dpanel-test";
         };
 
         dbxSessionName = "dpanel";

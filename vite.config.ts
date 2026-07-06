@@ -1,16 +1,56 @@
-import { defineConfig } from 'vite';
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, type Plugin } from 'vite';
 
 // Avoid Node.js-specific globals/types (e.g. __dirname) so this file stays portable
 // without requiring @types/node in the project.
 const abs = (p: string) => new URL(p, import.meta.url).pathname;
 
+const shoelacePublicPath = '/shoelace';
+const shoelaceCdnRoot = join(
+  fileURLToPath(new URL('.', import.meta.url)),
+  'node_modules/@shoelace-style/shoelace/cdn',
+);
+
+function shoelaceAssetsPlugin(): Plugin {
+  return {
+    name: 'shoelace-assets',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0];
+        if (!url?.startsWith(shoelacePublicPath)) {
+          next();
+          return;
+        }
+
+        const relativePath = normalize(url.slice(shoelacePublicPath.length));
+        if (relativePath.startsWith('..')) {
+          next();
+          return;
+        }
+
+        const filePath = join(shoelaceCdnRoot, relativePath);
+        if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
+          next();
+          return;
+        }
+
+        res.statusCode = 200;
+        createReadStream(filePath).pipe(res);
+      });
+    },
+  };
+}
+
 export default defineConfig({
   root: 'src',
   // Static files are served at /static/* (copied into dist/ on build).
   publicDir: 'static',
+  plugins: [shoelaceAssetsPlugin()],
   server: {
     port: 9090,
-    host: 'localhost'
+    host: 'localhost',
   },
   build: {
     outDir: '../dist',
@@ -20,15 +60,14 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: abs('./src/index.html'),
-        recovery: abs('./src/index_recovery.html')
-      }
-    }
+        recovery: abs('./src/index_recovery.html'),
+      },
+    },
   },
   // Handle absolute imports like /state/store.js
   resolve: {
     alias: {
       '/state': abs('./src/state'),
-      '/vendor': abs('./src/vendor'),
       '/components': abs('./src/components'),
       '/pages': abs('./src/pages'),
       '/router': abs('./src/router'),
@@ -36,7 +75,9 @@ export default defineConfig({
       '/api': abs('./src/api'),
       '/controllers': abs('./src/controllers'),
       '/styles': abs('./src/styles'),
-      '/gen': abs('./src/gen')
-    }
-  }
+      '/lib': abs('./src/lib'),
+      '/bootstrap': abs('./src/bootstrap'),
+      '/gen': abs('./src/gen'),
+    },
+  },
 });

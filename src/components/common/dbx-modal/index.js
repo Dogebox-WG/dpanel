@@ -361,8 +361,8 @@ export class DbxModal extends LitElement {
     if (!this.subtitle) return nothing;
 
     return this.subtitle
+      .trim()
       .split(/\n\n+/)
-      .filter(Boolean)
       .map(
         (paragraph) =>
           html`<p class="dbx-modal__subtitle">${paragraph}</p>`,

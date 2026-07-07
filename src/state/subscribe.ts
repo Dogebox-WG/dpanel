@@ -1,5 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
-import type { Store } from "./store.impl";
+import type { Store } from "./store.js";
 
 export class StoreSubscriber implements ReactiveController {
   host: ReactiveControllerHost;

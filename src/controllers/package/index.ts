@@ -21,7 +21,7 @@ export interface ChangeMeta {
 }
 
 export interface PkgObserver {
-  pupId?: string;
+  pupId?: string | null;
   // Loose signature so LitElement.requestUpdate(name?, oldValue?, options?)
   // satisfies the interface directly.
   requestUpdate(options?: unknown): void;

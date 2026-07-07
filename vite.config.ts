@@ -13,9 +13,9 @@ const shoelaceCdnRoot = join(
   'node_modules/@shoelace-style/shoelace/cdn',
 );
 
-// During the TypeScript migration, modules keep importing with .js
-// extensions while the underlying sources move to .ts one batch at a time.
-// Resolve a .js specifier to its .ts sibling when only the .ts file exists.
+// Project convention: modules import with .js extensions (Node ESM style)
+// while the sources are authored in .ts. Resolve a .js specifier to its
+// .ts sibling when only the .ts file exists.
 function tsSourceFallbackPlugin(): Plugin {
   return {
     name: 'ts-source-fallback',

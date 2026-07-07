@@ -1,5 +1,9 @@
-import "./index.js";
-import type { DbxModal } from "./index.js";
+// Use the same absolute specifier as all other importers so the module is
+// only ever loaded under one URL. The test server's node-resolve rewrites a
+// relative "./index.js" to the .ts source URL, which would load the module a
+// second time and double-register x-dbx-modal.
+import "/components/common/dbx-modal/index.js";
+import type { DbxModal } from "/components/common/dbx-modal/index.js";
 
 export interface OpenDbxModalOptions {
   title?: string;

@@ -3,6 +3,17 @@ import { getCustomNix, saveCustomNix, validateCustomNix } from '/api/system/cust
 import { createAlert } from '/components/common/alert.js';
 
 class PageCustomiseOS extends LitElement {
+  declare _loading: boolean;
+  declare _saving: boolean;
+  declare _content: string;
+  declare _originalContent: string;
+  declare _isValid: boolean;
+  declare _validationError: string;
+  declare _validating: boolean;
+  declare _exists: boolean;
+
+  _validationTimeout: ReturnType<typeof setTimeout> | null;
+
   static get properties() {
     return {
       _loading: { type: Boolean },
@@ -213,7 +224,7 @@ class PageCustomiseOS extends LitElement {
     }
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     super.updated(changedProperties);
     // Update the highlighted content directly via innerHTML
     const highlight = this.shadowRoot?.querySelector('.editor-highlight');
@@ -226,9 +237,9 @@ class PageCustomiseOS extends LitElement {
     this._loading = true;
     try {
       const res = await getCustomNix();
-      this._content = res.content;
-      this._originalContent = res.content;
-      this._exists = res.exists;
+      this._content = res.content ?? '';
+      this._originalContent = this._content;
+      this._exists = !!res.exists;
       this._isValid = true;
     } catch (err) {
       createAlert('danger', 'Failed to load custom configuration');
@@ -238,18 +249,19 @@ class PageCustomiseOS extends LitElement {
     }
   }
 
-  handleContentChange(e) {
-    this._content = e.target.value;
-    this.syncScroll(e.target);
+  handleContentChange(e: Event) {
+    const textarea = e.target as HTMLTextAreaElement;
+    this._content = textarea.value;
+    this.syncScroll(textarea);
     this.scheduleValidation();
   }
 
-  handleScroll(e) {
-    this.syncScroll(e.target);
+  handleScroll(e: Event) {
+    this.syncScroll(e.target as HTMLTextAreaElement);
   }
 
-  syncScroll(textarea) {
-    const highlight = this.shadowRoot.querySelector('.editor-highlight');
+  syncScroll(textarea: HTMLTextAreaElement) {
+    const highlight = this.shadowRoot?.querySelector('.editor-highlight');
     if (highlight) {
       highlight.scrollTop = textarea.scrollTop;
       highlight.scrollLeft = textarea.scrollLeft;
@@ -268,7 +280,7 @@ class PageCustomiseOS extends LitElement {
   async validateContent() {
     try {
       const res = await validateCustomNix(this._content);
-      this._isValid = res.valid;
+      this._isValid = !!res.valid;
       this._validationError = res.error || '';
     } catch (err) {
       this._isValid = false;
@@ -316,11 +328,11 @@ class PageCustomiseOS extends LitElement {
     }
   }
 
-  handleKeyDown(e) {
+  handleKeyDown(e: KeyboardEvent) {
     // Handle Tab key for indentation
     if (e.key === 'Tab') {
       e.preventDefault();
-      const textarea = e.target;
+      const textarea = e.target as HTMLTextAreaElement;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       
@@ -334,7 +346,7 @@ class PageCustomiseOS extends LitElement {
     }
   }
 
-  highlightNix(code) {
+  highlightNix(code: string) {
     // Use placeholder tokens to avoid regex collisions
     const TOKENS = {
       SPAN_OPEN: '\u0001',
@@ -342,7 +354,7 @@ class PageCustomiseOS extends LitElement {
       QUOTE: '\u0003',
     };
     
-    const span = (cls, content) => `${TOKENS.SPAN_OPEN}${cls}${TOKENS.SPAN_CLOSE}${content}${TOKENS.SPAN_OPEN}/${TOKENS.SPAN_CLOSE}`;
+    const span = (cls: string, content: string) => `${TOKENS.SPAN_OPEN}${cls}${TOKENS.SPAN_CLOSE}${content}${TOKENS.SPAN_OPEN}/${TOKENS.SPAN_CLOSE}`;
     
     // Escape HTML first
     let escaped = code

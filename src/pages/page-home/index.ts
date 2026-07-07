@@ -1,7 +1,16 @@
 import { LitElement, html, css } from '/lib/lit-all.js';
 import "/components/common/page-banner.js";
 
+interface HomeOption {
+  color: string;
+  prefix: string;
+  label: string;
+  icon: string;
+  desc: string;
+}
+
 class HomeView extends LitElement {
+  options: HomeOption[];
 
   static styles = css`
     :host {

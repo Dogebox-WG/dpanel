@@ -60,7 +60,7 @@ const STEP_BOOTSTRAP = 6;
 const STEP_DONE = 7;
 const STEP_INSTALL = 8;
 const SETUP_STEP_STORAGE_KEY = "recovery-setup-current-step";
-const STEP_NAMES = {
+const STEP_NAMES: Record<number, string> = {
   [STEP_LOGIN]: "login",
   [STEP_INTRO]: "intro",
   [STEP_SYS_SETTINGS]: "system-settings",
@@ -72,7 +72,40 @@ const STEP_NAMES = {
   [STEP_INSTALL]: "install",
 };
 
-class AppModeApp extends LitElement {
+import type { BootstrapFacts } from "/types/bootstrap";
+
+/** Setup facts plus the synthetic forbidden marker used pre-login. */
+type SetupState = Partial<BootstrapFacts> & { isForbidden?: boolean };
+
+interface PersistedSetupStep {
+  stepNumber: number;
+  setupSessionId: string;
+  bootstrapStartError?: string;
+}
+
+export class AppModeApp extends LitElement {
+  declare loading: boolean;
+  declare isLoggedIn: boolean;
+  declare activeStepNumber: number;
+  declare isFirstTimeSetup: boolean;
+  declare isForbidden: boolean;
+  declare hasLoaded: boolean;
+  declare bootstrapJobId: string | null;
+  declare bootstrapStartError: string;
+  declare installationState: string;
+  declare installationBootMedia: string;
+  declare renderReady: boolean;
+
+  dialogMgmt: HTMLElement | null;
+  mainChannel: typeof mainChannel;
+  context: StoreSubscriber;
+  devMode?: boolean;
+  _setupData: { initialDeviceName: string | null };
+  _setupState: SetupState | null = null;
+
+  // Render chunks mixed in via bindToClass(renderChunks, this).
+  declare renderNav: (isFirstTimeSetup: boolean) => unknown;
+
   static styles = [appModeStyles, navStyles];
   static properties = {
     loading: { type: Boolean },
@@ -111,22 +144,22 @@ class AppModeApp extends LitElement {
     };
   }
 
-  _logSetupFlow(message, details = {}) {
+  _logSetupFlow(message: string, details: unknown = {}) {
     console.log("[recovery-setup]", message, details);
   }
 
-  _getStepName(stepNumber) {
+  _getStepName(stepNumber: number) {
     return STEP_NAMES[stepNumber] ?? `unknown-${stepNumber}`;
   }
 
-  _readPersistedSetupStep() {
+  _readPersistedSetupStep(): PersistedSetupStep | null {
     try {
       const rawValue = window.sessionStorage.getItem(SETUP_STEP_STORAGE_KEY);
       if (rawValue === null) {
         return null;
       }
 
-      const parsedValue = JSON.parse(rawValue);
+      const parsedValue = JSON.parse(rawValue) as PersistedSetupStep | null;
       if (
         !parsedValue ||
         !Number.isInteger(parsedValue.stepNumber) ||
@@ -150,7 +183,7 @@ class AppModeApp extends LitElement {
     }
   }
 
-  _writePersistedSetupStep(stepNumber, setupSessionId, bootstrapStartError = "") {
+  _writePersistedSetupStep(stepNumber: number, setupSessionId: string | undefined, bootstrapStartError = "") {
     try {
       if (!setupSessionId) {
         this._logSetupFlow("persistedStep:write-skipped", {
@@ -189,7 +222,7 @@ class AppModeApp extends LitElement {
     }
   }
 
-  _getAllowedPersistedSteps(setupState) {
+  _getAllowedPersistedSteps(setupState: SetupState): Set<number> {
     const {
       hasCompletedInitialConfiguration,
       hasGeneratedKey,
@@ -252,7 +285,7 @@ class AppModeApp extends LitElement {
     ]);
   }
 
-  _resolvePersistedSetupStep(setupState, fallbackStep) {
+  _resolvePersistedSetupStep(setupState: SetupState, fallbackStep: number) {
     const persistedStep = this._readPersistedSetupStep();
     if (persistedStep === null) {
       return fallbackStep;
@@ -293,7 +326,7 @@ class AppModeApp extends LitElement {
     return persistedStep.stepNumber;
   }
 
-  set setupState(newValue) {
+  set setupState(newValue: SetupState | null) {
     this._setupState = newValue;
     if (newValue) {
       const stepNumber = this._determineStartingStep(newValue);
@@ -352,7 +385,7 @@ class AppModeApp extends LitElement {
     }
 
     this.devMode = response.devMode;
-    this.setupState = response.setupFacts;
+    this.setupState = response.setupFacts ?? null;
     this.loading = false;
   }
 
@@ -376,7 +409,7 @@ class AppModeApp extends LitElement {
     this.hasLoaded = true;
   }
 
-  _determineStartingStep(setupState) {
+  _determineStartingStep(setupState: SetupState) {
     const {
       hasCompletedInitialConfiguration,
       hasGeneratedKey,
@@ -422,13 +455,16 @@ class AppModeApp extends LitElement {
       }
 
       const persistedStep = this._readPersistedSetupStep();
+      // Guard against a null persisted step; comparing via ?. alone would
+      // pass when both session ids are undefined and then crash below.
       const hasPersistedBootstrapStartError =
-        persistedStep?.setupSessionId === setupState.setupSessionId &&
+        persistedStep != null &&
+        persistedStep.setupSessionId === setupState.setupSessionId &&
         persistedStep.stepNumber === STEP_BOOTSTRAP &&
         !!persistedStep.bootstrapStartError;
 
       if (hasPersistedBootstrapStartError) {
-        this.bootstrapStartError = persistedStep.bootstrapStartError;
+        this.bootstrapStartError = persistedStep.bootstrapStartError!;
         this._logSetupFlow("determineStartingStep:result", {
           reason: "persisted-bootstrap-start-error",
           step: STEP_BOOTSTRAP,
@@ -516,17 +552,17 @@ class AppModeApp extends LitElement {
 
   firstUpdated() {
     // Prevent dialog closures on overlay click
-    this.dialogMgmt = this.shadowRoot.querySelector("#MgmtDialog");
-    this.dialogMgmt.addEventListener("sl-request-close", (event) => {
+    this.dialogMgmt = this.shadowRoot!.querySelector("#MgmtDialog");
+    this.dialogMgmt?.addEventListener("sl-request-close", (event) => {
       if (
-        event.detail.source === "overlay" ||
+        (event as CustomEvent<{ source: string }>).detail.source === "overlay" ||
         this.context.store.setupContext.preventClose
       ) {
         event.preventDefault();
       }
     });
-    this.dialogMgmt.addEventListener("sl-after-hide", (event) => {
-      if (event.target.id === "MgmtDialog") {
+    this.dialogMgmt?.addEventListener("sl-after-hide", (event) => {
+      if ((event.target as HTMLElement).id === "MgmtDialog") {
         store.updateState({
           setupContext: {
             view: null,
@@ -540,7 +576,7 @@ class AppModeApp extends LitElement {
 
   _nextStep = () => {
     const fromStep = this.activeStepNumber;
-    this.isLoggedIn = this.context.store.networkContext.token;
+    this.isLoggedIn = !!this.context.store.networkContext.token;
     this.activeStepNumber++;
     this._logSetupFlow("nextStep", {
       fromStep,
@@ -551,7 +587,7 @@ class AppModeApp extends LitElement {
     });
   };
 
-  _goToStep = (stepNumber) => {
+  _goToStep = (stepNumber: number) => {
     const fromStep = this.activeStepNumber;
     this.activeStepNumber = stepNumber;
     this._logSetupFlow("goToStep", {
@@ -562,9 +598,9 @@ class AppModeApp extends LitElement {
     });
   };
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has("activeStepNumber")) {
-      const previousStep = changedProperties.get("activeStepNumber");
+      const previousStep = changedProperties.get("activeStepNumber") as number | undefined;
       if (
         this.activeStepNumber >= STEP_INTRO &&
         this.activeStepNumber <= STEP_BOOTSTRAP
@@ -611,8 +647,8 @@ class AppModeApp extends LitElement {
     super.disconnectedCallback();
   }
 
-  performLogout(e) {
-    if (!e.currentTarget.disabled) {
+  performLogout(e: Event) {
+    if (!(e.currentTarget as HTMLButtonElement).disabled) {
       this._clearPersistedSetupStep();
       store.updateState({ networkContext: { token: null } });
       window.location.reload();
@@ -757,11 +793,11 @@ class AppModeApp extends LitElement {
                               this.bootstrapStartError = "";
                               this._nextStep();
                             }}
-                            .onSuccess=${(jobId) => {
+                            .onSuccess=${(jobId: string) => {
                               this.bootstrapJobId = jobId;
                               this.bootstrapStartError = "";
                             }}
-                            .onBootstrapStartFailed=${(errorMessage) => {
+                            .onBootstrapStartFailed=${(errorMessage: string) => {
                               this.bootstrapJobId = null;
                               this.bootstrapStartError = errorMessage;
                             }}

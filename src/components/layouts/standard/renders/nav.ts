@@ -1,8 +1,11 @@
 import { html, classMap, nothing } from "/lib/lit-all.js";
 import { notYet } from "/components/common/not-yet-implemented.js";
-import "/components/common/job-indicator/index.ts";
+import "/components/common/job-indicator/index.js";
 
-export function renderNav(CURPATH) {
+import type { EnrichedPup } from "/types/pup-model";
+import type { DPanelApp } from "/app.js";
+
+export function renderNav(this: DPanelApp, CURPATH: string) {
   const gutterNavClasses = classMap({
     pulse: this.systemPromptActive,
   });
@@ -21,16 +24,16 @@ export function renderNav(CURPATH) {
   
   // Filter to pups that: 1) are pinned, 2) have UIs, 3) are installed
   const pinnedPups = pinnedPupIds
-    .map(id => allPups.find(p => p.state?.id === id))
-    .filter(p => p && p.state && (p.state.webUIs || []).length > 0)
+    .map((id: string) => allPups.find((p) => p.state?.id === id))
+    .filter((p): p is EnrichedPup => !!(p && p.state && (p.state.webUIs || []).length > 0))
     .sort((a, b) => {
-      const nameA = a.state.manifest?.meta?.name || '';
-      const nameB = b.state.manifest?.meta?.name || '';
+      const nameA = a.state?.manifest?.meta?.name || '';
+      const nameB = b.state?.manifest?.meta?.name || '';
       return nameA.localeCompare(nameB);
     });
 
   // Check if current path is a pinned pup's page (to avoid double-highlighting)
-  const isOnPinnedPupPage = pinnedPups.some(pup => CURPATH.includes(`/pups/${pup.state.id}`));
+  const isOnPinnedPupPage = pinnedPups.some(pup => CURPATH.includes(`/pups/${pup.state!.id}`));
   // "Pups" menu should be active for /pups routes, but NOT if we're on a pinned pup's page
   const isPupsMenuActive = CURPATH.startsWith("/pups") && !isOnPinnedPupPage;
   
@@ -75,10 +78,11 @@ export function renderNav(CURPATH) {
               <div class="pinned-pups-separator"></div>
               <div class="pinned-pups-container">
                 ${pinnedPups.map(pup => {
-                  const pupId = pup.state.id;
-                  const name = pup.state.manifest?.meta?.name || 'Unknown';
-                  const logo = pup.assets?.logos?.mainLogoBase64;
-                  const iconColor = pup.assets?.iconColor || "hsl(220 10% 65%)";
+                  const pupId = pup.state!.id;
+                  const name = pup.state?.manifest?.meta?.name || 'Unknown';
+                  const assets = pup.assets as { logos?: { mainLogoBase64?: string }; iconColor?: string } | null | undefined;
+                  const logo = assets?.logos?.mainLogoBase64;
+                  const iconColor = assets?.iconColor || "hsl(220 10% 65%)";
                   const isActive = CURPATH.includes(`/pups/${pupId}`);
                   
                   return html`
@@ -105,12 +109,12 @@ export function renderNav(CURPATH) {
   `;
 }
 
-export function handleExpandableMenuClick(e) {
+export function handleExpandableMenuClick(this: DPanelApp, e: Event) {
   e.preventDefault();
-  const sourceEl = e.currentTarget;
-  const targetEl = this.shadowRoot.querySelector(
+  const sourceEl = e.currentTarget as HTMLElement;
+  const targetEl = this.shadowRoot?.querySelector(
     `.sub-menu-list[for=${sourceEl.getAttribute("name")}]`,
   );
-  sourceEl.parentNode.classList.toggle("expand");
-  targetEl.classList.toggle("hidden");
+  (sourceEl.parentNode as HTMLElement)?.classList.toggle("expand");
+  targetEl?.classList.toggle("hidden");
 }

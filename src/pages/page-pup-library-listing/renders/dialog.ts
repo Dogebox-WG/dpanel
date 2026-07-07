@@ -8,39 +8,42 @@ import "/components/views/action-dependency-manage/dependency.js";
 import "/components/views/x-pup-update-panel/index.js";
 import { buildPupConfig } from "/utils/pup-config.js";
 
-export function renderDialog() {
-  const pkg = this.getPup();
-  const { statusId } = pkg.computed;
+import type { PupPage } from "../index.js";
+
+export function renderDialog(this: PupPage) {
+  const pkg = this.getPup()!;
+  const { statusId } = pkg.computed ?? {};
   const readmeEl = html`<div style="padding: 1em; text-align: center;"> Such empty. This pup does not provide a README.</div>`;
   const deps = pkg?.state?.manifest?.dependencies || [];
   const ints = pkg?.state?.manifest?.interfaces || [];
-  const depsEl = html`<x-action-manage-deps .dependencies=${deps} .providers=${pkg.state.providers} editMode pupId=${pkg.state.id}></x-action-manage-deps>`;
+  const depsEl = html`<x-action-manage-deps .dependencies=${deps} .providers=${pkg.state?.providers} editMode pupId=${pkg.state?.id}></x-action-manage-deps>`;
   const intsEl = html`<x-action-interface-list .interfaces=${ints}></x-action-interface-list>`;
   
   const updateEl = html`
     <x-pup-update-panel 
-      pupId=${pkg.state.id}
-      pupName=${pkg.state.manifest.meta.name}
-      currentVersion=${pkg.state.version}
+      pupId=${pkg.state?.id}
+      pupName=${pkg.state?.manifest?.meta?.name}
+      currentVersion=${pkg.state?.version}
       @upgrade-started=${this.handleUpgradeStarted}
       @update-skipped=${this.handleUpdateSkipped}
     ></x-pup-update-panel>
   `;
 
   const preventUninstallEl = html`
-    <p>Cannot uninstall a running Pup.<br/>Please disable ${pkg.state.manifest.meta.name } and try again.</p>
+    <p>Cannot uninstall a running Pup.<br/>Please disable ${pkg.state?.manifest?.meta?.name } and try again.</p>
     <sl-button slot="footer" variant="primary" @click=${this.clearDialog}>Dismiss</sl-button>
     <style>p:first-of-type { margin-top: 0px; }</style>
   `
 
+  const pupName = pkg.state?.manifest?.meta?.name;
   const uninstallEl = html`
-    <p>Are you sure you want to uninstall ${pkg.state.manifest.meta.name}?</p>
+    <p>Are you sure you want to uninstall ${pupName}?</p>
     <sl-input 
-      placeholder="Type '${pkg.state.manifest.meta.name}' to confirm" 
-      @sl-input=${(e) => this._confirmedName = e.target.value }
-      @keydown=${(e) => {
+      placeholder="Type '${pupName}' to confirm" 
+      @sl-input=${(e: Event) => this._confirmedName = (e.target as HTMLInputElement).value }
+      @keydown=${(e: KeyboardEvent) => {
         if (e.key === 'Enter' && 
-            this._confirmedName === pkg.state.manifest.meta.name && 
+            this._confirmedName === pupName && 
             !this.inflight_uninstall) {
           this.handleUninstall();
         }
@@ -48,7 +51,7 @@ export function renderDialog() {
       autofocus
       autocomplete="off"
     ></sl-input>
-    <sl-button slot="footer" variant="danger" @click=${this.handleUninstall} ?loading=${this.inflight_uninstall} ?disabled=${this.inflight_uninstall || this._confirmedName !== pkg.state.manifest.meta.name}>Uninstall</sl-button>
+    <sl-button slot="footer" variant="danger" @click=${this.handleUninstall} ?loading=${this.inflight_uninstall} ?disabled=${this.inflight_uninstall || this._confirmedName !== pupName}>Uninstall</sl-button>
     <style>p:first-of-type { margin-top: 0px; }</style>
   `;
 

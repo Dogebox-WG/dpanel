@@ -5,6 +5,12 @@ import { notYet } from "/components/common/not-yet-implemented.js"
 import "/components/views/x-launcher-button/index.js";
 
 class SetupCompleteView extends LitElement {
+  declare isFirstTimeSetup: boolean;
+  declare reflectorToken: string;
+
+  // Assigned by the parent (app_recovery) via property binding.
+  declare setupData: unknown;
+
   static get properties() {
     return {
       isFirstTimeSetup: { type: Boolean },
@@ -64,8 +70,8 @@ class SetupCompleteView extends LitElement {
     `,
   ];
 
-  handleMgmtOptionClick(e, hideViewClose) {
-    store.updateState({ setupContext: { view: e.currentTarget.getAttribute('data-id'), hideViewClose: hideViewClose }});
+  handleMgmtOptionClick(e: Event, hideViewClose?: boolean) {
+    store.updateState({ setupContext: { view: (e.currentTarget as HTMLElement).getAttribute('data-id'), hideViewClose: hideViewClose }});
   }
 
   firstUpdated() {
@@ -89,11 +95,11 @@ class SetupCompleteView extends LitElement {
         </sl-button>
 
         <sl-button variant="neutral" outline data-id="reboot"
-          @click=${(e) => this.handleMgmtOptionClick(e, true)}>Reboot
+          @click=${(e: Event) => this.handleMgmtOptionClick(e, true)}>Reboot
         </sl-button>
 
         <sl-button variant="neutral" outline data-id="power-off"
-          @click=${(e) => this.handleMgmtOptionClick(e, true)}>Power Off
+          @click=${(e: Event) => this.handleMgmtOptionClick(e, true)}>Power Off
         </sl-button>
 
         <sl-button variant="danger" outline data-id="factory-reset"

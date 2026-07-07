@@ -32,7 +32,48 @@ import { renderStatus } from "./renders/status.js";
 import { addSidebarPup, removeSidebarPup } from "/api/system/sidebar-preferences.js";
 import { canCopyToClipboard } from "/utils/clipboard.js";
 
-class PupPage extends LitElement {
+import type { EnrichedPup, PupComputedVals } from "/types/pup-model";
+import type { ActionProgress } from "/types/jobs";
+
+/** Computed labels spread from pkg.computed; may be empty when not yet derived. */
+export type PupLabels = Partial<PupComputedVals>;
+
+interface HealthCheckDef {
+  status?: string;
+  [key: string]: unknown;
+}
+
+export class PupPage extends LitElement {
+  declare ready: boolean; // Page is loading or not.
+  declare result: string; // 200, 404, 500.
+  declare open_dialog: string | false;
+  declare open_dialog_label: string;
+  declare checks: HealthCheckDef[];
+  declare pupEnabled: boolean;
+  declare _confirmedName: string;
+  declare inflight_startstop: boolean;
+  declare inflight_uninstall: boolean;
+  declare inflight_purge: boolean;
+  declare activityLogs: ActionProgress[];
+  declare rollbackAvailable: boolean;
+  declare _renderedJobId: string | null;
+
+  pkgController: typeof pkgController;
+  context: StoreSubscriber;
+  open_page: boolean;
+  open_page_label: string;
+  pupId?: string | null;
+  _missingPupRedirectTimer: ReturnType<typeof setTimeout> | null;
+
+  renderDialog: () => unknown;
+  renderActions: (labels: PupLabels, hasLogs: number) => unknown;
+  renderStatus: (labels: PupLabels, pkg: EnrichedPup, rollbackAvailable?: boolean) => unknown;
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare openConfig: () => void;
+  declare openDeps: () => void;
+  declare handlePurgeFunction: () => Promise<void>;
+
   static get properties() {
     return {
       ready: { type: Boolean }, // Page is loading or not.
@@ -93,8 +134,8 @@ class PupPage extends LitElement {
     super.disconnectedCallback();
   }
 
-  requestUpdate(options = {}) {
-    if (this.pkgController && options.type === 'activity') {
+  requestUpdate(options?: unknown) {
+    if (this.pkgController && (options as { type?: string } | undefined)?.type === 'activity') {
       if (this.context.store.pupContext?.state?.id) {
         this.updateActivityLogs();
       }
@@ -104,7 +145,7 @@ class PupPage extends LitElement {
 
   updateActivityLogs() {
     const pupId = this.context.store.pupContext?.state?.id
-    const logs = this.pkgController.activityIndex[pupId];
+    const logs = pupId ? this.pkgController.activityIndex[pupId] : undefined;
     this.activityLogs = Array.isArray(logs) ? [...logs] : [];
   }
 
@@ -112,7 +153,7 @@ class PupPage extends LitElement {
     this._renderedJobId = null;
   };
 
-  renderLogViewer(pkg) {
+  renderLogViewer(pkg: EnrichedPup | null) {
     if (!pkg?.state?.id) return nothing;
     
     // Check if there's a recent job (active or recently completed) for this pup
@@ -149,19 +190,23 @@ class PupPage extends LitElement {
     this.open_dialog_label = "";
   }
 
-  handleMenuClick = (event, el) => {
-    this.open_dialog = el.getAttribute("name");
-    this.open_dialog_label = el.getAttribute("label");
+  handleMenuClick = (event: Event, el: HTMLElement) => {
+    this.open_dialog = el.getAttribute("name") ?? "";
+    this.open_dialog_label = el.getAttribute("label") ?? "";
   };
 
-  submitConfig = async (stagedChanges, formNode, dynamicForm) => {
+  submitConfig = async (
+    stagedChanges: Record<string, unknown>,
+    formNode: unknown,
+    dynamicForm: { commitChanges: (formNode: unknown) => void; retainChanges: () => void },
+  ) => {
     // Define callbacks
-    const pupId = this.context.store.pupContext.state.id
+    const pupId = this.context.store.pupContext!.state!.id
     const callbacks = {
       onSuccess: () => dynamicForm.commitChanges(formNode),
-      onError: (errorPayload) => {
+      onError: (errorPayload?: unknown) => {
         dynamicForm.retainChanges();
-        this.displayConfigUpdateErr(errorPayload);
+        this.displayConfigUpdateErr(errorPayload as { id?: string; error?: string });
       },
     };
 
@@ -170,19 +215,19 @@ class PupPage extends LitElement {
       stagedChanges,
       callbacks,
     );
-    if (res && !res.error) {
+    if (res) {
       return true;
     }
   };
 
-  displayConfigUpdateErr(failedTxnPayload) {
+  displayConfigUpdateErr(failedTxnPayload: { id?: string; error?: string } | undefined) {
     const failedTxnId = failedTxnPayload?.id ? `(${failedTxnPayload.id})` : "";
     const message = [
       "Failed to update configuration",
       `Refer to logs ${failedTxnId}`,
     ];
     const action = { text: "View details" };
-    const err = new Error(failedTxnPayload.error);
+    const err = new Error(failedTxnPayload?.error);
     const hideAfter = 0;
 
     createAlert(
@@ -195,24 +240,25 @@ class PupPage extends LitElement {
     );
   }
 
-  async handleStartStop(e) {
-    const pupId = this.context.store.pupContext.state.id
+  async handleStartStop(e: Event) {
+    const pupId = this.context.store.pupContext!.state!.id
+    const checked = (e.target as HTMLInputElement).checked;
     this.inflight_startstop = true;
-    this.pupEnabled = e.target.checked;
+    this.pupEnabled = checked;
     this.requestUpdate();
 
-    const actionName = e.target.checked ? 'start' : 'stop' ;
+    const actionName = checked ? 'start' : 'stop' ;
     const callbacks = {
       onSuccess: () => { this.inflight_startstop = false; },
-      onError: () => { console.warning('Txn reported an error'); this.inflight_startstop = false; },
+      onError: () => { console.warn('Txn reported an error'); this.inflight_startstop = false; },
       onTimeout: () => { console.log('Slow txn, no repsonse within ~30 seconds (start/stop)', ); this.inflight_startstop = false; }
     }
     await this.pkgController.requestPupAction(pupId, actionName, callbacks);
   }
 
-  async handleSidebarToggle(e) {
-    const pupId = this.context.store.pupContext.state.id;
-    const checked = e.target.checked;
+  async handleSidebarToggle(e: Event) {
+    const pupId = this.context.store.pupContext!.state!.id;
+    const checked = (e.target as HTMLInputElement).checked;
     const currentPinned = this.context.store.sidebarContext?.pinned || [];
     
     // Optimistically update store (which triggers re-render with new state)
@@ -225,7 +271,7 @@ class PupPage extends LitElement {
     } else {
       store.updateState({
         sidebarContext: {
-          pinned: currentPinned.filter(id => id !== pupId),
+          pinned: currentPinned.filter((id: string) => id !== pupId),
         }
       });
     }
@@ -247,8 +293,8 @@ class PupPage extends LitElement {
     }
   }
 
-  async handleUninstall(e) {
-    const pupId = this.context.store.pupContext.state.id
+  async handleUninstall(e?: Event) {
+    const pupId = this.context.store.pupContext!.state!.id
     this.pupEnabled = false;
     this.inflight_uninstall = true;
     this.requestUpdate();
@@ -280,13 +326,13 @@ class PupPage extends LitElement {
     this.clearDialog();
   }
 
-  handleUpgradeStarted(e) {
+  handleUpgradeStarted(e: Event) {
     // Close the dialog and show a message
     this.clearDialog();
-    createAlert('neutral', `Upgrading ${this.context.store.pupContext.state.manifest.meta.name}...`, 'arrow-up-circle', 3000);
+    createAlert('neutral', `Upgrading ${this.context.store.pupContext?.state?.manifest?.meta?.name}...`, 'arrow-up-circle', 3000);
   }
 
-  handleUpdateSkipped(e) {
+  handleUpdateSkipped(e: Event) {
     // Close the dialog
     this.clearDialog();
   }
@@ -297,12 +343,12 @@ class PupPage extends LitElement {
     return pupUpdates.hasUpdate(pupId);
   }
 
-  async updated(changedProperties) {
+  async updated(changedProperties: Map<PropertyKey, unknown>) {
     super.updated(changedProperties);
     
     // Check for rollback availability when pup becomes broken
     const pkg = this.getPup();
-    if (pkg && pkg.state.installation === 'broken') {
+    if (pkg && pkg.state?.installation === 'broken') {
       await this.checkRollbackAvailability();
     }
 
@@ -374,7 +420,8 @@ class PupPage extends LitElement {
       </div>`
     }
 
-    const path = this.context.store?.appContext?.path || [];
+    // appContext.path is legacy (never populated).
+    const path = (this.context.store?.appContext as { path?: string[] })?.path || [];
     const pkg = this.getPup();
 
     if (!pkg) {
@@ -392,12 +439,12 @@ class PupPage extends LitElement {
       `;
     }
 
-    const hasChecks = (pkg.state.manifest?.checks || []).length > 0;
+    const hasChecks = ((pkg.state?.manifest as { checks?: unknown[] } | undefined)?.checks || []).length > 0;
 
-    let labels = { ...(pkg?.computed || {}) }
-    let isInstallationLoadingStatus =  ["installing", "upgrading", "uninstalling", "purging"].includes(labels.installationId);
+    let labels: PupLabels = { ...(pkg?.computed || {}) }
+    let isInstallationLoadingStatus =  ["installing", "upgrading", "uninstalling", "purging"].includes(labels.installationId ?? "");
     let statusInstallationId = labels.installationId === "ready" ? labels.statusId : labels.installationId
-    const isLoadingStatus =  ["starting", "stopping"].includes(labels.statusId);
+    const isLoadingStatus =  ["starting", "stopping"].includes(labels.statusId ?? "");
     const disableActions = labels.installationId === "uninstalled";
     const isRunning = labels.statusId === "running";
 
@@ -405,7 +452,7 @@ class PupPage extends LitElement {
     const short = pkg?.state?.manifest?.meta?.shortDescription || '';
     const long = pkg?.state?.manifest?.meta?.longDescription || ''
 
-    const logo = pkg?.assets?.logos?.mainLogoBase64
+    const logo = (pkg?.assets as { logos?: { mainLogoBase64?: string } } | null | undefined)?.logos?.mainLogoBase64
 
     const renderHealthChecks = () => {
       return this.checks.map(
@@ -415,7 +462,18 @@ class PupPage extends LitElement {
       );
     };
 
-    const renderMetricCollection = (metrics = [], manifestList = [], emptyMessage = "") => {
+    interface MetricEntry {
+      name?: string;
+      label?: string;
+      description?: string;
+      [key: string]: unknown;
+    }
+    interface MetricDef {
+      name?: string;
+      description?: string;
+    }
+
+    const renderMetricCollection = (metrics: MetricEntry[] = [], manifestList: MetricDef[] = [], emptyMessage = "") => {
       if (metrics.length === 0) {
         return html`
           <div class="stats-empty">
@@ -436,7 +494,7 @@ class PupPage extends LitElement {
         return { ...metric, description };
       });
 
-      const renderMetricCard = (metric) => html`
+      const renderMetricCard = (metric: MetricEntry) => html`
         <div class="metric-container compact-metric-card">
           <div
             class="metric-label"
@@ -459,32 +517,32 @@ class PupPage extends LitElement {
     };
 
     const renderStats = () => renderMetricCollection(
-      Array.isArray(pkg?.stats?.metrics) ? pkg.stats.metrics : [],
-      pkg.state.manifest?.metrics ?? [],
+      Array.isArray(pkg?.stats?.metrics) ? (pkg.stats!.metrics as MetricEntry[]) : [],
+      (pkg.state?.manifest?.metrics as MetricDef[] | undefined) ?? [],
       "Such empty. Pup reports no metrics",
     );
 
     const renderResources = () => {
       return renderMetricCollection(
-        pkg.stats.systemMetrics,
+        (pkg.stats?.systemMetrics as MetricEntry[] | undefined) ?? [],
         [],
         "No resource metrics available",
       );
     };
 
-    const hasWebUI = (pkg.state.webUIs || []).length > 0;
+    const hasWebUI = (pkg.state?.webUIs || []).length > 0;
     const pinnedPups = this.context.store.sidebarContext?.pinned || [];
-    const isInSidebar = pinnedPups.includes(pkg.state.id);
-    const hasStatsMetrics = (pkg.stats.metrics || []).length > 0;
+    const isInSidebar = pinnedPups.includes(pkg.state?.id ?? "");
+    const hasStatsMetrics = (pkg.stats?.metrics || []).length > 0;
     const source = pkg?.state?.source || pkg?.def?.source || null;
-    const sourceLocation = source?.location?.trim();
+    const sourceLocation = (source as { location?: string } | null)?.location?.trim();
     const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
     const canCopy = canCopyToClipboard();
 
     const renderMenu = () => html`
       <action-row prefix="power" name="state" label="Enabled" ?disabled=${disableActions}>
         Enable or disable this Pup
-        <sl-switch slot="suffix" ?checked=${!disableActions && pkg.state.enabled} @sl-input=${this.handleStartStop} ?disabled=${this.inflight_startstop || labels.installationId !== "ready"}></sl-switch>
+        <sl-switch slot="suffix" ?checked=${!disableActions && pkg.state?.enabled} @sl-input=${this.handleStartStop} ?disabled=${this.inflight_startstop || labels.installationId !== "ready"}></sl-switch>
       </action-row>
 
       ${hasWebUI ? html`
@@ -495,12 +553,12 @@ class PupPage extends LitElement {
       ` : nothing}
 
       <action-row prefix="gear" name="configure" label="Configure" .trigger=${this.handleMenuClick} ?disabled=${disableActions} ?dot=${labels.statusId === 'needs_config'}>
-        Customise ${pkg.state.manifest.meta.name}
+        Customise ${pkg.state?.manifest?.meta?.name}
       </action-row>
 
       <action-row prefix="arrow-up-circle" name="update" label="Updates" .trigger=${this.handleMenuClick} ?dot=${this.hasUpdate}>
         ${this.hasUpdate 
-          ? html`A new version of ${pkg.state.manifest.meta.name} is available`
+          ? html`A new version of ${pkg.state?.manifest?.meta?.name} is available`
           : html`<small>No updates available.</small>`
         }
       </action-row>
@@ -546,7 +604,7 @@ class PupPage extends LitElement {
               slot="suffix"
               value=${sourceLocation}
               title="Copy source path"
-              @click=${(event) => {
+              @click=${(event: Event) => {
                 event.preventDefault();
                 event.stopPropagation();
               }}

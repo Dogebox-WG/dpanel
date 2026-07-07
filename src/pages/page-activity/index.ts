@@ -5,7 +5,20 @@ import { clearCompletedJobs, deleteJob } from '/api/jobs/jobs.js';
 import { isActiveJobStatus, isFinishedJobStatus } from '/controllers/jobs/status.js';
 import '/components/common/job-progress/index.js';
 
+import type { JobRecord } from '/types/jobs';
+
 class JobActivityPage extends LitElement {
+  declare showActiveLimit: number;
+  declare showPendingLimit: number;
+  declare showCompletedLimit: number;
+  declare searchQuery: string;
+  declare statusFilter: string;
+  declare dateFilter: string;
+  declare targetJobId: string;
+
+  context: StoreSubscriber;
+  _didScrollToTarget: boolean;
+
   static properties = {
     showActiveLimit: { type: Number },
     showPendingLimit: { type: Number },
@@ -165,7 +178,7 @@ class JobActivityPage extends LitElement {
 
   updated() {
     if (!this.targetJobId || this._didScrollToTarget) return;
-    const target = this.renderRoot?.querySelector(`#job-${this.targetJobId}`);
+    const target = this.renderRoot?.querySelector(`#job-${this.targetJobId}`) as HTMLElement | null;
     if (target) {
       this._didScrollToTarget = true;
       setTimeout(() => {
@@ -174,7 +187,7 @@ class JobActivityPage extends LitElement {
     }
   }
 
-  scrollToTarget(target) {
+  scrollToTarget(target: HTMLElement | null) {
     if (!target) return;
     const container = this.getScrollContainer(target);
     const headerOffset = this.getPageHeaderOffset();
@@ -182,8 +195,8 @@ class JobActivityPage extends LitElement {
     container.scrollTo({ top: Math.max(0, targetTop - headerOffset), behavior: 'smooth' });
   }
 
-  getScrollContainer(target) {
-    return this.getScrollParent(target) || document.scrollingElement || document.documentElement;
+  getScrollContainer(target: HTMLElement) {
+    return this.getScrollParent(target) || (document.scrollingElement as HTMLElement | null) || document.documentElement;
   }
 
   getPageHeaderOffset() {
@@ -192,10 +205,11 @@ class JobActivityPage extends LitElement {
     return header?.getBoundingClientRect?.().height || 0;
   }
 
-  getScrollParent(element) {
-    let current = element;
+  getScrollParent(element: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = element;
     while (current) {
-      const parent = current.parentElement || current.getRootNode?.().host;
+      const parent = (current.parentElement ||
+        (current.getRootNode?.() as ShadowRoot).host) as HTMLElement | null | undefined;
       if (!parent || parent === current) break;
       const style = getComputedStyle(parent);
       const overflowY = style.overflowY;
@@ -207,12 +221,12 @@ class JobActivityPage extends LitElement {
     return null;
   }
 
-  getOffsetTop(element, container) {
+  getOffsetTop(element: HTMLElement, container: HTMLElement) {
     let offsetTop = 0;
-    let current = element;
+    let current: HTMLElement | null = element;
     while (current && current !== container) {
       offsetTop += current.offsetTop || 0;
-      current = current.offsetParent;
+      current = current.offsetParent as HTMLElement | null;
     }
     return offsetTop;
   }
@@ -256,20 +270,20 @@ class JobActivityPage extends LitElement {
     }
   }
   
-  handleSearchInput(e) {
-    this.searchQuery = e.target.value.toLowerCase();
+  handleSearchInput(e: Event) {
+    this.searchQuery = (e.target as HTMLInputElement).value.toLowerCase();
   }
   
-  handleStatusFilter(e) {
-    this.statusFilter = e.target.value;
+  handleStatusFilter(e: Event) {
+    this.statusFilter = (e.target as HTMLInputElement).value;
   }
   
-  handleDateFilter(e) {
-    this.dateFilter = e.target.value;
+  handleDateFilter(e: Event) {
+    this.dateFilter = (e.target as HTMLInputElement).value;
   }
 
-  async handleDeleteJob(e) {
-    const job = e.detail?.job;
+  async handleDeleteJob(e: Event) {
+    const job = (e as CustomEvent<{ job?: JobRecord }>).detail?.job;
     if (!job?.id) return;
 
     const confirmed = confirm(`Delete "${job.displayName}"? This action cannot be undone.`);
@@ -288,7 +302,7 @@ class JobActivityPage extends LitElement {
     }
   }
   
-  filterJobs(jobs) {
+  filterJobs(jobs: JobRecord[]) {
     let filtered = jobs;
     
     // Apply search filter
@@ -323,7 +337,7 @@ class JobActivityPage extends LitElement {
       }
       
       filtered = filtered.filter(job => {
-        const jobDate = new Date(job.started);
+        const jobDate = new Date(job.started ?? 0);
         return jobDate >= cutoffDate;
       });
     }
@@ -331,7 +345,7 @@ class JobActivityPage extends LitElement {
     return filtered;
   }
   
-  renderSection(title, jobs, limit, showMoreHandler, targetJobId) {
+  renderSection(title: string, jobs: JobRecord[], limit: number, showMoreHandler: () => void, targetJobId: string) {
     const displayJobs = jobs.slice(0, limit);
     if (targetJobId) {
       const targetJob = jobs.find(job => job.id === targetJobId);
@@ -381,7 +395,7 @@ class JobActivityPage extends LitElement {
     const pendingJobs = filteredJobs.filter(j => j.status === 'queued');
     const completedJobs = filteredJobs
       .filter((j) => isFinishedJobStatus(j.status))
-      .sort((a, b) => new Date(b.finished || b.started) - new Date(a.finished || a.started));
+      .sort((a, b) => new Date(b.finished || b.started || 0).getTime() - new Date(a.finished || a.started || 0).getTime());
     
     return html`
       <div class="padded">

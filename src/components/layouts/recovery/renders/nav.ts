@@ -112,7 +112,14 @@ export const navStyles = css`
   }
 `;
 
-export function renderNav(isFirstTimeSetup) {
+import type { AppModeApp } from "/app_recovery.js";
+
+interface SetupStep {
+  name: string;
+  label: string;
+}
+
+export function renderNav(this: AppModeApp, isFirstTimeSetup: boolean) {
   const renderMenu = () => {
     return html`
       <div class="dropmenu">
@@ -195,7 +202,7 @@ export function renderNav(isFirstTimeSetup) {
   `;
 }
 
-function checkPartialComplete(active, step, stepNumber) {
+function checkPartialComplete(active: number, step: SetupStep, stepNumber: number) {
   if (step.name === "pass") {
     if (active === stepNumber + 1) {
       return true;

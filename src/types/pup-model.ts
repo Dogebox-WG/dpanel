@@ -21,11 +21,12 @@ export interface PupComputedVals {
   libraryURL: string | null;
 }
 
-/** A single version entry within a store-listing pup definition. */
-export interface PupDefinitionVersion {
-  version?: string;
-  manifest?: PupManifest;
-}
+/**
+ * A single version entry within a store-listing pup definition. On the wire
+ * each entry is that version's full manifest, though sources can serve
+ * sparse entries (null dependencies, empty meta), hence Partial.
+ */
+export type PupDefinitionVersion = Partial<PupManifest>;
 
 /**
  * A raw store-listing pup entry (a value of a source's `pups` map from

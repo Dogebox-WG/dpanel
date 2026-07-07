@@ -62,7 +62,24 @@ import { pupUpdates } from "/state/pup-updates.js";
 import { jobWebSocket } from "/controllers/sockets/job-channel.js";
 import { jobsController } from "/controllers/jobs/index.js";
 
-class DPanelApp extends LitElement {
+export class DPanelApp extends LitElement {
+  declare ready: boolean;
+  declare menuAnimating: boolean;
+  declare systemPromptActive: boolean;
+
+  context: StoreSubscriber;
+  _debouncedHandleResize: () => void;
+  pkgController: typeof pkgController;
+  mainChannel: typeof mainChannel;
+  router: Router | null;
+  outletWrapper: HTMLElement | null;
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare renderNav: (CURPATH: string) => unknown;
+  declare renderFooter: () => unknown;
+  // Referenced from the nav template; not currently defined on the class.
+  handleNavClick?: (e: Event) => void;
+
   static properties = {
     ready: { type: Boolean },
     menuAnimating: { type: Boolean },
@@ -123,7 +140,7 @@ class DPanelApp extends LitElement {
     }
 
     // Initialise our router singleton and provide it a target elemenet.
-    const outlet = this.shadowRoot.querySelector("#Outlet");
+    const outlet = this.shadowRoot!.querySelector("#Outlet") as HTMLElement;
     // this.outletWrapper = this.shadowRoot.querySelector("#OutletWrapper")
     this.router = new Router(outlet);
     setRouterInstance(this.router);
@@ -196,13 +213,13 @@ class DPanelApp extends LitElement {
   }
 
   openDrawer() {
-    const drawer = this.shadowRoot.querySelector("sl-drawer");
-    drawer.show();
+    const drawer = this.shadowRoot?.querySelector("sl-drawer") as (HTMLElement & { show: () => void }) | null;
+    drawer?.show();
   }
 
   enableSystemPrompt() {
     if (this.systemPromptActive) {
-      this.shadowRoot.querySelector("system-prompt").close();
+      (this.shadowRoot?.querySelector("system-prompt") as (HTMLElement & { close: () => void }) | null)?.close();
       setTimeout(() => {
         this.systemPromptActive = false;
       }, 400);
@@ -211,8 +228,8 @@ class DPanelApp extends LitElement {
     }
   }
 
-  selectActionIcon(action) {
-    const actions = {
+  selectActionIcon(action: string) {
+    const actions: Record<string, string> = {
       back: "chevron-left",
       close: "x-lg"
     }

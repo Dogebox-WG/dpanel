@@ -2,15 +2,17 @@ import { html, css, nothing } from "/lib/lit-all.js";
 import "/components/common/version-selector/index.js";
 import { sortVersionsDescending } from "/utils/version.js";
 
-export function openConfig() {
+import type { PupInstallPage } from "../index.js";
+
+export function openConfig(this: PupInstallPage) {
   this.open_dialog = "configure";
   this.open_dialog_label = "Configure";
 }
 
-export function renderActions() {
+export function renderActions(this: PupInstallPage) {
   const pkg = this.getPup();
-  const installationId = pkg.computed.installationId;
-  const isInstalled = pkg.computed.isInstalled;
+  const installationId = pkg?.computed?.installationId;
+  const isInstalled = pkg?.computed?.isInstalled;
 
   const styles = css`
     .action-wrap {
@@ -49,9 +51,9 @@ export function renderActions() {
   `;
 
   // Get all available versions and sort them descending (latest first)
-  const availableVersions = pkg.def.versions ? sortVersionsDescending(Object.keys(pkg.def.versions)) : [];
+  const availableVersions = pkg?.def?.versions ? sortVersionsDescending(Object.keys(pkg.def.versions)) : [];
   
-  const selectedVersion = this.selectedInstallVersion || pkg.def.latestVersion;
+  const selectedVersion = this.selectedInstallVersion || pkg?.def?.latestVersion;
 
   return html`
     <div class="action-wrap">
@@ -71,8 +73,8 @@ export function renderActions() {
                 <version-selector
                   .versions=${availableVersions}
                   .selectedVersion=${selectedVersion}
-                  .latestVersion=${pkg.def.latestVersion}
-                  @version-change=${(e) => this.selectedInstallVersion = e.detail.version}
+                  .latestVersion=${pkg?.def?.latestVersion}
+                  @version-change=${(e: CustomEvent<{ version: string }>) => this.selectedInstallVersion = e.detail.version}
                   size="small"
                   class="version-select"
                   placeholder="Select version"
@@ -98,7 +100,7 @@ export function renderActions() {
             <sl-button
               variant="danger"
               size="large"
-              href="${pkg.computed.libraryURL}"
+              href="${pkg?.computed?.libraryURL}"
             >
               View issue
             </sl-button>
@@ -109,7 +111,7 @@ export function renderActions() {
             <sl-button
               variant="primary"
               size="large"
-              href="${pkg.computed.libraryURL}"
+              href="${pkg?.computed?.libraryURL}"
             >
               Manage
             </sl-button>
@@ -122,8 +124,9 @@ export function renderActions() {
   `;
 }
 
-export async function handleInstall() {
+export async function handleInstall(this: PupInstallPage) {
   const pkg = this.getPup();
+  if (!pkg) return;
   this.inflight = true;
   const callbacks = {
     onSuccess: () => {
@@ -140,11 +143,11 @@ export async function handleInstall() {
   };
 
   // Use selected version, or fall back to latest
-  const versionToInstall = this.selectedInstallVersion || pkg.def.latestVersion;
+  const versionToInstall = this.selectedInstallVersion || pkg.def?.latestVersion || "";
 
   const body = {
-    sourceId: pkg.def.source.id,
-    pupName: pkg.def.versions[versionToInstall].meta.name,
+    sourceId: pkg.def?.source?.id,
+    pupName: pkg.def?.versions?.[versionToInstall]?.meta?.name,
     pupVersion: versionToInstall,
     autoInstallDependencies: Boolean(this.autoInstallDependencies),
     installWithDevModeEnabled: Boolean(this.installWithDevModeEnabled)

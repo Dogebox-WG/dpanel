@@ -3,7 +3,22 @@ import { StoreSubscriber } from '/state/subscribe.js';
 import { store } from '/state/store.js';
 import debounce from '/utils/debounce.js';
 
+/**
+ * Legacy manifest shape read by this page (manifest.gui.source predates the
+ * current PupContext model; kept as-is pending an iframe page rework).
+ */
+interface IframeManifest {
+  path?: string;
+  gui?: { source?: string };
+}
+
 class IframeView extends LitElement {
+  ready: boolean;
+  context: StoreSubscriber;
+  iframeElement: HTMLIFrameElement | null;
+  debouncedHandleResize: (contentRect: DOMRectReadOnly) => void;
+  resizeObserver: ResizeObserver;
+
   static styles = css`
     #LoaderContainer {
       position: absolute;
@@ -28,12 +43,16 @@ class IframeView extends LitElement {
   `;
 
   // Whenever pupContext source is available, set ready to true.
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     super.updated(changedProperties);
     if (changedProperties.has('pupContext')) {
-      this.ready = !!this.context.store.pupContext.manifest.gui.source;
+      this.ready = !!this.getIframeManifest()?.gui?.source;
       this.requestUpdate();
     }
+  }
+
+  getIframeManifest(): IframeManifest | undefined {
+    return (this.context.store.pupContext as { manifest?: IframeManifest }).manifest;
   }
 
   constructor() {
@@ -43,7 +62,7 @@ class IframeView extends LitElement {
     this.context = new StoreSubscriber(this, store)
 
     // Ready state is dependent on the pupContext having an iframe source.
-    this.ready = !!this.context.store.pupContext.manifest.gui.source
+    this.ready = !!this.getIframeManifest()?.gui?.source
 
     this.iframeElement = null;
     this.debouncedHandleResize = debounce(this.handleResize, 300);
@@ -61,14 +80,14 @@ class IframeView extends LitElement {
     this.updateComplete.then(() => {
       if (!this.ready) return
       
-      this.iframeElement = this.shadowRoot.querySelector('iframe');
+      this.iframeElement = this.shadowRoot!.querySelector('iframe');
     
       // TODO: perform action on iframe load.
       // this.iframeElement.addEventListener('load', this.handleIframeLoad);
       
       // track host container size changes
-      const hostContainer = this.shadowRoot.getElementById('IframeContainer');
-      this.resizeObserver.observe(hostContainer);
+      const hostContainer = this.shadowRoot!.getElementById('IframeContainer');
+      if (hostContainer) this.resizeObserver.observe(hostContainer);
 
       // subscribe to path change messages from child.
       window.addEventListener("message", this.handleMessage.bind(this));
@@ -76,11 +95,10 @@ class IframeView extends LitElement {
     });
   }
 
-  handleMessage(event) {
+  handleMessage(event: MessageEvent<{ path?: string }>) {
     // TODO: switch on event type
     // TODO: not this.
-    const { pupContext } = this.context.store
-    const newUrl = `${pupContext.manifest.path}/${event.data.path}`.replace('//','/')
+    const newUrl = `${this.getIframeManifest()?.path}/${event.data.path}`.replace('//','/')
     this.updateBrowserURL(newUrl, '', '', false);
   }
 
@@ -91,7 +109,7 @@ class IframeView extends LitElement {
   }
 
   // The actual resize handler that sends the message to the iframe
-  handleResize = (contentRect) => {
+  handleResize = (contentRect: DOMRectReadOnly) => {
     const width = contentRect.width;
     const height = contentRect.height;
     if (this.iframeElement && this.iframeElement.contentWindow) {
@@ -101,11 +119,11 @@ class IframeView extends LitElement {
     }
   }
 
-  updateBrowserURL(pathname, search = '', hash = '', replace = false) {
+  updateBrowserURL(pathname: string, search = '', hash = '', replace = false) {
     if (window.location.pathname !== pathname ||
         window.location.search !== search ||
         window.location.hash !== hash) {
-      const changeState = replace ? 'replaceState' : 'pushState';
+      const changeState = replace ? 'replaceState' as const : 'pushState' as const;
       // Update the URL
       window.history[changeState](null, document.title, pathname + search + hash);
       // Dispatch a custom popstate event with a state that tells the router to ignore this change
@@ -129,7 +147,7 @@ class IframeView extends LitElement {
       return html`
 
         <div id="IframeContainer">
-          <iframe src="${pupContext.manifest.gui.source}" frameBorder="0"></iframe>
+          <iframe src="${this.getIframeManifest()?.gui?.source}" frameBorder="0"></iframe>
         </div>
       `;
     }

@@ -20,7 +20,28 @@ import "/components/common/reveal-row/reveal-row.js";
 import "/components/common/page-container.js";
 import "/components/views/x-log-viewer/index.js";
 
-class PupInstallPage extends LitElement {
+export class PupInstallPage extends LitElement {
+  declare open_dialog: string | false;
+  declare open_dialog_label: string;
+  declare busy: boolean;
+  declare inflight: boolean;
+  declare autoInstallDependencies: boolean;
+  declare installWithDevModeEnabled: boolean;
+  declare selectedInstallVersion: string | null;
+  declare _renderedJobId: string | null;
+
+  pupId: string | null;
+  pkgController: typeof pkgController;
+  context: StoreSubscriber;
+  open_page: boolean;
+  open_page_label: string;
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare renderStatus: () => unknown;
+  declare renderActions: () => unknown;
+  declare renderDialog: () => unknown;
+  declare handleInstall: () => Promise<void>;
+
   static get properties() {
     return {
       open_dialog: { type: String },
@@ -74,7 +95,7 @@ class PupInstallPage extends LitElement {
     this.addEventListener("sl-hide", this.handleDialogClose);
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     super.updated(changedProperties);
   }
 
@@ -87,9 +108,9 @@ class PupInstallPage extends LitElement {
     this.open_dialog_label = "";
   }
 
-  handleMenuClick = (event, el) => {
-    this.open_dialog = el.getAttribute("name");
-    this.open_dialog_label = el.getAttribute("label");
+  handleMenuClick = (event: Event, el: HTMLElement) => {
+    this.open_dialog = el.getAttribute("name") ?? "";
+    this.open_dialog_label = el.getAttribute("label") ?? "";
   };
 
   handleLogViewerClosed = () => {
@@ -145,14 +166,15 @@ class PupInstallPage extends LitElement {
       </div>`
     }
 
-    const path = this.context.store?.appContext?.path || [];
+    // appContext.path is legacy (never populated); popover_page stays undefined.
+    const path = (this.context.store?.appContext as { path?: string[] })?.path || [];
     const pkg = this.getPup();
 
     if (!pkg) return;
 
-    const { statusId, statusLabel, installationId, isInstalled, installationLabel } = pkg?.computed
+    const { installationId, isInstalled } = pkg.computed ?? { installationId: "", isInstalled: false };
     const source = pkg?.def?.source || pkg?.state?.source || null;
-    const sourceLocation = source?.location?.trim();
+    const sourceLocation = (source as { location?: string } | null)?.location?.trim();
     const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
     const canCopy = canCopyToClipboard();
     const popover_page = path[1];
@@ -162,6 +184,12 @@ class PupInstallPage extends LitElement {
       installed: ["ready", "unready"].includes(installationId),
     });
 
+    // Placeholders for the disabled (false && ...) Provides/Dependencies
+    // sections below, kept for when that UI ships.
+    const hasInterfaces = false;
+    const dep = { id: "", name: "", condition: "" };
+    const renderDependancyList = () => nothing;
+
     const renderInterfacesList = () => {
       return html`
         <action-row prefix="ui-checks-grid" name=${dep.id} label=${dep.name} href=${`/explore/${dep.id}/${dep.name}`}>
@@ -170,8 +198,9 @@ class PupInstallPage extends LitElement {
       `
     }
 
-    const long = pkg?.def?.versions[pkg?.def?.latestVersion]?.meta?.longDescription || ''
-    const hasDependencies = pkg?.def?.versions[pkg?.def?.latestVersion]?.dependencies?.length > 0;
+    const latestVersion = pkg?.def?.latestVersion ?? "";
+    const long = pkg?.def?.versions?.[latestVersion]?.meta?.longDescription || ''
+    const hasDependencies = (pkg?.def?.versions?.[latestVersion]?.dependencies?.length ?? 0) > 0;
     const isDevModeAvailable = pkg?.def?.devModeAvailable;
     const notInstalledOrBroken = !isInstalled && installationId !== "broken";
 
@@ -197,7 +226,7 @@ class PupInstallPage extends LitElement {
                 <sl-checkbox
                   ?checked=${this.autoInstallDependencies}
                   ?disabled=${installationId === "installing"}
-                  @sl-change=${(e) => this.autoInstallDependencies = e.target.checked}
+                  @sl-change=${(e: Event) => this.autoInstallDependencies = (e.target as HTMLInputElement).checked}
                 >
                 <span style="display: flex; align-items: center; gap: 0.5em;">
                   Install dependencies 
@@ -213,7 +242,7 @@ class PupInstallPage extends LitElement {
                 <sl-checkbox
                   ?checked=${this.installWithDevModeEnabled}
                   ?disabled=${installationId === "installing"}
-                  @sl-change=${(e) => this.installWithDevModeEnabled = e.target.checked}
+                  @sl-change=${(e: Event) => this.installWithDevModeEnabled = (e.target as HTMLInputElement).checked}
                 >
                   <span style="display: flex; align-items: center; gap: 0.5em;">
                     Development Mode
@@ -295,7 +324,7 @@ class PupInstallPage extends LitElement {
                     slot="suffix"
                     value=${sourceLocation}
                     title="Copy source path"
-                    @click=${(event) => {
+                    @click=${(event: Event) => {
                       event.preventDefault();
                       event.stopPropagation();
                     }}

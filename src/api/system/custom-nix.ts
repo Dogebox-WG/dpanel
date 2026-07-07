@@ -10,17 +10,17 @@ import {
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
 export async function getCustomNix() {
-  const res = await client.get(`/system/custom-nix`, { mock: getCustomNixResponse });
+  const res = await client.get<{ content?: string; exists?: boolean }>(`/system/custom-nix`, { mock: getCustomNixResponse });
   return res;
 }
 
 export async function saveCustomNix(content: string) {
-  const res = await client.put(`/system/custom-nix`, { content }, { mock: saveCustomNixResponse });
+  const res = await client.put<{ success?: boolean; error?: string }>(`/system/custom-nix`, { content }, { mock: saveCustomNixResponse });
   return res;
 }
 
 export async function validateCustomNix(content: string) {
-  const res = await client.post(`/system/custom-nix/validate`, { content }, { mock: validateCustomNixResponse });
+  const res = await client.post<{ valid?: boolean; error?: string }>(`/system/custom-nix/validate`, { content }, { mock: validateCustomNixResponse });
   return res;
 }
 

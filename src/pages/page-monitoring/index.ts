@@ -1,21 +1,45 @@
 import { LitElement, html, css, nothing } from '/lib/lit-all.js';
-import { getSystemStats } from '/api/monitoring/system.js';
-import { getAvailableServices } from '/api/monitoring/services.js';
+import { getSystemStats, type SystemStatSeries, type SystemStatsResponse } from '/api/monitoring/system.js';
+import { getAvailableServices, type MonitoringService } from '/api/monitoring/services.js';
 import { pkgController } from '/controllers/package/index.js';
+import type { EnrichedPup } from '/types/pup-model';
 import { getBootstrapV2 } from '/api/bootstrap/bootstrap.js';
 import '/components/views/x-metric/metric.js';
 import '/components/views/service-status-card/index.js';
 import '/components/common/action-row/action-row.js';
 import '/components/common/sparkline-chart/sparkline-chart-v2.js';
 
+// A single card placed on a monitoring dashboard.
+interface DashboardComponent {
+  type: 'system' | 'service' | 'pup';
+  id: string;
+  visibleMetrics?: string[];
+}
+
+interface Dashboard {
+  id: string;
+  name: string;
+  components: DashboardComponent[];
+}
+
+// Shape rendered by renderSystemStatCard.
+interface SystemStatCard {
+  id: string;
+  label: string;
+  icon: string;
+  current?: number;
+  values: number[];
+  detail: string | null;
+}
+
 // Service definitions for display purposes
-const SERVICE_DEFINITIONS = {
+const SERVICE_DEFINITIONS: Record<string, { name?: string; icon: string; description?: string }> = {
   tailscale: { name: 'Tailscale', icon: 'hdd-network', description: 'Secure network access' }
   // Future services added here
 };
 
 // Default dashboard structure for first-time users
-const DEFAULT_DASHBOARDS = [
+const DEFAULT_DASHBOARDS: Dashboard[] = [
   {
     id: 'default',
     name: 'Overview',
@@ -24,6 +48,24 @@ const DEFAULT_DASHBOARDS = [
 ];
 
 class MonitoringPage extends LitElement {
+  declare loading: boolean;
+  declare error: boolean;
+  declare systemStats: SystemStatsResponse | null;
+  declare availableServices: MonitoringService[];
+  declare dashboards: Dashboard[];
+  declare activeDashboardId: string;
+  declare editMode: boolean;
+  declare showAddModal: boolean;
+  declare showPupMetricEditor: boolean;
+  declare editingPupId: string | null;
+  declare installedPups: EnrichedPup[];
+  declare usingFallbackStats: boolean;
+
+  pkgController: typeof pkgController;
+  refreshInterval: ReturnType<typeof setInterval> | null;
+  statsHistory: { cpu: number[]; ram: number[]; disk: number[] };
+  maxHistorySize: number;
+
   static properties = {
     loading: { type: Boolean },
     error: { type: Boolean },
@@ -80,7 +122,7 @@ class MonitoringPage extends LitElement {
     super.disconnectedCallback();
   }
 
-  loadDashboards() {
+  loadDashboards(): Dashboard[] {
     try {
       const saved = localStorage.getItem('monitoring.dashboards');
       if (saved) {
@@ -116,14 +158,14 @@ class MonitoringPage extends LitElement {
     this.saveDashboards();
   }
 
-  renameDashboard(dashboardId, newName) {
+  renameDashboard(dashboardId: string, newName: string) {
     this.dashboards = this.dashboards.map(d => 
       d.id === dashboardId ? { ...d, name: newName } : d
     );
     this.saveDashboards();
   }
 
-  deleteDashboard(dashboardId) {
+  deleteDashboard(dashboardId: string) {
     if (this.dashboards.length <= 1) return; // Keep at least one dashboard
     
     this.dashboards = this.dashboards.filter(d => d.id !== dashboardId);
@@ -135,7 +177,7 @@ class MonitoringPage extends LitElement {
     this.saveDashboards();
   }
 
-  reorderDashboards(fromIndex, toIndex) {
+  reorderDashboards(fromIndex: number, toIndex: number) {
     const newDashboards = [...this.dashboards];
     const [removed] = newDashboards.splice(fromIndex, 1);
     newDashboards.splice(toIndex, 0, removed);
@@ -144,7 +186,7 @@ class MonitoringPage extends LitElement {
     this.requestUpdate();
   }
 
-  reorderComponent(fromIndex, toIndex) {
+  reorderComponent(fromIndex: number, toIndex: number) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -157,7 +199,7 @@ class MonitoringPage extends LitElement {
   }
 
   // Component management methods
-  addComponent(type, id, options = {}) {
+  addComponent(type: DashboardComponent['type'], id: string, options: Partial<DashboardComponent> = {}) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -176,7 +218,7 @@ class MonitoringPage extends LitElement {
     this.requestUpdate();
   }
 
-  removeComponent(type, id) {
+  removeComponent(type: DashboardComponent['type'], id: string) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -187,7 +229,7 @@ class MonitoringPage extends LitElement {
     this.requestUpdate();
   }
 
-  updatePupVisibleMetrics(pupId, visibleMetrics) {
+  updatePupVisibleMetrics(pupId: string, visibleMetrics: string[]) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -279,31 +321,31 @@ class MonitoringPage extends LitElement {
     }
   }
 
-  accumulateStats(statsRes) {
+  accumulateStats(statsRes: SystemStatsResponse) {
     // Add new values to history buffers
     if (statsRes.cpu?.current !== undefined) {
       if (this.statsHistory.cpu.length === 0) {
-        this.statsHistory.cpu.push(statsRes.cpu.current);
+        this.statsHistory.cpu.push(statsRes.cpu.current!);
       }
-      this.statsHistory.cpu.push(statsRes.cpu.current);
+      this.statsHistory.cpu.push(statsRes.cpu.current!);
       if (this.statsHistory.cpu.length > this.maxHistorySize) {
         this.statsHistory.cpu.shift();
       }
     }
     if (statsRes.ram?.current !== undefined) {
       if (this.statsHistory.ram.length === 0) {
-        this.statsHistory.ram.push(statsRes.ram.current);
+        this.statsHistory.ram.push(statsRes.ram.current!);
       }
-      this.statsHistory.ram.push(statsRes.ram.current);
+      this.statsHistory.ram.push(statsRes.ram.current!);
       if (this.statsHistory.ram.length > this.maxHistorySize) {
         this.statsHistory.ram.shift();
       }
     }
     if (statsRes.disk?.current !== undefined) {
       if (this.statsHistory.disk.length === 0) {
-        this.statsHistory.disk.push(statsRes.disk.current);
+        this.statsHistory.disk.push(statsRes.disk.current!);
       }
-      this.statsHistory.disk.push(statsRes.disk.current);
+      this.statsHistory.disk.push(statsRes.disk.current!);
       if (this.statsHistory.disk.length > this.maxHistorySize) {
         this.statsHistory.disk.shift();
       }
@@ -338,7 +380,7 @@ class MonitoringPage extends LitElement {
     this.editMode = !this.editMode;
   }
 
-  handleEditPupMetrics(pupId) {
+  handleEditPupMetrics(pupId: string) {
     this.editingPupId = pupId;
     this.showPupMetricEditor = true;
   }
@@ -348,7 +390,7 @@ class MonitoringPage extends LitElement {
     this.editingPupId = null;
   }
 
-  async handleRenameDashboard(dashboardId) {
+  async handleRenameDashboard(dashboardId: string) {
     const dashboard = this.dashboards.find(d => d.id === dashboardId);
     if (!dashboard) return;
 
@@ -358,7 +400,7 @@ class MonitoringPage extends LitElement {
     }
   }
 
-  handleToggleSystemStat(statId) {
+  handleToggleSystemStat(statId: string) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -370,7 +412,7 @@ class MonitoringPage extends LitElement {
     }
   }
 
-  handleToggleService(serviceId) {
+  handleToggleService(serviceId: string) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -382,7 +424,7 @@ class MonitoringPage extends LitElement {
     }
   }
 
-  handleTogglePup(pupId) {
+  handleTogglePup(pupId: string) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -398,14 +440,14 @@ class MonitoringPage extends LitElement {
     }
   }
 
-  isComponentAdded(type, id) {
+  isComponentAdded(type: DashboardComponent['type'], id: string) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return false;
 
     return dashboard.components.some(c => c.type === type && c.id === id);
   }
 
-  handlePupMetricToggle(pupId, metricName, enabled) {
+  handlePupMetricToggle(pupId: string, metricName: string, enabled: boolean) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return;
 
@@ -425,7 +467,7 @@ class MonitoringPage extends LitElement {
     this.updatePupVisibleMetrics(pupId, visibleMetrics);
   }
 
-  isPupMetricVisible(pupId, metricName) {
+  isPupMetricVisible(pupId: string, metricName: string) {
     const dashboard = this.getActiveDashboard();
     if (!dashboard) return false;
 
@@ -435,7 +477,7 @@ class MonitoringPage extends LitElement {
     return component.visibleMetrics?.includes(metricName) || false;
   }
 
-  formatBytes(mb) {
+  formatBytes(mb: number) {
     if (mb >= 1024) {
       return `${(mb / 1024).toFixed(1)} GB`;
     }
@@ -455,7 +497,7 @@ class MonitoringPage extends LitElement {
                 <sl-tooltip content="Move dashboard left">
                   <button 
                     class="tab-move-btn tab-move-left"
-                    @click=${(e) => {
+                    @click=${(e: Event) => {
                       e.stopPropagation();
                       this.reorderDashboards(index, index - 1);
                     }}
@@ -471,7 +513,7 @@ class MonitoringPage extends LitElement {
                 <sl-tooltip content="Move dashboard right">
                   <button 
                     class="tab-move-btn tab-move-right"
-                    @click=${(e) => {
+                    @click=${(e: Event) => {
                       e.stopPropagation();
                       this.reorderDashboards(index, index + 1);
                     }}
@@ -486,7 +528,7 @@ class MonitoringPage extends LitElement {
                   <sl-icon 
                     name="pencil-square" 
                     class="rename-tab"
-                    @click=${(e) => {
+                    @click=${(e: Event) => {
                       e.stopPropagation();
                       this.handleRenameDashboard(dashboard.id);
                     }}
@@ -498,7 +540,7 @@ class MonitoringPage extends LitElement {
                   <sl-icon 
                     name="x-circle" 
                     class="delete-tab"
-                    @click=${(e) => {
+                    @click=${(e: Event) => {
                       e.stopPropagation();
                       this.deleteDashboard(dashboard.id);
                     }}
@@ -553,9 +595,9 @@ class MonitoringPage extends LitElement {
     `;
   }
 
-  renderSystemStatCard(stat) {
+  renderSystemStatCard(stat: SystemStatCard) {
     const percentage = stat.current?.toFixed(1) || '0';
-    const values = stat.values.filter(v => v > 0);
+    const values = stat.values.filter((v) => v > 0);
     const hasChart = values.length >= 2;
 
     return html`
@@ -575,10 +617,10 @@ class MonitoringPage extends LitElement {
     `;
   }
 
-  renderSystemComponent(componentId, index) {
+  renderSystemComponent(componentId: string, index: number) {
     if (!this.systemStats) return nothing;
 
-    let stat = null;
+    let stat: SystemStatCard | null = null;
     
     if (componentId === 'cpu' && this.systemStats.cpu) {
       stat = {
@@ -659,7 +701,7 @@ class MonitoringPage extends LitElement {
     `;
   }
 
-  renderServiceComponent(serviceId, index) {
+  renderServiceComponent(serviceId: string, index: number) {
     const service = this.availableServices.find(s => s.id === serviceId && s.configured);
     if (!service) return nothing;
 
@@ -708,7 +750,7 @@ class MonitoringPage extends LitElement {
     `;
   }
 
-  renderPupComponent(pupId, visibleMetrics = [], index) {
+  renderPupComponent(pupId: string, visibleMetrics: string[] = [], index: number = 0) {
     const pup = this.installedPups.find(p => p.state?.id === pupId);
     if (!pup) return nothing;
 
@@ -730,12 +772,12 @@ class MonitoringPage extends LitElement {
             name: manifestMetric.name,
             label: manifestMetric.label,
             type: manifestMetric.type,
-            values: []
+            values: [] as unknown[]
           };
         }
         return null;
       })
-      .filter(Boolean);
+      .filter((m): m is NonNullable<typeof m> => Boolean(m));
 
     if (metricsToShow.length === 0) return nothing;
 
@@ -837,7 +879,7 @@ class MonitoringPage extends LitElement {
 
   renderAddComponentModal() {
     const configuredServices = this.availableServices.filter(s => s.configured);
-    const pupsWithMetrics = this.installedPups.filter(p => p.state?.manifest?.metrics?.length > 0);
+    const pupsWithMetrics = this.installedPups.filter(p => (p.state?.manifest?.metrics?.length ?? 0) > 0);
 
     return html`
       <sl-dialog 
@@ -857,11 +899,11 @@ class MonitoringPage extends LitElement {
                 <div class="add-grid">
                   ${pupsWithMetrics.map(pup => {
                     const metrics = pup.state?.manifest?.metrics || [];
-                    const isAdded = this.isComponentAdded('pup', pup.state.id);
+                    const isAdded = this.isComponentAdded('pup', pup.state!.id);
                     return html`
                       <div 
                         class="add-card ${isAdded ? 'added' : ''}" 
-                        @click=${() => this.handleTogglePup(pup.state.id)}
+                        @click=${() => this.handleTogglePup(pup.state!.id)}
                       >
                         <sl-icon name="box-seam" class="add-icon"></sl-icon>
                         <div class="add-label">${pup.state?.manifest?.meta?.name || 'Unknown'}</div>
@@ -942,8 +984,9 @@ class MonitoringPage extends LitElement {
 
   renderPupMetricEditor() {
     if (!this.editingPupId) return nothing;
+    const editingPupId = this.editingPupId;
 
-    const pup = this.installedPups.find(p => p.state?.id === this.editingPupId);
+    const pup = this.installedPups.find(p => p.state?.id === editingPupId);
     if (!pup) return nothing;
 
     const metrics = pup.state?.manifest?.metrics || [];
@@ -961,11 +1004,11 @@ class MonitoringPage extends LitElement {
           <div class="metrics-toggle-grid">
             ${metrics.map(metric => {
               const icon = metric.type === 'string' ? 'card-text' : 'graph-up';
-              const isVisible = this.isPupMetricVisible(this.editingPupId, metric.name);
+              const isVisible = this.isPupMetricVisible(editingPupId, metric.name);
               return html`
                 <div 
                   class="metric-toggle-card ${isVisible ? 'enabled' : ''}"
-                  @click=${() => this.handlePupMetricToggle(this.editingPupId, metric.name, !isVisible)}
+                  @click=${() => this.handlePupMetricToggle(editingPupId, metric.name, !isVisible)}
                 >
                   <sl-icon name="${icon}" class="card-icon"></sl-icon>
                   <div class="metric-toggle-label">${metric.label}</div>

@@ -16,7 +16,7 @@ class PageLogs extends LitElement {
 
   // TODO - import router and get the pupId from the route params
   // Rather than grabbing from URL.
-  getPupIdFromUrl(url) {
+  getPupIdFromUrl(url: string) {
     const parts = url.split('/');
     const pupsIndex = parts.indexOf('pups');
     if (pupsIndex !== -1 && parts.length > pupsIndex + 1) {

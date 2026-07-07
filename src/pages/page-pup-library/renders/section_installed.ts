@@ -1,5 +1,8 @@
 import { html, css, nothing, repeat } from '/lib/lit-all.js';
 
+import type { EnrichedPup } from '/types/pup-model';
+import type { LibraryView } from '../index.js';
+
 var pupCardGrid = css`
   .pup-card-grid {
     display: grid;
@@ -7,7 +10,7 @@ var pupCardGrid = css`
   }
 `
 
-export function renderSectionInstalledHeader(ready) {
+export function renderSectionInstalledHeader(this: LibraryView, ready: unknown) {
 
 
   return html`
@@ -41,7 +44,7 @@ export function renderSectionInstalledHeader(ready) {
   `
 }
 
-export function renderSectionInstalledBody(ready, SKELS, hasItems) {
+export function renderSectionInstalledBody(this: LibraryView, ready: unknown, SKELS: unknown[], hasItems: (nickname: string) => boolean | undefined) {
 
   return html`
     ${this.fetchLoading ? html`
@@ -62,19 +65,19 @@ export function renderSectionInstalledBody(ready, SKELS, hasItems) {
 
     ${ready && hasItems('installed') ? html`
       <div class="pup-card-grid">
-        ${repeat(this.installedList.getCurrentPageData(), (pkg) => `${pkg.state.id}-${pkg.state.version}`, (pkg) => {
+        ${repeat(this.installedList.getCurrentPageData(), (pkg: EnrichedPup) => `${pkg.state?.id}-${pkg.state?.version}`, (pkg: EnrichedPup) => {
           return html`
             <pup-card
               defaultIcon="box"
-              pupId=${pkg.state.id}
-              pupName=${pkg.state.manifest.meta.name}
-              version=${pkg.state.version}
-              logoBase64=${pkg?.assets?.logos?.mainLogoBase64}
-              status=${pkg.computed.statusLabel}
+              pupId=${pkg.state?.id}
+              pupName=${pkg.state?.manifest?.meta?.name}
+              version=${pkg.state?.version}
+              logoBase64=${(pkg?.assets as { logos?: { mainLogoBase64?: string } } | null | undefined)?.logos?.mainLogoBase64}
+              status=${pkg.computed?.statusLabel}
               ?sourceUnavailable=${pkg.computed?.unavailableFromSource || false}
-              .upstreamVersions=${pkg.state.manifest?.meta?.upstreamVersions || {}}
-              href=${pkg.computed.libraryURL}
-              gref=${pkg.computed.pupURL}
+              .upstreamVersions=${pkg.state?.manifest?.meta?.upstreamVersions || {}}
+              href=${pkg.computed?.libraryURL}
+              gref=${(pkg.computed as { pupURL?: string } | null)?.pupURL}
               ?hasGui=${false}
             ></pup-card>
           `}

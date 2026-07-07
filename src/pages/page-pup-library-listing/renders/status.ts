@@ -2,9 +2,12 @@ import { html, css, classMap, nothing } from "/lib/lit-all.js";
 import { rollbackPup } from "/api/pup-updates/pup-updates.js";
 import { createAlert } from "/components/common/alert.js";
 
-export function renderStatus(labels, pkg, rollbackAvailable = false) {
+import type { EnrichedPup } from "/types/pup-model";
+import type { PupLabels, PupPage } from "../index.js";
+
+export function renderStatus(this: PupPage, labels: PupLabels, pkg: EnrichedPup, rollbackAvailable = false) {
   let { statusId, statusLabel, installationId, installationLabel } = labels;
-  const isInstallationLoadingStatus = ["uninstalling", "purging", "upgrading"].includes(installationId)
+  const isInstallationLoadingStatus = ["uninstalling", "purging", "upgrading"].includes(installationId ?? "")
   const unavailableFromSource = pkg?.computed?.unavailableFromSource;
 
   const styles = css`
@@ -68,13 +71,13 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
 
   const handleRollback = async () => {
     try {
-      const result = await rollbackPup(pkg.state.id);
+      const result = await rollbackPup(pkg.state!.id);
       if (result.jobId) {
-        createAlert('neutral', `Rolling back ${pkg.state.manifest.meta.name}...`, 'arrow-counterclockwise', 5000);
+        createAlert('neutral', `Rolling back ${pkg.state?.manifest?.meta?.name}...`, 'arrow-counterclockwise', 5000);
       }
     } catch (error) {
       console.error('Rollback failed:', error);
-      createAlert('danger', `Rollback failed: ${error.message}`, 'exclamation-triangle', 0);
+      createAlert('danger', `Rollback failed: ${(error as Error).message}`, 'exclamation-triangle', 0);
     }
   };
 
@@ -102,7 +105,7 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
 
           <br />
           Error Message: ${brokenReason}<br />
-          Error Code: ${pkg.state.brokenReason}
+          Error Code: ${pkg.state?.brokenReason}
         </sl-alert>
 
         ${rollbackAvailable ? html`
@@ -126,8 +129,10 @@ export function renderStatus(labels, pkg, rollbackAvailable = false) {
  * Returns a pretty string to show to the user, and a boolean of whether this is a recoverable error or not.
  * @returns {[string, boolean]}
  */
-function getBrokenReason(pkg) {
-  switch(pkg.state.brokenReason) {
+function getBrokenReason(pkg: EnrichedPup): [string, boolean] {
+  // Widened to string: older backends emitted reasons (e.g. manifest_load_failed)
+  // that are no longer in the BrokenReason union.
+  switch(pkg.state?.brokenReason as string | undefined) {
     case "state_update_failed": {
       return [ "We were unable to update the state for this pup.", true ]
     }

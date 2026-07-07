@@ -7,7 +7,9 @@ import { PaginationController } from '/components/common/paginator/paginator-con
 import { bindToClass } from '/utils/class-bind.js'
 import * as renderMethods from './renders/index.js';
 
-const initialSort = (a, b) => {
+import type { EnrichedPup } from '/types/pup-model';
+
+const initialSort = (a: EnrichedPup, b: EnrichedPup) => {
   const nameA = a?.state?.manifest?.meta?.name || '';
   const nameB = b?.state?.manifest?.meta?.name || '';
   
@@ -17,7 +19,21 @@ const initialSort = (a, b) => {
   return 0;
 }
 
-class LibraryView extends LitElement {
+export class LibraryView extends LitElement {
+  declare fetchLoading: boolean;
+  declare fetchError: boolean;
+  declare packageList: unknown[] | null;
+  declare busy: boolean;
+  declare inspectedPup: string | undefined;
+
+  busyQueue: EventTarget[];
+  itemsPerPage: number;
+  pkgController: typeof pkgController;
+  installedList: PaginationController<EnrichedPup>;
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare renderSectionInstalledHeader: (ready: unknown) => unknown;
+  declare renderSectionInstalledBody: (ready: unknown, SKELS: unknown[], hasItems: (nickname: string) => boolean | undefined) => unknown;
 
   static properties = {
     fetchLoading: { type: Boolean },
@@ -35,7 +51,7 @@ class LibraryView extends LitElement {
     this.fetchError = false;
     this.itemsPerPage = 20;
     this.pkgController = pkgController;
-    this.installedList = new PaginationController(this, undefined, this.itemsPerPage, { initialSort });
+    this.installedList = new PaginationController<EnrichedPup>(this, undefined, this.itemsPerPage, { initialSort });
     // this.availableList = new PaginationController(this, undefined, this.itemsPerPage);
     this.inspectedPup;
     bindToClass(renderMethods, this);
@@ -70,14 +86,14 @@ class LibraryView extends LitElement {
     this.busy = this.busyQueue.length > 0;
   }
 
-  handleBusyStart(event) {
-    this.busyQueue.push(event.target);
+  handleBusyStart(event: Event) {
+    if (event.target) this.busyQueue.push(event.target);
     this.updateBusyState();
   }
 
-  handleBusyStop(event) {
+  handleBusyStop(event: Event) {
     // Remove the identifier of the event source from the queue
-    const index = this.busyQueue.indexOf(event.target);
+    const index = event.target ? this.busyQueue.indexOf(event.target) : -1;
     if (index > -1) {
       this.busyQueue.splice(index, 1);
     }
@@ -86,18 +102,20 @@ class LibraryView extends LitElement {
     }, 500);
   }
 
-  handlePupInstalled(event) {
+  handlePupInstalled(event: Event) {
     event.stopPropagation();
-    this.pkgController.installPkg(event.detail.pupid)
+    // installPkg no longer exists on pkgController; guarded so a stray
+    // pup-installed event (legacy card-pup-snapshot) cannot throw.
+    (this.pkgController as { installPkg?: (pupId: string) => void }).installPkg?.((event as CustomEvent<{ pupid: string }>).detail.pupid)
     this.requestUpdate();
   }
 
-  handlePupClick(event) {
-    this.inspectedPup = event.currentTarget.pupId
+  handlePupClick(event: Event) {
+    this.inspectedPup = (event.currentTarget as HTMLElement & { pupId?: string }).pupId
   }
 
-  handleForcedTabShow(event) {
-    this.inspectedPup = event.detail.pupId
+  handleForcedTabShow(event: Event) {
+    this.inspectedPup = (event as CustomEvent<{ pupId: string }>).detail.pupId
   }
 
   async fetchBootstrap() {
@@ -124,8 +142,8 @@ class LibraryView extends LitElement {
     this.requestUpdate();
   }
 
-  handleActionsMenuSelect(event) {
-    const selectedItemValue = event.detail.item.value;
+  handleActionsMenuSelect(event: Event) {
+    const selectedItemValue = (event as CustomEvent<{ item: { value: string } }>).detail.item.value;
     switch (selectedItemValue) {
       case 'refresh':
         this.fetchBootstrap();
@@ -140,7 +158,7 @@ class LibraryView extends LitElement {
       this.installedList.data
     )
 
-    const hasItems = (listNickname) => {
+    const hasItems = (listNickname: string) => {
       switch(listNickname) {
         case 'installed':
           return Boolean(this.installedList.data.length)

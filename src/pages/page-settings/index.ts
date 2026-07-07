@@ -22,7 +22,22 @@ import { promptPowerOff, promptReboot } from "./power-helpers.js";
 import { doBootstrap } from '/api/bootstrap/bootstrap.js';
 import { importBlockchain } from '/api/system/import-blockchain-data.js';
 
+import type { JobsControllerState } from "/controllers/jobs/index.js";
+import type { ActionProgress } from "/types/jobs";
+import type { Store } from "/state/store.js";
+
 class SettingsPage extends LitElement {
+  declare inflight_import_blockchain: boolean;
+  declare showImportLogs: boolean;
+  declare systemLogs: ActionProgress[];
+  declare showImportLogsModal: boolean;
+  declare isSystemUpdateLocked: boolean;
+  declare systemUpdateStatus: string;
+
+  context: StoreSubscriber;
+  pkgController: typeof pkgController;
+  updatesRowDescription: string;
+
   static styles = css`
     .padded {
       padding: 20px;
@@ -99,9 +114,9 @@ class SettingsPage extends LitElement {
     this.showImportLogs = false;
     this.systemLogs = [];
     this.showImportLogsModal = false;
-  }x
+  }
 
-  onJobsUpdate(state) {
+  onJobsUpdate(state: JobsControllerState) {
     if (
       state?.isSystemUpdateLocked === this.isSystemUpdateLocked &&
       state?.systemUpdateStatus === this.systemUpdateStatus
@@ -118,7 +133,7 @@ class SettingsPage extends LitElement {
   handleDialogClose() {
     store.updateState({ dialogContext: { name: null }});
     const router = getRouter();
-    router.go('/settings', { replace: true });
+    router?.go('/settings', { replace: true });
   }
 
   handleImportLogsModalClose() {
@@ -128,11 +143,11 @@ class SettingsPage extends LitElement {
     this.requestUpdate();
   }
 
-  handleMenuClick = (event, el) => {
+  handleMenuClick = (event: Event, el: HTMLElement) => {
     const dialogName = el.getAttribute("name");
     store.updateState({ dialogContext: { name: dialogName }});
     const router = getRouter();
-    router.go(`/settings/${dialogName}`, { replace: true });
+    router?.go(`/settings/${dialogName}`, { replace: true });
   };
 
   async handleImportBlockchain() {
@@ -165,12 +180,12 @@ class SettingsPage extends LitElement {
     }
   }
 
-  requestUpdate(options = {}) {
+  requestUpdate(options?: unknown) {
     // This component is an observer of pkgController changes
     // In response to pkgControllers notification of a 'system-activity'
     // this function can determine whether there are new system logs
     // to display to the user.
-    if (this.pkgController && options.type === 'system-activity') {
+    if (this.pkgController && (options as { type?: string } | undefined)?.type === 'system-activity') {
       // Filter for blockchain import logs and update the system logs
       const allSystemLogs = this.pkgController.activityIndex['system'] || [];
       console.log('System activity received:', allSystemLogs);
@@ -193,9 +208,9 @@ class SettingsPage extends LitElement {
   }
 
   render() {
-    const { updateAvailable } = store.getContext('sys')
+    const updateAvailable = store.getContext('sys')?.updateAvailable
     const dialog = store.getContext('dialog')
-    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "language", "keyboard-layout", "date-time"].includes(dialog.name);
+    const hasSettingsDialog = ["updates", "versions", "remote-access", "import-blockchain", "language", "keyboard-layout", "date-time"].includes(dialog?.name ?? "");
     
     return html`
       <div class="padded">
@@ -272,7 +287,7 @@ class SettingsPage extends LitElement {
 
       <sl-dialog no-header
         ?open=${hasSettingsDialog} @sl-request-close=${this.handleDialogClose}>
-        ${choose(dialog.name, [
+        ${choose(dialog?.name, [
           ["updates", () => html`<x-action-check-updates></x-action-check-updates>`],
           ["remote-access", () => html`<x-action-remote-access></x-action-remote-access>`],
           ["versions", () => renderVersionsDialog(store, this.handleDialogClose)],
@@ -339,8 +354,8 @@ class SettingsPage extends LitElement {
 
 customElements.define("x-page-settings", SettingsPage);
 
-function renderVersionsDialog(store, closeFn) {
-  const { dbxVersion, gitCommit, gitDirty } = store.getContext('app')
+function renderVersionsDialog(store: Store, closeFn: () => void) {
+  const { dbxVersion, gitCommit, gitDirty } = store.getContext('app') ?? {}
   const displayVersion = dbxVersion || 'Unknown'
   
   return html`

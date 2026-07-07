@@ -10,9 +10,11 @@ import '/components/common/paginator/paginator-ui.js';
 import '/components/common/page-banner.js';
 import '/components/views/action-manage-sources/index.js';
 
-const initialSort = (a, b) => {
-  const nameA = a?.def?.versions?.[a?.def?.latestVersion]?.meta?.name || '';
-  const nameB = b?.def?.versions?.[b?.def?.latestVersion]?.meta?.name || '';
+import type { EnrichedPup } from '/types/pup-model';
+
+const initialSort = (a: EnrichedPup, b: EnrichedPup) => {
+  const nameA = a?.def?.versions?.[a?.def?.latestVersion ?? '']?.meta?.name || '';
+  const nameB = b?.def?.versions?.[b?.def?.latestVersion ?? '']?.meta?.name || '';
   
   // Default alphabetical sort
   if (nameA < nameB) return -1;
@@ -20,7 +22,33 @@ const initialSort = (a, b) => {
   return 0;
 }
 
-class StoreView extends LitElement {
+interface StoreCategory {
+  name: string;
+  label: string;
+  disabled?: boolean;
+}
+
+export class StoreView extends LitElement {
+  declare pups: EnrichedPup[];
+  declare fetchLoading: boolean;
+  declare fetchError: boolean;
+  declare busy: boolean;
+  declare inspectedPup: string | undefined;
+  declare searchValue: string;
+  declare searchInDescription: boolean;
+  declare searchInInterfaces: boolean;
+  declare _showSourceManagementDialog: boolean;
+  declare _hasSourceErrors: boolean;
+
+  busyQueue: EventTarget[];
+  itemsPerPage: number;
+  pkgController: typeof pkgController;
+  packageList: PaginationController<EnrichedPup>;
+  showCategories: boolean;
+  categories: StoreCategory[];
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare renderSectionBody: (ready: unknown, SKELS: unknown[], hasItems: (nickname: string) => boolean | undefined) => unknown;
 
   static get properties() {
     return {
@@ -49,7 +77,7 @@ class StoreView extends LitElement {
     this.searchInInterfaces = false;
     this.itemsPerPage = 10;
     this.pkgController = pkgController;
-    this.packageList = new PaginationController(this, undefined, this.itemsPerPage,{ initialSort });
+    this.packageList = new PaginationController<EnrichedPup>(this, undefined, this.itemsPerPage,{ initialSort });
     this._showSourceManagementDialog = false;
     this._hasSourceErrors = false;
 
@@ -93,7 +121,7 @@ class StoreView extends LitElement {
       this.searchValue = search;
     }
 
-    const isTruthy = (v) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
+    const isTruthy = (v: string | null) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
     if (params.has('interfaces')) {
       this.searchInInterfaces = isTruthy(params.get('interfaces'));
     }
@@ -126,14 +154,14 @@ class StoreView extends LitElement {
     this.busy = this.busyQueue.length > 0;
   }
 
-  handleBusyStart(event) {
-    this.busyQueue.push(event.target);
+  handleBusyStart(event: Event) {
+    if (event.target) this.busyQueue.push(event.target);
     this.updateBusyState();
   }
 
-  handleBusyStop(event) {
+  handleBusyStop(event: Event) {
     // Remove the identifier of the event source from the queue
-    const index = this.busyQueue.indexOf(event.target);
+    const index = event.target ? this.busyQueue.indexOf(event.target) : -1;
     if (index > -1) {
       this.busyQueue.splice(index, 1);
     }
@@ -142,18 +170,20 @@ class StoreView extends LitElement {
     }, 500);
   }
 
-  handlePupInstalled(event) {
+  handlePupInstalled(event: Event) {
     event.stopPropagation();
-    this.pkgController.installPkg(event.detail.pupid)
+    // installPkg no longer exists on pkgController; guarded so a stray
+    // pup-installed event (legacy card-pup-snapshot) cannot throw.
+    (this.pkgController as { installPkg?: (pupId: string) => void }).installPkg?.((event as CustomEvent<{ pupid: string }>).detail.pupid)
     this.requestUpdate();
   }
 
-  handlePupClick(event) {
-    this.inspectedPup = event.currentTarget.pupId
+  handlePupClick(event: Event) {
+    this.inspectedPup = (event.currentTarget as HTMLElement & { pupId?: string }).pupId
   }
 
-  handleForcedTabShow(event) {
-    this.inspectedPup = event.detail.pupId
+  handleForcedTabShow(event: Event) {
+    this.inspectedPup = (event as CustomEvent<{ pupId: string }>).detail.pupId
   }
 
   async fetchBootstrap() {
@@ -187,8 +217,8 @@ class StoreView extends LitElement {
     this.requestUpdate('pups');
   }
 
-  handleActionsMenuSelect(event) {
-    const selectedItemValue = event.detail.item.value;
+  handleActionsMenuSelect(event: Event) {
+    const selectedItemValue = (event as CustomEvent<{ item: { value: string } }>).detail.item.value;
     switch (selectedItemValue) {
       case 'refresh':
         this.fetchBootstrap();
@@ -196,7 +226,7 @@ class StoreView extends LitElement {
     }
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('pups')) {
       this.packageList.setData(this.pups);
       // setData() replaces initial_data and clears any active filter, so a
@@ -214,25 +244,34 @@ class StoreView extends LitElement {
     }
   }
 
-  handleSearchInput(event) {
-    this.searchValue = event.target.value;
+  handleSearchInput(event: Event) {
+    this.searchValue = (event.target as HTMLInputElement).value;
   }
 
-  handleSearchOptionChange(event) {
-    const option = event.target.dataset.option;
+  handleSearchOptionChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const option = target.dataset.option;
     if (option === 'description') {
-      this.searchInDescription = event.target.checked;
+      this.searchInDescription = target.checked;
     } else if (option === 'interfaces') {
-      this.searchInInterfaces = event.target.checked;
+      this.searchInInterfaces = target.checked;
     }
   }
 
   // Collect the searchable text for a pup based on which search options are
   // currently enabled. Always includes the pup key + display name.
-  getSearchableText(pkg) {
+  getSearchableText(pkg: EnrichedPup) {
     const def = pkg?.def;
-    const meta = def?.versions?.[def?.latestVersion]?.meta || {};
-    const version = def?.versions?.[def?.latestVersion] || {};
+    const latestVersion = def?.latestVersion ?? "";
+    // Older sources used descShort/descLong for the meta description keys.
+    const meta = (def?.versions?.[latestVersion]?.meta || {}) as {
+      name?: string;
+      shortDescription?: string;
+      longDescription?: string;
+      descShort?: string;
+      descLong?: string;
+    };
+    const version = def?.versions?.[latestVersion] || {};
 
     const parts = [def?.key || "", meta.name || ""];
 
@@ -262,7 +301,7 @@ class StoreView extends LitElement {
       return;
     }
 
-    this.packageList.setFilter((pkg) => this.getSearchableText(pkg).includes(query));
+    this.packageList.setFilter((pkg: EnrichedPup) => this.getSearchableText(pkg).includes(query));
   }
 
   handleManageSourcesClick() {
@@ -281,7 +320,7 @@ class StoreView extends LitElement {
       this.packageList.data
     )
 
-    const hasItems = (listNickname) => {
+    const hasItems = (listNickname: string) => {
       switch(listNickname) {
         case 'packages':
           return Boolean(this.packageList.data.length)

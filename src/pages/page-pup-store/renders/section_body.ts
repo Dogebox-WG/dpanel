@@ -1,5 +1,8 @@
 import { html, css, nothing, repeat } from '/lib/lit-all.js';
 
+import type { EnrichedPup } from '/types/pup-model';
+import type { StoreView } from '../index.js';
+
 var pupCardGrid = css`
   .pup-card-grid {
     display: grid;
@@ -10,7 +13,7 @@ var pupCardGrid = css`
   }
 `
 
-export function renderSectionHeader(ready) {
+export function renderSectionHeader(this: StoreView, ready: unknown) {
 
   return html`
     <div class="actions">
@@ -33,7 +36,7 @@ export function renderSectionHeader(ready) {
   `
 }
 
-export function renderSectionBody(ready, SKELS, hasItems) {
+export function renderSectionBody(this: StoreView, ready: unknown, SKELS: unknown[], hasItems: (nickname: string) => boolean | undefined) {
   return html`
     ${this.fetchLoading ? html`
       <div class="details-group">
@@ -53,7 +56,7 @@ export function renderSectionBody(ready, SKELS, hasItems) {
 
     ${ready && hasItems('packages') ? html`
       <div class="pup-card-grid">
-        ${repeat(this.packageList.getCurrentPageData(), (pkg) => `${pkg.def?.source?.id || 'unknown'}-${pkg.def?.key || 'unknown'}`, (pkg) => {
+        ${repeat(this.packageList.getCurrentPageData(), (pkg: EnrichedPup) => `${pkg.def?.source?.id || 'unknown'}-${pkg.def?.key || 'unknown'}`, (pkg: EnrichedPup) => {
           return html`
           <pup-install-card
             defaultIcon="box"
@@ -63,8 +66,8 @@ export function renderSectionBody(ready, SKELS, hasItems) {
             pupName=${pkg.def?.key || 'unknown'}
             version=${pkg.def?.latestVersion || 'unknown'}
             logoBase64=${pkg.def?.logoBase64 || ''}
-            .upstreamVersions=${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.upstreamVersions || {}}
-            short="${pkg.def?.versions?.[pkg.def?.latestVersion]?.meta?.shortDescription || ''}"
+            .upstreamVersions=${pkg.def?.versions?.[pkg.def?.latestVersion ?? '']?.meta?.upstreamVersions || {}}
+            short="${pkg.def?.versions?.[pkg.def?.latestVersion ?? '']?.meta?.shortDescription || ''}"
             ?installed=${pkg.computed?.isInstalled || false}
             href=${pkg.computed?.storeURL || '#'}
             .source=${pkg.def?.source || null}

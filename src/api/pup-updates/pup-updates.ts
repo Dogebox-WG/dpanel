@@ -53,11 +53,22 @@ export async function upgradePup(pupId: string, targetVersion?: string) {
   return result;
 }
 
+/** GET /pup/:pupId/previous-version response (dogeboxd pkg/web/pup_updates.go). */
+export interface PreviousVersionResponse {
+  pupId?: string;
+  currentVersion?: string;
+  previousVersion?: string;
+  isBroken?: boolean;
+  brokenReason?: string;
+  hasSnapshot?: boolean;
+  rollbackPossible?: boolean;
+}
+
 // Rollback pup to previous version
 export async function rollbackPup(pupId: string) {
   const result = await useMock(
-    () => mockPupUpdatesApi.rollbackPup(pupId),
-    () => client.post(`/pup/${pupId}/rollback`),
+    () => mockPupUpdatesApi.rollbackPup(pupId) as Promise<{ jobId?: string }>,
+    () => client.post<{ jobId?: string }>(`/pup/${pupId}/rollback`),
     'rollbackPup'
   )();
   return result;
@@ -66,8 +77,9 @@ export async function rollbackPup(pupId: string) {
 // Get previous version info (for rollback)
 export async function getPreviousVersion(pupId: string) {
   const result = await useMock(
-    () => mockPupUpdatesApi.getPreviousVersion(pupId),
-    () => client.get(`/pup/${pupId}/previous-version`),
+    // The mock returns a snapshot object rather than the wire shape.
+    () => mockPupUpdatesApi.getPreviousVersion(pupId) as unknown as Promise<PreviousVersionResponse>,
+    () => client.get<PreviousVersionResponse>(`/pup/${pupId}/previous-version`),
     'getPreviousVersion'
   )();
   return result;

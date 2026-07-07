@@ -2,19 +2,21 @@ import { html, css, nothing } from "/lib/lit-all.js";
 import { doBootstrap } from "/api/bootstrap/bootstrap.js";
 import { pupUpdates } from "/state/pup-updates.js";
 
-export function openConfig() {
+import type { PupLabels, PupPage } from "../index.js";
+
+export function openConfig(this: PupPage) {
   this.open_dialog = "configure";
   this.open_dialog_label = "Configure";
 }
 
-export function openDeps() {
+export function openDeps(this: PupPage) {
   this.open_dialog = "deps";
   this.open_dialog_label = "Dependencies";
 }
 
-export async function handlePurgeFunction() {
+export async function handlePurgeFunction(this: PupPage) {
   this.inflight_purge = true;
-  const pupId = this.getPup().state.id
+  const pupId = this.getPup()!.state!.id
   this.requestUpdate();
 
   // Clear update info immediately to prevent stale cache on page refresh
@@ -39,14 +41,14 @@ export async function handlePurgeFunction() {
   await this.pkgController.requestPupAction(pupId, 'purge', callbacks);
 }
 
-export function renderActions(labels, hasLogs) {
+export function renderActions(this: PupPage, labels: PupLabels, hasLogs: number) {
   const pkg = this.getPup();
   let { installationId, statusId, statusLabel } = labels
 
   const hasButtons =
-    ["needs_deps", "needs_config"].includes(statusId)
-    || ["uninstalled"].includes(installationId)
-    || pkg.state.manifest?.gui;
+    ["needs_deps", "needs_config"].includes(statusId ?? "")
+    || ["uninstalled"].includes(installationId ?? "")
+    || (pkg?.state?.manifest as { gui?: unknown } | undefined)?.gui;
 
   const styles = css`
     .action-wrap {
@@ -68,7 +70,7 @@ export function renderActions(labels, hasLogs) {
     }
   `
 
-  const webUIs = Array.isArray(pkg.state.webUIs) ? pkg.state.webUIs : []
+  const webUIs = Array.isArray(pkg?.state?.webUIs) ? pkg!.state!.webUIs : []
 
   const uiButtons = webUIs.map((entry) => {
     return html`

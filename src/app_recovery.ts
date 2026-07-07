@@ -23,7 +23,7 @@ import "/components/views/action-setup-progress/index.js";
 import "/components/views/action-select-install-location/index.js";
 import "/components/views/action-system-settings/index.js";
 import "/components/views/setup-dislaimer/index.js";
-import "/components/views/confirmation-prompt/index.js";
+import "/components/common/dbx-modal/index.js";
 import "/pages/page-recovery/index.js";
 
 // Components
@@ -96,7 +96,6 @@ export class AppModeApp extends LitElement {
   declare installationBootMedia: string;
   declare renderReady: boolean;
 
-  dialogMgmt: HTMLElement | null;
   mainChannel: typeof mainChannel;
   context: StoreSubscriber;
   devMode?: boolean;
@@ -124,7 +123,6 @@ export class AppModeApp extends LitElement {
 
   constructor() {
     super();
-    this.dialogMgmt = null;
     this.isLoggedIn = false;
     this.activeStepNumber = 0;
     this.setupState = null;
@@ -550,30 +548,6 @@ export class AppModeApp extends LitElement {
     return STEP_DONE;
   }
 
-  firstUpdated() {
-    // Prevent dialog closures on overlay click
-    this.dialogMgmt = this.shadowRoot!.querySelector("#MgmtDialog");
-    this.dialogMgmt?.addEventListener("sl-request-close", (event) => {
-      if (
-        (event as CustomEvent<{ source: string }>).detail.source === "overlay" ||
-        this.context.store.setupContext.preventClose
-      ) {
-        event.preventDefault();
-      }
-    });
-    this.dialogMgmt?.addEventListener("sl-after-hide", (event) => {
-      if ((event.target as HTMLElement).id === "MgmtDialog") {
-        store.updateState({
-          setupContext: {
-            view: null,
-            hideViewClose: false,
-            preventClose: false,
-          },
-        });
-      }
-    });
-  }
-
   _nextStep = () => {
     const fromStep = this.activeStepNumber;
     this.isLoggedIn = !!this.context.store.networkContext.token;
@@ -689,6 +663,115 @@ export class AppModeApp extends LitElement {
       setupContext: { view: null, hideViewClose: false, preventClose: false },
     });
   };
+
+  getMgmtDialogTitle(view: string | null) {
+    return ({
+      network: "Network",
+      password: "Reset Password",
+      reboot: "Are you sure you want to reboot?",
+      "post-reboot": "Rebooting",
+      "power-off": "Are you sure you want to power off?",
+      "post-power-off": "Power Off",
+      "factory-reset": "Factory Reset",
+    } as Record<string, string>)[view ?? ""] ?? "Recovery";
+  }
+
+  renderMgmtDialog(view: string | null) {
+    const isReboot = view === "reboot";
+    const isPowerOff = view === "power-off";
+    const isConfirmation = isReboot || isPowerOff;
+    const showClose =
+      !isConfirmation && !this.context.store.setupContext.hideViewClose;
+
+    return html`
+      <x-dbx-modal
+        id="MgmtDialog"
+        ?open=${view !== null}
+        title=${this.getMgmtDialogTitle(view)}
+        .dismissable=${!this.context.store.setupContext.preventClose}
+        subtitle=${isReboot
+          ? "Remove your USB recovery stick if you want to boot back into normal mode"
+          : isPowerOff
+            ? "Physical access may be required to turn your Dogebox on again"
+            : ""}
+        primaryLabel=${isReboot
+          ? "Reboot"
+          : isPowerOff
+            ? "Yes, turn it off."
+            : ""}
+        cancelLabel=${isConfirmation ? "Cancel" : ""}
+        footerLabel=${showClose ? "Close" : ""}
+        @dbx-close=${() => {
+          if (!this.context.store.setupContext.preventClose) {
+            this._closeMgmtDialog();
+          }
+        }}
+        @dbx-cancel-click=${this._closeMgmtDialog}
+        @dbx-primary-click=${() => {
+          if (isReboot) this.triggerReboot();
+          if (isPowerOff) this.triggerPoweroff();
+        }}
+        @dbx-footer-click=${this._closeMgmtDialog}
+      >
+        ${choose(view, [
+          [
+            "network",
+            () => html`
+              <x-action-select-network
+                slot="custom"
+                showSuccessAlert
+                .onClose=${() => this._closeMgmtDialog()}
+              >
+              </x-action-select-network>
+            `,
+          ],
+          [
+            "password",
+            () =>
+              html` <x-action-change-pass
+                slot="custom"
+                hide-title
+                resetMethod="credentials"
+                showSuccessAlert
+                refreshAfterChange
+              ></x-action-change-pass>`,
+          ],
+          [
+            "post-reboot",
+            () =>
+              html` <div slot="custom">
+                <img style="width: 100%;" src="/static/img/again.png" />
+                <p class="statement">
+                  Rebooting.<br /><small
+                    >Please re-reconnect to the same network as your Dogebox
+                    and refresh.</small
+                  >
+                </p>
+              </div>`,
+          ],
+          [
+            "post-power-off",
+            () => html`
+              <div slot="custom">
+                <img style="width: 100%;" src="/static/img/bye.png" />
+                <p class="statement">
+                  Dogebox turned off successfully.<br />You may close this
+                  page.
+                </p>
+              </div>
+            `,
+          ],
+          [
+            "factory-reset",
+            () =>
+              html` <div slot="custom" class="coming-soon">
+                <h3>Not yet implemented</h3>
+              </div>`,
+          ],
+        ])}
+      </x-dbx-modal>
+    `;
+  }
 
   render() {
     const navClasses = classMap({
@@ -850,99 +933,7 @@ export class AppModeApp extends LitElement {
         : nothing}
       ${guard(
         [this.context.store.setupContext.view],
-        () => html`
-          <sl-dialog
-            id="MgmtDialog"
-            no-header
-            ?open=${this.context.store.setupContext.view !== null}
-          >
-            ${choose(store.setupContext.view, [
-              [
-                "network",
-                () => html`
-                  <x-action-select-network
-                    showSuccessAlert
-                    .onClose=${() => this._closeMgmtDialog()}
-                  >
-                  </x-action-select-network>
-                `,
-              ],
-              [
-                "password",
-                () =>
-                  html` <x-action-change-pass
-                    resetMethod="credentials"
-                    showSuccessAlert
-                    refreshAfterChange
-                  ></x-action-change-pass>`,
-              ],
-              [
-                "reboot",
-                () => html`
-                  <x-confirmation-prompt
-                    title="Are you sure you want to reboot?"
-                    description="Remove your USB recovery stick if you want to boot back into normal mode"
-                    bottomButtonText="Cancel"
-                    .bottomButtonClick=${this._closeMgmtDialog}
-                    topButtonText="Reboot"
-                    .topButtonClick=${this.triggerReboot}
-                  ></x-confirmation-prompt>
-                `,
-              ],
-              [
-                "post-reboot",
-                () =>
-                  html` <img style="width: 100%;" src="/static/img/again.png" />
-                    <p class="statement">
-                      Rebooting.<br /><small
-                        >Please re-reconnect to the same network as your Dogebox
-                        and refresh.</small
-                      >
-                    </p>`,
-              ],
-              [
-                "power-off",
-                () => html`
-                  <x-confirmation-prompt
-                    title="Are you sure you want to power off?"
-                    description="Physical access may be required to turn your Dogebox on again"
-                    bottomButtonText="Cancel"
-                    .bottomButtonClick=${this._closeMgmtDialog}
-                    topButtonText="Yes, turn it off."
-                    .topButtonClick=${this.triggerPoweroff}
-                  ></x-confirmation-prompt>
-                `,
-              ],
-              [
-                "post-power-off",
-                () => html`
-                  <img style="width: 100%;" src="/static/img/bye.png" />
-                  <p class="statement">
-                    Dogebox turned off successfully.<br />You may close this
-                    page.
-                  </p>
-                `,
-              ],
-              [
-                "factory-reset",
-                () =>
-                  html` <div class="coming-soon">
-                    <h3>Not yet implemented</h3>
-                  </div>`,
-              ],
-            ])}
-            ${this.context.store.setupContext.hideViewClose
-              ? nothing
-              : html`
-                  <sl-button
-                    slot="footer"
-                    outline
-                    @click=${this._closeMgmtDialog}
-                    >Close</sl-button
-                  >
-                `}
-          </sl-dialog>
-        `,
+        () => this.renderMgmtDialog(this.context.store.setupContext.view),
       )}
       <x-debug-panel></x-debug-panel>
     `;

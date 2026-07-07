@@ -2,6 +2,7 @@ import {
   LitElement,
   html,
   css,
+  nothing,
 } from "/lib/lit-all.js";
 
 import { asyncTimeout } from "/utils/timeout.js";
@@ -16,6 +17,7 @@ export class DateTimeSettings extends LitElement {
   declare _timezones: FormattedTimezone[];
   declare _current_timezone: string | undefined;
   declare _changes: { timezone?: string };
+  declare hideTitle: boolean;
 
   static styles = css`
     h1 {
@@ -54,6 +56,7 @@ export class DateTimeSettings extends LitElement {
       _timezones: { type: Array },
       _current_timezone: { type: String },
       _changes: { type: Object },
+      hideTitle: { type: Boolean, attribute: "hide-title" },
     };
   }
 
@@ -61,6 +64,7 @@ export class DateTimeSettings extends LitElement {
     super();
     this._timezones = [];
     this._changes = {};
+    this.hideTitle = false;
   }
  
   async connectedCallback() {
@@ -148,7 +152,7 @@ export class DateTimeSettings extends LitElement {
     }
     
     return html`
-      <h1>Date and Time</h1>
+      ${this.hideTitle ? nothing : html`<h1>Date and Time</h1>`}
 
       <div class="form-control">
         <sl-select

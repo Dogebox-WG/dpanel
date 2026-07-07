@@ -8,6 +8,7 @@ import '/components/views/x-metric/metric.js';
 import '/components/views/service-status-card/index.js';
 import '/components/common/action-row/action-row.js';
 import '/components/common/sparkline-chart/sparkline-chart-v2.js';
+import '/components/common/dbx-modal/index.js';
 
 // A single card placed on a monitoring dashboard.
 interface DashboardComponent {
@@ -882,13 +883,15 @@ class MonitoringPage extends LitElement {
     const pupsWithMetrics = this.installedPups.filter(p => (p.state?.manifest?.metrics?.length ?? 0) > 0);
 
     return html`
-      <sl-dialog 
-        label="Add Components" 
+      <x-dbx-modal
+        title="Add Components"
         ?open=${this.showAddModal}
-        @sl-request-close=${this.handleAddModalClose}
+        footerLabel="Close"
         class="add-modal"
+        @dbx-close=${() => this.handleAddModalClose()}
+        @dbx-footer-click=${() => this.handleAddModalClose()}
       >
-        <sl-tab-group>
+        <sl-tab-group slot="custom">
           <sl-tab slot="nav" panel="pups">Pups</sl-tab>
           <sl-tab slot="nav" panel="system">System</sl-tab>
           <sl-tab slot="nav" panel="services">Services</sl-tab>
@@ -975,10 +978,7 @@ class MonitoringPage extends LitElement {
           </sl-tab-panel>
         </sl-tab-group>
 
-        <sl-button slot="footer" variant="default" @click=${this.handleAddModalClose}>
-          Close
-        </sl-button>
-      </sl-dialog>
+      </x-dbx-modal>
     `;
   }
 
@@ -993,13 +993,15 @@ class MonitoringPage extends LitElement {
     if (metrics.length === 0) return nothing;
 
     return html`
-      <sl-dialog 
-        label="Edit ${pup.state?.manifest?.meta?.name || 'Pup'} Metrics" 
+      <x-dbx-modal
+        title="Edit ${pup.state?.manifest?.meta?.name || 'Pup'} Metrics"
         ?open=${this.showPupMetricEditor}
-        @sl-request-close=${this.handlePupMetricEditorClose}
+        footerLabel="Done"
         class="pup-metric-editor"
+        @dbx-close=${() => this.handlePupMetricEditorClose()}
+        @dbx-footer-click=${() => this.handlePupMetricEditorClose()}
       >
-        <div class="metric-editor-content">
+        <div slot="custom" class="metric-editor-content">
           <p class="editor-description">Select which metrics to display for this pup:</p>
           <div class="metrics-toggle-grid">
             ${metrics.map(metric => {
@@ -1018,10 +1020,7 @@ class MonitoringPage extends LitElement {
           </div>
         </div>
 
-        <sl-button slot="footer" variant="primary" @click=${this.handlePupMetricEditorClose}>
-          Done
-        </sl-button>
-      </sl-dialog>
+      </x-dbx-modal>
     `;
   }
 

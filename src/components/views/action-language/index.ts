@@ -2,6 +2,7 @@ import {
   LitElement,
   html,
   css,
+  nothing,
 } from "/lib/lit-all.js";
 
 import { asyncTimeout } from "/utils/timeout.js";
@@ -15,6 +16,7 @@ export class LanguageSettings extends LitElement {
   declare _keymaps: Keymap[];
   declare _current_keymap: string | undefined;
   declare _changes: Record<string, string | undefined>;
+  declare hideTitle: boolean;
 
   static styles = css`
     h1 {
@@ -53,6 +55,7 @@ export class LanguageSettings extends LitElement {
       _keymaps: { type: Array },
       _current_keymap: { type: String },
       _changes: { type: Object },
+      hideTitle: { type: Boolean, attribute: "hide-title" },
     };
   }
 
@@ -60,6 +63,7 @@ export class LanguageSettings extends LitElement {
     super();
     this._keymaps = [];
     this._changes = {};
+    this.hideTitle = false;
   }
  
   async connectedCallback() {
@@ -146,7 +150,7 @@ export class LanguageSettings extends LitElement {
     }
     
     return html`
-      <h1>Keyboard Layout</h1>
+      ${this.hideTitle ? nothing : html`<h1>Keyboard Layout</h1>`}
 
       <div class="form-control">
 

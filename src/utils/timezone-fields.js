@@ -1,4 +1,4 @@
-export function buildTimezoneFields(inFlight, timezones, label = 'Timezone') {
+export function buildTimezoneFields(inFlight, timezones) {
   return {
     sections: [
       {
@@ -7,7 +7,7 @@ export function buildTimezoneFields(inFlight, timezones, label = 'Timezone') {
           {
             name: 'timezone',
             type: 'select',
-            label,
+            label: 'Timezone',
             required: true,
             help: 'Where in the world should your clock be set to',
             disabled: inFlight,

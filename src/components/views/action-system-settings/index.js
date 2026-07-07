@@ -20,7 +20,6 @@ import { toggledSectionStyles } from "/components/common/toggled-section.js";
 import "/bootstrap/deform.js";
 
 const DEFAULT_KEYMAP = "us";
-const TIMEZONE_FIELD_LABEL = 'Select Timezone';
 
 class SystemSettings extends LitElement {
   static styles = [toggledSectionStyles, css`
@@ -96,7 +95,7 @@ class SystemSettings extends LitElement {
     super();
     this.onBack = null;
     this._timezones = [];
-    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
+    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
     this._disks = [];
     this._changes = {
       keymap: DEFAULT_KEYMAP,
@@ -129,7 +128,7 @@ class SystemSettings extends LitElement {
       // Transform and sort timezones
       const formattedTimezones = rawTimezones.map(tz => formatTimezoneWithOffset(tz));
       this._timezones = sortTimezonesByCity(formattedTimezones);
-      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
       
       this._disks = await getDisks();
 
@@ -158,7 +157,7 @@ class SystemSettings extends LitElement {
 
   async _attemptSubmit() {
     this._inflight = true;
-    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
+    this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
 
     // Only input elements that have a name attribute are sent to backend.
     const formFields = this.shadowRoot.querySelectorAll('sl-input[name], sl-select[name], sl-checkbox[name]');
@@ -169,7 +168,7 @@ class SystemSettings extends LitElement {
     if (hasInvalidField) {
       createAlert('warning', 'Uh oh, invalid data detected.');
       this._inflight = false;
-      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
       return;
     }
 
@@ -196,7 +195,7 @@ class SystemSettings extends LitElement {
       createAlert('danger', ['Failed to save config', 'Please refresh and try again'])
     } finally {
       this._inflight = false;
-      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones, TIMEZONE_FIELD_LABEL);
+      this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
       if (didSucceed) {
         await this.onSuccess(); 
       }

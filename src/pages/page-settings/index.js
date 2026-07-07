@@ -386,12 +386,10 @@ function renderVersionsDialog(store) {
   const displayVersion = dbxVersion || 'Unknown'
   
   return html`
-    <div>
-      <div style="text-align: left; margin: 1em 0;">
-        <h2 style="margin: 0 0 0.5em 0;">Dogebox</h2>
-        <p style="margin: 0 0 0.5em 0;"><strong>Version:</strong> ${displayVersion}</p>
-        ${gitCommit ? html`<p style="margin: 0;"><strong>Git commit:</strong> ${gitCommit}${gitDirty ? ' (dirty)' : ''}</p>` : ''}
-      </div>
+    <div style="text-align: left; margin: 1em 0;">
+      <h2 style="margin: 0 0 0.5em 0;">Dogebox</h2>
+      <p style="margin: 0 0 0.5em 0;"><strong>Version:</strong> ${displayVersion}</p>
+      ${gitCommit ? html`<p style="margin: 0;"><strong>Git commit:</strong> ${gitCommit}${gitDirty ? ' (dirty)' : ''}</p>` : ''}
     </div>
   `
 }

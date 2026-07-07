@@ -13,6 +13,7 @@ import {
   setSSHState,
 } from "/api/sshkeys/sshkeys.js";
 import "/components/common/action-row/action-row.js";
+import "/components/common/dbx-modal/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { canCopyToClipboard } from "/utils/clipboard.js";
 import { createAlert } from "/components/common/alert.js";
@@ -20,6 +21,7 @@ import { createAlert } from "/components/common/alert.js";
 export class RemoteAccessSettings extends LitElement {
   static get properties() {
     return {
+      hideTitle: { type: Boolean, attribute: "hide-title" },
       _loading: { type: Boolean},
       _inflight: { type: Boolean },
       _server_fault: { type: String },
@@ -60,10 +62,6 @@ export class RemoteAccessSettings extends LitElement {
       justify-content: space-between;
       align-items: center;
       margin-top: 1em;
-
-      sl-button {
-        margin-right: -1em;
-      }
     }
 
     .key-reveal-dropdown {
@@ -166,6 +164,12 @@ export class RemoteAccessSettings extends LitElement {
     this._show_add_key_dialog = true
   }
 
+  closeAddKeyDialog() {
+    this._show_add_key_dialog = false;
+    this._new_key_value = "";
+    this._show_private_key_warning = false;
+  }
+
   handleTrash(keyId) {
     this._selected_key_id_for_trash = keyId;
   }
@@ -222,7 +226,7 @@ export class RemoteAccessSettings extends LitElement {
     const keys = this._ssh_public_keys 
     const canCopy = canCopyToClipboard();
     return html`
-      <h1>Remote Access</h1>
+      ${this.hideTitle ? nothing : html`<h1>Remote Access</h1>`}
 
       <div class="helper-text">
         <pre>ssh shibe@${window.location.hostname}</pre>
@@ -279,15 +283,32 @@ export class RemoteAccessSettings extends LitElement {
       }) : nothing }
       </div>
 
-      <sl-dialog @sl-request-close=${(e) => { this._selected_key_id_for_trash = ""; e.stopPropagation();}} ?open=${this._selected_key_id_for_trash} label="Are you sure?">
-        <div class="confirmation-container">
-          <sl-button variant="text" @click=${() => this._selected_key_id_for_trash = ""}>I changed my mind</sl-button>
-          <sl-button variant="danger" ?loading=${this._inflight} @click=${this.performKeyDelete}>Yes, delete this SSH Public Key</sl-button>
-        </div>
-      </sl-dialog>
+      <x-dbx-modal
+        ?open=${Boolean(this._selected_key_id_for_trash)}
+        title="Are you sure?"
+        primaryLabel="Yes, delete this SSH Public Key"
+        primaryVariant="danger"
+        cancelLabel="I changed my mind"
+        ?primaryLoading=${this._inflight}
+        @dbx-close=${() => this._selected_key_id_for_trash = ""}
+        @dbx-cancel-click=${() => this._selected_key_id_for_trash = ""}
+        @dbx-primary-click=${() => this.performKeyDelete()}
+      ></x-dbx-modal>
 
-      <sl-dialog @sl-request-close=${(e) => { this._show_add_key_dialog = false; e.stopPropagation(); }} ?open=${this._show_add_key_dialog} label="Add an SSH Public Key">
+      <x-dbx-modal
+        ?open=${this._show_add_key_dialog}
+        title="Add an SSH Public Key"
+        footer-text-label="I've changed my mind"
+        footerLabel="Submit"
+        footerVariant="primary"
+        ?footerDisabled=${this._inflight || this._show_private_key_warning || !this._new_key_value}
+        ?footerLoading=${this._inflight}
+        @dbx-close=${() => this.closeAddKeyDialog()}
+        @dbx-footer-text-click=${() => this.closeAddKeyDialog()}
+        @dbx-footer-click=${() => this.performAddKey()}
+      >
         <sl-textarea
+          slot="custom"
           value=${this._new_key_value}
           rows="6"
           help-text="Important: Enter your public key"
@@ -295,15 +316,10 @@ export class RemoteAccessSettings extends LitElement {
           >
         </sl-textarea>
 
-        <sl-alert variant="warning" ?open=${this._show_private_key_warning} style="margin-top: 1em;">
+        <sl-alert slot="custom" variant="warning" ?open=${this._show_private_key_warning} style="margin-top: 1em;">
           Take care, you may have mistakenly entered a Private key.<br>Be sure to enter a Public key only.
         </sl-alert>
-
-        <div slot="footer">
-          <sl-button variant="text" @click=${() => this._show_add_key_dialog = false}>I've changed my mind</sl-button>
-          <sl-button variant="primary" ?disabled=${this._inflight || this._show_private_key_warning || !this._new_key_value} ?loading=${this._inflight} @click=${this.performAddKey}>Submit</sl-button>
-        </div>
-      </sl-dialog>
+      </x-dbx-modal>
     `
   }
 }

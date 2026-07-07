@@ -42,6 +42,7 @@ class ChangePassView extends LitElement {
       refreshAfterChange: { type: Boolean },
       retainHash: { type: Boolean },
       noSubmit: { type: Boolean },
+      hideTitle: { type: Boolean, attribute: "hide-title" },
       onBack: { type: Object },
       _server_fault: { type: Boolean },
       _invalid_creds: { type: Boolean },
@@ -58,6 +59,7 @@ class ChangePassView extends LitElement {
     this.refreshAfterChange = false;
     this.retainHash = false;
     this.noSubmit = false;
+    this.hideTitle = false;
     this.onBack = null;
     this.fieldDefaults = {};
     this._server_fault = false;
@@ -227,7 +229,7 @@ class ChangePassView extends LitElement {
     return html`
       <div class="page">
         <div class="padded">
-          ${renderBanner(this.label, this.description)}
+        ${this.hideTitle ? "" : renderBanner(this.label, this.description)}
           ${this._invalid_creds ? html`
             <div style="color: #ff6b6b; margin-bottom: 1em;">
               Invalid credentials. Please check your current password or recovery phrase.

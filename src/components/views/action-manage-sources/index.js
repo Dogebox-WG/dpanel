@@ -5,6 +5,7 @@ import { pkgController } from "/controllers/package/index.js";
 import { addSource, removeSource } from "/api/sources/manage.js";
 import { doBootstrap } from "/api/bootstrap/bootstrap.js";
 import { refreshStoreListing } from "/api/sources/sources.js";
+import "/components/common/dbx-modal/index.js";
 
 export class SourceManagerView extends LitElement {
 
@@ -144,11 +145,12 @@ export class SourceManagerView extends LitElement {
     }
   }
 
-  handleClosure(event) {
-    // Check if the event target is the dialog with id "ManageSourcesDialog"
-    if (event.target.id === "ManageSourcesDialog") {
-      this.dispatchEvent(new CustomEvent("manage-sources-closed", { bubbles: true, composed: true }));
-    }
+  handleClosure() {
+    this.dispatchEvent(new CustomEvent("manage-sources-closed", { bubbles: true, composed: true }));
+  }
+
+  stopHoistedMenuEvent(event) {
+    event.stopPropagation();
   }
 
 
@@ -156,67 +158,84 @@ export class SourceManagerView extends LitElement {
 
     const renderAddSource = () => {
       return html`
-        <sl-dialog ?open=${this._showAddSourceDialog} class="wider-dialog" no-header>
-          
+        <x-dbx-modal
+          ?open=${this._showAddSourceDialog}
+          title="Add Source"
+          footer-text-label="Cancel"
+          footerLabel="Add this source"
+          footerVariant="primary"
+          ?footerDisabled=${!this._addSourceInputURL}
+          ?footerLoading=${this._addSourceInProgress}
+          @dbx-close=${() => { this._showAddSourceDialog = false; this._addSourceInputURL = ""; }}
+          @dbx-footer-text-click=${() => { this._showAddSourceDialog = false; this._addSourceInputURL = ""; }}
+          @dbx-footer-click=${() => this.handleAddSourceSubmitClick()}
+          @pointerdown=${this.stopHoistedMenuEvent}
+          @mousedown=${this.stopHoistedMenuEvent}
+          @click=${this.stopHoistedMenuEvent}
+        >
           <sl-input
+            slot="custom"
             label="Enter source URL"
             placeholder="Eg: https://github.com/Dogebox-WG/pups.git"
             @sl-input=${(e) => this._addSourceInputURL = e.target.value }
             autofocus
             >
           </sl-input>
-
-          <div slot="footer">
-            <sl-button variant="text" @click=${() => { this._showAddSourceDialog = false; this._addSourceInputURL = ""; }}>Cancel</sl-button>
-            <sl-button variant="primary" ?disabled=${!this._addSourceInputURL} ?loading=${this._addSourceInProgress} @click=${this.handleAddSourceSubmitClick}>
-              Add this source
-            </sl-button>
-          </div>
-          
-        </sl-dialog>
+        </x-dbx-modal>
       `
     }
 
     const renderRemovalConfirmation = () => {
       return html`
-        <sl-dialog ?open=${this._showSourceRemovalConfirmation} class="wider-dialog" no-header>
-          <div>
-            <h3>Are you sure?</h3>
-            You will no longer see pups from this source.
-          </div>
-          <div slot="footer">
-            <sl-button variant="text" @click=${() => this._showSourceRemovalConfirmation = false}>Cancel</sl-button>
-            <sl-button variant="danger" ?loading=${this._sourceRemovaInProgress} @click=${this.handleRemovalConfirmClick}>
-              Yes, delete this source
-              <sl-icon slot="suffix" name="trash3-fill"></sl-icon>
-            </sl-button>
-          </div>
-          
-        </sl-dialog>
+        <x-dbx-modal
+          ?open=${this._showSourceRemovalConfirmation}
+          title="Are you sure?"
+          subtitle="You will no longer see pups from this source."
+          primaryLabel="Yes, delete this source"
+          primaryVariant="danger"
+          cancelLabel="Cancel"
+          ?primaryLoading=${this._sourceRemovaInProgress}
+          @dbx-close=${() => this._showSourceRemovalConfirmation = false}
+          @dbx-cancel-click=${() => this._showSourceRemovalConfirmation = false}
+          @dbx-primary-click=${() => this.handleRemovalConfirmClick()}
+          @pointerdown=${this.stopHoistedMenuEvent}
+          @mousedown=${this.stopHoistedMenuEvent}
+          @click=${this.stopHoistedMenuEvent}
+        ></x-dbx-modal>
       `
     }
 
     const renderRemovalRejection = () => {
       return html`
-        <sl-dialog ?open=${this._showSourceRemovalRejection} class="wider-dialog" no-header>
-          <div>
-            <h3>Cannot remove source</h3>
-            A pup source cannot be removed whilst it has pups installed.<br>
-            Uninstall pups from this source before removing it.
-          </div>
-          <div slot="footer">
-            <sl-button variant="primary" @click=${() => this._showSourceRemovalRejection = false}>
-              Dismiss
-            </sl-button>
-          </div>
-          
-        </sl-dialog>
+        <x-dbx-modal
+          ?open=${this._showSourceRemovalRejection}
+          title="Cannot remove source"
+          subtitle="A pup source cannot be removed whilst it has pups installed. Uninstall pups from this source before removing it."
+          footerLabel="Dismiss"
+          @dbx-close=${() => this._showSourceRemovalRejection = false}
+          @dbx-footer-click=${() => this._showSourceRemovalRejection = false}
+          @pointerdown=${this.stopHoistedMenuEvent}
+          @mousedown=${this.stopHoistedMenuEvent}
+          @click=${this.stopHoistedMenuEvent}
+        ></x-dbx-modal>
       `
     }
 
     return html`
-      <sl-dialog id="ManageSourcesDialog" open label="Pup Sources" style="position: relative;" @sl-after-hide=${this.handleClosure}>
-        
+      <x-dbx-modal
+        open
+        title="Pup Sources"
+        footer-text-label="Refresh all"
+        footerLabel="Add Source"
+        footerVariant="success"
+        ?footer-text-loading=${this._refreshInProgress}
+        ?footer-text-disabled=${!this._ready}
+        ?footerDisabled=${!this._ready}
+        @dbx-close=${() => this.handleClosure()}
+        @dbx-footer-text-click=${() => this.handleRefreshClick()}
+        @dbx-footer-click=${() => this.handleAddSourceClick()}
+      >
+        <div slot="custom">
         ${!this._ready ? html`
           <div class="loader-overlay">
             <sl-spinner style="font-size: 2rem; --indicator-color: #bbb;"></sl-spinner>
@@ -258,8 +277,28 @@ export class SourceManagerView extends LitElement {
                 <sl-dropdown hoist>
                   <sl-button slot="trigger" caret></sl-button>
                   <sl-menu>
-                    <sl-menu-item value="refres" @click=${() => this.handleRefreshClick(s)}>Refresh</sl-menu-item>
-                    <sl-menu-item value="copy" @click=${() => this.handleRemoveClick(s)}>Remove</sl-menu-item>
+                    <sl-menu-item
+                      value="refres"
+                      @pointerdown=${this.stopHoistedMenuEvent}
+                      @mousedown=${this.stopHoistedMenuEvent}
+                      @click=${(event) => {
+                        this.stopHoistedMenuEvent(event);
+                        this.handleRefreshClick(s);
+                      }}
+                    >
+                      Refresh
+                    </sl-menu-item>
+                    <sl-menu-item
+                      value="copy"
+                      @pointerdown=${this.stopHoistedMenuEvent}
+                      @mousedown=${this.stopHoistedMenuEvent}
+                      @click=${(event) => {
+                        this.stopHoistedMenuEvent(event);
+                        this.handleRemoveClick(s);
+                      }}
+                    >
+                      Remove
+                    </sl-menu-item>
                   </sl-menu>
                 </sl-dropdown>
               </div>
@@ -274,25 +313,12 @@ export class SourceManagerView extends LitElement {
           </div>
         `: nothing}
 
-        <div slot="footer">
-          <sl-button variant="text"
-            ?loading=${this._refreshInProgress}
-            ?disabled=${!this._ready}
-            @click=${this.handleRefreshClick}>
-            Refresh all
-          </sl-button>
-          <sl-button variant=success
-            ?disabled=${!this._ready}
-            @click=${this.handleAddSourceClick}>
-            <sl-icon slot="prefix" name="plus-square-fill"></sl-icon>
-            Add Source
-          </sl-button>
         </div>
-      
+      </x-dbx-modal>
+
       ${renderRemovalConfirmation()}
       ${renderRemovalRejection()}
       ${renderAddSource()}
-      </sl-dialog>
     `
   }
 

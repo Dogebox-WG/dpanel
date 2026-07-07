@@ -2,25 +2,16 @@ import { html, nothing } from "/lib/lit-all.js";
 import { LitElement, css } from "/lib/lit-all.js";
 import { postWelcomeComplete } from "/api/system/post-welcome-complete.js";
 import { postInstallPupCollection } from "/api/system/post-install-pup-collection.js";
+import "/components/common/dbx-modal/index.js";
 
 class WelcomeModal extends LitElement {
   static styles = css`
     :host {
       display: block;
     }
-    sl-dialog::part(panel) {
-      width: 600px;
-    }
     .welcome-content {
       text-align: center;
       padding: 1em;
-    }
-    .modal-title {
-      font-family: "Comic Neue", sans-serif;
-      font-size: 2em;
-      font-weight: bold;
-      margin-bottom: 1em;
-      color: var(--sl-color-neutral-900);
     }
     .intro-text {
       margin-bottom: 2em;
@@ -157,16 +148,6 @@ class WelcomeModal extends LitElement {
     this.isInstalling = false;
   }
 
-  firstUpdated() {
-    // Prevent closing when clicking outside
-    const dialog = this.shadowRoot.querySelector('sl-dialog');
-    dialog.addEventListener('sl-request-close', (event) => {
-      if (event.detail.source === 'overlay') {
-        event.preventDefault();
-      }
-    });
-  }
-
   async handleNext() {
     try {
       await postWelcomeComplete();
@@ -190,41 +171,36 @@ class WelcomeModal extends LitElement {
 
     if (this.isInstalling) {
       return html`
-        <sl-dialog 
-          label="Welcome to Dogebox"
+        <x-dbx-modal
           ?open=${this.open}
-          @sl-hide=${this.onClose}
-          no-header
+          title="Welcome to Dogebox"
+          panel-width="600px"
+          .dismissable=${false}
+          footerLabel="Done"
+          @dbx-footer-click=${() => this.onClose()}
         >
-          <div class="installing-content">
+          <div slot="custom" class="installing-content">
             <div class="installing-image"></div>
             <div class="installing-text">
               Your pups are now being installed in the background.<br>Navigate to the pup page to see progress
             </div>
-            <div class="footer">
-              <sl-button variant="primary" @click=${this.onClose}>
-                Done
-              </sl-button>
-            </div>
           </div>
-        </sl-dialog>
+        </x-dbx-modal>
       `;
     }
 
     return html`
-      <sl-dialog 
-        label="Welcome to Dogebox"
+      <x-dbx-modal
         ?open=${this.open}
-        @sl-hide=${this.onClose}
-        no-header
+        title="Welcome to Dogebox"
+        subtitle=${"Since this may be your first time here, we can offer some help to get you setup quickly.\n\nPlease select one of the following Pup Collections you'd like to have automatically installed on your Dogebox."}
+        panel-width="600px"
+        .dismissable=${false}
+        footerLabel="Next"
+        ?footerDisabled=${!this.selectedOption}
+        @dbx-footer-click=${() => this.handleNext()}
       >
-        <div class="welcome-content">
-          <div class="modal-title">Welcome to Dogebox</div>
-          <div class="intro-text">
-            <p>Since this may be your first time here, we can offer some help to get you setup quickly.</p>
-            <p>Please select one of the following Pup Collections you'd like to have automatically installed on your Dogebox.</p>
-          </div>
-
+        <div slot="custom" class="welcome-content">
             <div class="card ${this.selectedOption === 'essentials' ? 'selected' : ''}"
                  @click=${() => this.handleOptionSelect('essentials')}>
               <div class="recommended-label">Recommended</div>
@@ -266,16 +242,8 @@ class WelcomeModal extends LitElement {
               </div>
             </div>
           </div>
-
-          <div class="footer" slot="footer">
-            <sl-button variant="primary" 
-                      @click=${this.handleNext}
-                      ?disabled=${!this.selectedOption}>
-              Next
-            </sl-button>
-          </div>
         </div>
-      </sl-dialog>
+      </x-dbx-modal>
     `;
   }
 }
@@ -283,20 +251,12 @@ class WelcomeModal extends LitElement {
 customElements.define('x-welcome-modal', WelcomeModal);
 
 export function showWelcomeModal() {
-  if (!document.body.hasAttribute('listener-on-welcome-dialog')) {
-    document.body.addEventListener('sl-after-hide', closeWelcomeDialog);
-    document.body.setAttribute('listener-on-welcome-dialog', true);
-  }
-
   const dialog = document.createElement('x-welcome-modal');
   dialog.open = true;
-  dialog.onClose = () => dialog.open = false;
+  dialog.onClose = () => {
+    dialog.open = false;
+    dialog.remove();
+  };
   
   document.body.append(dialog);
-}
-
-function closeWelcomeDialog(event) {
-  if (event.target.tagName.toLowerCase() === 'x-welcome-modal') {
-    event.target.remove();
-  }
 }

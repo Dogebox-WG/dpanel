@@ -5,6 +5,7 @@ import { showWelcomeModal } from "/components/common/welcome-modal.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 
 // Components
+import "/components/common/dbx-modal/index.js";
 import "/components/views/action-change-pass/index.js";
 
 // Render chunks
@@ -44,6 +45,7 @@ class LoginView extends LitElement {
       _invalid_creds: { type: Boolean },
       _loginFields: { type: Object },
       _attemptLogin: { type: Object },
+      _showChangePassDialog: { type: Boolean },
       retainHash: { type: Boolean },
     };
   }
@@ -53,7 +55,7 @@ class LoginView extends LitElement {
     this._server_fault = false;
     this._invalid_creds = false;
     this.retainHash = false;
-    this.dialog = null;
+    this._showChangePassDialog = false;
   }
 
   connectedCallback() {
@@ -75,16 +77,6 @@ class LoginView extends LitElement {
         },
       ],
     };
-  }
-
-  firstUpdated() {
-    // Prevent dialog closures on overlay click
-    this.dialog = this.shadowRoot.querySelector("#ChangePassDialog");
-    this.dialog.addEventListener("sl-request-close", (event) => {
-      if (event.detail.source === "overlay") {
-        event.preventDefault();
-      }
-    });
   }
 
   disconnectedCallback() {
@@ -165,7 +157,7 @@ class LoginView extends LitElement {
   }
 
   handleForgotPass() {
-    this.shadowRoot.querySelector("#ChangePassDialog").show();
+    this._showChangePassDialog = true;
   }
 
   render() {
@@ -193,8 +185,14 @@ class LoginView extends LitElement {
         </div>
       </div>
 
-      <sl-dialog id="ChangePassDialog">
+      <x-dbx-modal
+        ?open=${this._showChangePassDialog}
+        title="Reset Password"
+        @dbx-close=${() => this._showChangePassDialog = false}
+      >
         <x-action-change-pass
+          slot="custom"
+          hide-title
           resetMethod="seedphrase"
           showSuccessAlert
           refreshAfterChange
@@ -202,7 +200,7 @@ class LoginView extends LitElement {
           label="Reset Password"
           description="Reset your password using your recovery phrase or current password"
         ></x-action-change-pass>
-      </sl-dialog>
+      </x-dbx-modal>
     `;
   }
 }

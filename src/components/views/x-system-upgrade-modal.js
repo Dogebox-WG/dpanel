@@ -9,6 +9,7 @@ import { StoreSubscriber } from "/state/subscribe.js";
 import { jobsController } from "/controllers/jobs/index.js";
 import { isFailureJobStatus } from "/controllers/jobs/status.js";
 import "/components/views/x-log-viewer/index.js";
+import "/components/common/dbx-modal/index.js";
 
 const outcomeHashes = Object.freeze({
   success: "#system-upgrade-success",
@@ -29,19 +30,10 @@ class SystemUpgradeModal extends LitElement {
       display: block;
     }
 
-    sl-dialog::part(panel) {
-      width: min(920px, 96vw);
-    }
-
     .content {
       display: flex;
       flex-direction: column;
       gap: 1rem;
-    }
-
-    h2 {
-      margin: 0;
-      font-family: "Comic Neue", sans-serif;
     }
 
     x-log-viewer {
@@ -366,14 +358,18 @@ class SystemUpgradeModal extends LitElement {
     const isBlocking = this.isBlocking();
 
     return html`
-      <sl-dialog
-        no-header
+      <x-dbx-modal
         ?open=${open}
-        @sl-request-close=${this.handleRequestClose}
+        title="System Upgrade"
+        panel-width="920px"
+        .dismissable=${!isBlocking}
+        footerLabel=${!isBlocking ? "Dismiss" : ""}
+        @dbx-close=${() => {
+          if (!isBlocking) this.dismissFinishedModal();
+        }}
+        @dbx-footer-click=${() => this.dismissFinishedModal()}
       >
-        <div class="content">
-          <h2>System Upgrade</h2>
-
+        <div slot="custom" class="content">
           <sl-alert open variant=${this.getAlertVariant()}>
             <small>${copy.headline}</small>
             ${isBlocking
@@ -388,18 +384,8 @@ class SystemUpgradeModal extends LitElement {
                 .autoReconnect=${true}
               ></x-log-viewer>`
             : nothing}
-
-          ${!isBlocking
-            ? html`
-                <div class="actions">
-                  <sl-button variant="primary" @click=${this.dismissFinishedModal}>
-                    Dismiss
-                  </sl-button>
-                </div>
-              `
-            : nothing}
         </div>
-      </sl-dialog>
+      </x-dbx-modal>
     `;
   }
 }

@@ -6,6 +6,7 @@ import {
 import { promptStyles } from "./styles.js";
 import { store } from "/state/store.js";
 import "./tasks/index.js";
+import "/components/common/dbx-modal/index.js";
 
 class SystemPrompt extends LitElement {
   static styles = [promptStyles];
@@ -26,14 +27,7 @@ class SystemPrompt extends LitElement {
     super();
     this.open = false;
     this.task = "";
-  }
-
-  disconnectedCallback() {
-    this.removeEventListener("task-close-request", (e) =>
-      this.handleTaskCloseRequest(e),
-    );
-    this.addEventListener("sl-open");
-    super.disconnectedCallback();
+    this.showExplainerDialog = false;
   }
 
   handleTaskCloseRequest(event) {
@@ -41,8 +35,9 @@ class SystemPrompt extends LitElement {
     event.stopPropagation();
   }
 
-  handleWhyClick() {
-    this.shadowRoot.querySelector("sl-dialog").show();
+  handleWhyClick(event) {
+    event.preventDefault();
+    this.showExplainerDialog = true;
   }
 
   close() {
@@ -81,7 +76,7 @@ class SystemPrompt extends LitElement {
           <div class="heading-container">
             <div class="more-container">
               <hr />
-              <a href="#" @click=${this.handleWhyClick}
+              <a href="#" @click=${(event) => this.handleWhyClick(event)}
                 >Why am I seeing this?
                 <sl-icon name="info-circle-fill"></sl-icon
               ></a>
@@ -117,9 +112,15 @@ class SystemPrompt extends LitElement {
                 ></a>
               </div>
 
-              <sl-dialog label="User consent prompt">
-                <span>TODO :: Write a helpful explanation</span>
-              </sl-dialog>
+              <x-dbx-modal
+                ?open=${this.showExplainerDialog}
+                title="User consent prompt"
+                footerLabel="OK"
+                @dbx-close=${() => this.showExplainerDialog = false}
+                @dbx-footer-click=${() => this.showExplainerDialog = false}
+              >
+                <span slot="custom">TODO :: Write a helpful explanation</span>
+              </x-dbx-modal>
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@ import { createKeyStyles } from "./styles.js";
 import { themes } from "/components/common/shoelace-button-themes.js";
 
 // Components
+import "/components/common/dbx-modal/index.js";
 import "/components/common/text-loader/text-loader.js";
 import { notYet } from "/components/common/not-yet-implemented.js"
 
@@ -41,6 +42,7 @@ class CreateKey extends LitElement {
       _keyList: { type: Object, state: true },
       _keyListLoading: { type: Boolean },
       _keyReady: { type: Boolean },
+      _keyGenDialogOpen: { type: Boolean },
       _revealPhrase: { type: Boolean },
       _termsChecked: { type: Boolean },
       _phrase: { type: Array },
@@ -56,6 +58,7 @@ class CreateKey extends LitElement {
     this._invalid_creds = false;
     this._keyList = [];
     this._keyListLoading = false;
+    this._keyGenDialogOpen = false;
     this._phrase = [];
     this.onSuccess = null;
     this.showSuccessAlert = false;
@@ -69,13 +72,6 @@ class CreateKey extends LitElement {
   }
 
   firstUpdated() {
-    const keyGenDialog = this.shadowRoot.querySelector(
-      "sl-dialog#KeyGenDialog",
-    );
-    keyGenDialog.addEventListener("sl-request-close", (event) => {
-      event.preventDefault();
-    });
-
     this._fetchKeyList();
   }
 
@@ -118,7 +114,6 @@ class CreateKey extends LitElement {
 
   async handleGenKeyClick() {
     const genKeyBtn = this.shadowRoot.querySelector("#GenKeyBtn");
-    const dialog = this.shadowRoot.querySelector("#KeyGenDialog");
 
     genKeyBtn.loading = true;
     await asyncTimeout(1000);
@@ -127,12 +122,12 @@ class CreateKey extends LitElement {
     // If user password unknown, prompt for authentication.
     if (!store.setupContext.hashedPassword) {
       this._authenticationRequired = true;
-      dialog.show();
+      this._keyGenDialogOpen = true;
       return;
     }
 
     // If user password retained, attempt to create key
-    dialog.show();
+    this._keyGenDialogOpen = true;
 
     const res = await createKey(store.setupContext.hashedPassword)
     if (!res || !res.success || res.error || !res.seedPhrase) {
@@ -152,9 +147,8 @@ class CreateKey extends LitElement {
   }
 
   handlePhraseCloseClick() {
-    const dialog = this.shadowRoot.querySelector("#KeyGenDialog");
     this._revealPhrase = false;
-    dialog.hide();
+    this._keyGenDialogOpen = false;
     this._fetchKeyList(getMockList.keys);
   }
 
@@ -368,8 +362,8 @@ class CreateKey extends LitElement {
         </div>
       </div>
 
-      <sl-dialog id="KeyGenDialog" no-header>
-        <div class="inner">
+      <x-dbx-modal ?open=${this._keyGenDialogOpen} .dismissable=${false}>
+        <div slot="custom" class="inner">
           ${!this._keyReady && this._authenticationRequired ? html `
             <p>Something went wrong.</p>
             <sl-button @click=${() => window.location.reload()}>Refresh</sl-button>
@@ -390,7 +384,7 @@ class CreateKey extends LitElement {
 
           ${this._keyReady && !this._authenticationRequired ? html` ${phraseEl} ` : nothing}
         </div>
-      </sl-dialog>
+      </x-dbx-modal>
     `;
   }
 }

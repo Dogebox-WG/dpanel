@@ -1,10 +1,8 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-// Run both dev servers with live reload, mirroring how the app is served in
-// production: the main dpanel UI on 9090 and the recovery/AP-mode UI on 9091.
-// Each is a full Vite dev server (see vite.config.ts), so CJS interop, CSS
-// imports and fonts all work the same as the built UI dogeboxd serves on 8080.
+// Run both dev servers with live reload
+// The main dpanel UI on 9090 and the recovery/AP-mode UI on 9091.
 const viteBin = fileURLToPath(new URL('../node_modules/.bin/vite', import.meta.url));
 
 const servers = [

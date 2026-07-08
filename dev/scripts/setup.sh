@@ -17,7 +17,7 @@ echo "# -----------"
 (cd "$repo_root/dev" && npm install)
 
 echo ""
-echo "# Setup complete.  Run \"npm start\" from dev/"
+echo "# Setup complete.  Run \"npm run dev\" from the repo root"
 echo "# -----------"
 echo ""
 

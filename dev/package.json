@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "setup": "./scripts/setup.sh",
+    "prestart": "npm --prefix .. run generate",
     "start": "node ./scripts/start.js",
     "test": "web-test-runner --config ./configs/web-test-runner.config.mjs",
     "test:watch": "web-test-runner --config ./configs/web-test-runner.config.mjs --watch"

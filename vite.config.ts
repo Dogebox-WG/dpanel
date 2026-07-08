@@ -94,6 +94,10 @@ export default defineConfig({
   root: 'src',
   // Static files are served at /static/* (copied into dist/ on build).
   publicDir: 'static',
+  // Give each dev server its own dep-optimiser cache. Both servers share this
+  // node_modules, so without a per-server cacheDir they race each other
+  // renaming .vite/deps_temp_* -> .vite/deps and crash with ENOTEMPTY.
+  cacheDir: abs(`./node_modules/.vite/${isRecovery ? 'recovery' : 'main'}`),
   plugins: [
     tsSourceFallbackPlugin(),
     shoelaceAssetsPlugin(),
@@ -102,6 +106,9 @@ export default defineConfig({
   server: {
     port: devPort,
     host: 'localhost',
+    // Fail loudly if the port is taken (usually a stale dev server) rather than
+    // silently drifting to a random port and serving on an unexpected URL.
+    strictPort: true,
   },
   build: {
     outDir: '../dist',

@@ -240,37 +240,47 @@ class Store implements StoreState {
       contextName = `${contextName}Context`;
     }
 
-    const slice = (this as unknown as Record<string, unknown>)[contextName];
-    if (slice) {
-      return { ...(slice as object) };
+    if (this.isSliceKey(contextName)) {
+      const slice = this[contextName];
+      if (slice) {
+        return { ...slice };
+      }
     }
 
     return null;
   }
 
-  subscribe(controller: StoreSubscriberLike): void {
+  /** The store's own `*Context` properties are exactly the state slices. */
+  private isSliceKey(key: string): key is StoreSliceKey {
+    return (
+      Object.prototype.hasOwnProperty.call(this, key) &&
+      key.endsWith("Context")
+    );
+  }
+
+  subscribe(controller: StoreSubscriberLike) {
     this.subscribers.push(controller);
   }
 
-  notifySubscribers(): void {
+  notifySubscribers() {
     for (const controller of this.subscribers) {
       controller.stateChanged();
     }
   }
 
-  hydrate(): void {
+  hydrate() {
     // Check if localStorage is supported and accessible
     if (this.supportsLocalStorage()) {
       try {
         // Attempt to parse the saved state from localStorage
         const raw = localStorage.getItem("storeState");
-        const savedState = raw
-          ? (JSON.parse(raw) as Partial<StoreState>)
+        const savedState: Partial<StoreState> | null = raw
+          ? JSON.parse(raw)
           : null;
         if (savedState && savedState.networkContext) {
-          this.networkContext = savedState.networkContext as NetworkContext;
+          this.networkContext = savedState.networkContext;
           if (savedState.sidebarContext) {
-            this.sidebarContext = savedState.sidebarContext as SidebarContext;
+            this.sidebarContext = savedState.sidebarContext;
           }
         }
       } catch (error) {
@@ -281,7 +291,7 @@ class Store implements StoreState {
     }
   }
 
-  persist(): void {
+  persist() {
     if (this.supportsLocalStorage()) {
       try {
         const stateToPersist = {
@@ -296,7 +306,7 @@ class Store implements StoreState {
     }
   }
 
-  supportsLocalStorage(): boolean {
+  supportsLocalStorage() {
     try {
       const testKey = "testLocalStorage";
       localStorage.setItem(testKey, testKey);
@@ -307,7 +317,7 @@ class Store implements StoreState {
     }
   }
 
-  clearContext(contexts: StoreSliceKey[]): void {
+  clearContext(contexts: StoreSliceKey[]) {
     if (!contexts) {
       return;
     }
@@ -316,8 +326,9 @@ class Store implements StoreState {
       if (this[context]) {
         // Cleared slices are repopulated by their owners (e.g. the loadPup
         // middleware refills pupContext), so an empty object is acceptable
-        // here despite the slice interfaces.
-        (this as unknown as Record<string, unknown>)[context] = {};
+        // here despite the slice interfaces. Object.assign lets us reset the
+        // slice without a type assertion.
+        Object.assign(this, { [context]: {} });
       }
     });
 
@@ -325,7 +336,7 @@ class Store implements StoreState {
     this.notifySubscribers();
   }
 
-  updateState(partialState: PartialStoreState): void {
+  updateState(partialState: PartialStoreState) {
     // Update the state properties with the partial state provided
     if (partialState.appContext) {
       this.appContext = { ...this.appContext, ...partialState.appContext };

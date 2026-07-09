@@ -157,7 +157,7 @@ export class AppModeApp extends LitElement {
         return null;
       }
 
-      const parsedValue = JSON.parse(rawValue) as PersistedSetupStep | null;
+      const parsedValue: PersistedSetupStep | null = JSON.parse(rawValue);
       if (
         !parsedValue ||
         !Number.isInteger(parsedValue.stepNumber) ||
@@ -574,7 +574,8 @@ export class AppModeApp extends LitElement {
 
   updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has("activeStepNumber")) {
-      const previousStep = changedProperties.get("activeStepNumber") as number | undefined;
+      const previousValue = changedProperties.get("activeStepNumber");
+      const previousStep = typeof previousValue === "number" ? previousValue : undefined;
       if (
         this.activeStepNumber >= STEP_INTRO &&
         this.activeStepNumber <= STEP_BOOTSTRAP
@@ -622,7 +623,9 @@ export class AppModeApp extends LitElement {
   }
 
   performLogout(e: Event) {
-    if (!(e.currentTarget as HTMLButtonElement).disabled) {
+    const target = e.currentTarget;
+    const disabled = target instanceof HTMLButtonElement ? target.disabled : false;
+    if (!disabled) {
       this._clearPersistedSetupStep();
       store.updateState({ networkContext: { token: null } });
       window.location.reload();
@@ -665,7 +668,7 @@ export class AppModeApp extends LitElement {
   };
 
   getMgmtDialogTitle(view: string | null) {
-    return ({
+    const titles: Record<string, string> = {
       network: "Network",
       password: "Reset Password",
       reboot: "Are you sure you want to reboot?",
@@ -673,7 +676,8 @@ export class AppModeApp extends LitElement {
       "power-off": "Are you sure you want to power off?",
       "post-power-off": "Power Off",
       "factory-reset": "Factory Reset",
-    } as Record<string, string>)[view ?? ""] ?? "Recovery";
+    };
+    return titles[view ?? ""] ?? "Recovery";
   }
 
   renderMgmtDialog(view: string | null) {

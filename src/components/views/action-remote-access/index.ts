@@ -19,6 +19,20 @@ import { canCopyToClipboard } from "/utils/clipboard.js";
 import { createAlert } from "/components/common/alert.js";
 import type { SSHPublicKey, SSHState } from "/api/sshkeys/sshkeys.js";
 
+/** Shoelace textarea/input exposing a string value as an element property. */
+interface SlValueEl extends HTMLElement { value: string }
+
+/** Shoelace switch exposing a boolean checked state as an element property. */
+interface SlCheckedEl extends HTMLElement { checked: boolean }
+
+function isSlValueEl(target: EventTarget | null): target is SlValueEl {
+  return target instanceof HTMLElement;
+}
+
+function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
+  return target instanceof HTMLElement;
+}
+
 export class RemoteAccessSettings extends LitElement {
   declare _loading: boolean;
   declare _inflight: boolean;
@@ -164,7 +178,7 @@ export class RemoteAccessSettings extends LitElement {
       }
     } catch (err) {
       // failed to fetch keys
-      this._server_fault = (err as Error).message;
+      this._server_fault = err instanceof Error ? err.message : String(err);
       console.log('ER', err);
     } finally {
       this._loading = false;
@@ -221,7 +235,8 @@ export class RemoteAccessSettings extends LitElement {
   }
 
   handleTextareaInput(e: Event) {
-    const inputValue = (e.target as HTMLTextAreaElement).value;
+    if (!isSlValueEl(e.target)) return;
+    const inputValue = e.target.value;
     this._new_key_value = inputValue;
     this._show_private_key_warning = privateKeyIndicators.some(indicator =>
       inputValue.includes(indicator)
@@ -229,8 +244,10 @@ export class RemoteAccessSettings extends LitElement {
   }
 
   async handleSSHToggle(e: Event) {
+    if (!isSlCheckedEl(e.target)) return;
+    const enabled = e.target.checked;
     try {
-      await setSSHState({ enabled: (e.target as HTMLInputElement).checked });
+      await setSSHState({ enabled });
     } catch (err) {
       createAlert('danger', 'Failed to change SSH state');
     }

@@ -5,7 +5,7 @@ import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { getStoreListing } from "/api/sources/sources.js";
 import type { RouteContext, RouteCommands } from "./router.js";
 
-export async function loadPup(context: RouteContext, commands: RouteCommands): Promise<void> {
+export async function loadPup(context: RouteContext, commands: RouteCommands) {
   const pupId = context.params.pupid;
   const sourceId = context.params.sourceid;
   const pupName = decodeURIComponent(context.params.pupname);
@@ -84,7 +84,7 @@ export function performLogout(context: RouteContext, commands: RouteCommands): n
   return commands.redirect("/login");
 }
 
-export function asPage(context: RouteContext, commands: RouteCommands): void {
+export function asPage(context: RouteContext, commands: RouteCommands) {
   if (context.route.dynamicTitle) {
     context.route.pageTitle = decodeURIComponent(context.params.pupname);
     context.route.pageAction = "back";
@@ -98,10 +98,10 @@ export function asPage(context: RouteContext, commands: RouteCommands): void {
 
   // Create instance of page-container
   const PageContainer = customElements.get("page-container")!;
-  const pageContainer = new PageContainer() as HTMLElement & {
+  const pageContainer: HTMLElement & {
     pageTitle?: string;
     pageAction?: string;
-  };
+  } = new PageContainer();
 
   // Set properties on the page-container per the route definition.
   pageContainer.pageTitle = pageTitle;
@@ -115,7 +115,7 @@ export function asPage(context: RouteContext, commands: RouteCommands): void {
   context.route.componentInstance = pageContainer;
 }
 
-export function withDialog(context: RouteContext, commands: RouteCommands): void {
+export function withDialog(context: RouteContext, commands: RouteCommands) {
   store.updateState({
     dialogContext: { name: context?.params?.dialog },
   });

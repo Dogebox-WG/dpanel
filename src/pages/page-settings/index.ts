@@ -196,7 +196,13 @@ class SettingsPage extends LitElement {
     // In response to pkgControllers notification of a 'system-activity'
     // this function can determine whether there are new system logs
     // to display to the user.
-    if (this.pkgController && (options as { type?: string } | undefined)?.type === 'system-activity') {
+    if (
+      this.pkgController &&
+      typeof options === 'object' &&
+      options !== null &&
+      'type' in options &&
+      options.type === 'system-activity'
+    ) {
       // Filter for blockchain import logs and update the system logs
       const allSystemLogs = this.pkgController.activityIndex['system'] || [];
       console.log('System activity received:', allSystemLogs);
@@ -320,7 +326,7 @@ class SettingsPage extends LitElement {
   }
 
   renderSettingsDialog(dialogName: string, open: boolean) {
-    const dialogTitle: string = ({
+    const dialogTitles: Record<string, string> = {
       updates: "System Updates",
       "remote-access": "Remote Access",
       versions: "Versions",
@@ -328,7 +334,8 @@ class SettingsPage extends LitElement {
       language: "Keyboard Layout",
       "keyboard-layout": "Keyboard Layout",
       "date-time": "Date and Time",
-    } as Record<string, string>)[dialogName] ?? "Settings";
+    };
+    const dialogTitle: string = dialogTitles[dialogName] ?? "Settings";
 
     const isImportBlockchain = dialogName === "import-blockchain";
 

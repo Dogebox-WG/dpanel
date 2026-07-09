@@ -5,6 +5,12 @@
 import "/components/common/dbx-modal/index.js";
 import type { DbxModal } from "/components/common/dbx-modal/index.js";
 
+declare global {
+  interface HTMLElementTagNameMap {
+    "x-dbx-modal": DbxModal;
+  }
+}
+
 export interface OpenDbxModalOptions {
   title?: string;
   subtitle?: string;
@@ -60,7 +66,7 @@ export function openDbxModal({
   onClose = () => {},
   customContent = null,
 }: OpenDbxModalOptions): DbxModal {
-  const modal = document.createElement("x-dbx-modal") as DbxModal;
+  const modal = document.createElement("x-dbx-modal");
   modal.title = title;
   modal.subtitle = subtitle;
   modal.dismissable = dismissable;

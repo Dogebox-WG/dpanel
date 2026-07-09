@@ -66,17 +66,17 @@ const defaultMockConfig: MockSidebarConfig = {
   pups: [],
 };
 
-function randomFrom(list: string[]): string {
+function randomFrom(list: string[]) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-export function generateRandomPupName(): string {
+export function generateRandomPupName() {
   const base = `${randomFrom(ADJECTIVES)} ${randomFrom(NOUNS)}`;
   const makeLong = Math.random() < 0.2;
   return makeLong ? `${base} ${randomFrom(LONG_SUFFIXES)}` : base;
 }
 
-function generateRandomIconColor(): string {
+function generateRandomIconColor() {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue} 80% 60%)`;
 }
@@ -89,20 +89,23 @@ function createSidebarPup(name: string = generateRandomPupName()): MockSidebarPu
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
+}
+
 function normalizePup(pup: unknown): MockSidebarPup | null {
-  if (!pup || typeof pup !== "object") return null;
-  const candidate = pup as Partial<MockSidebarPup>;
-  const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-  const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
-  const iconColor = typeof candidate.iconColor === "string" && candidate.iconColor.trim()
-    ? candidate.iconColor.trim()
+  if (!isRecord(pup)) return null;
+  const id = typeof pup.id === "string" ? pup.id.trim() : "";
+  const name = typeof pup.name === "string" ? pup.name.trim() : "";
+  const iconColor = typeof pup.iconColor === "string" && pup.iconColor.trim()
+    ? pup.iconColor.trim()
     : generateRandomIconColor();
   if (!id || !name) return null;
   return { id, name, iconColor };
 }
 
 function normalizeConfig(config: unknown): MockSidebarConfig {
-  const source = (config && typeof config === "object" ? config : {}) as { pups?: unknown[] };
+  const source: Record<string, unknown> = isRecord(config) ? config : {};
   const pups = Array.isArray(source.pups) ? source.pups : [];
   return {
     pups: pups.map(normalizePup).filter((pup): pup is MockSidebarPup => Boolean(pup)),
@@ -121,7 +124,7 @@ export function getMockConfig(): MockSidebarConfig {
   }
 }
 
-export function saveMockConfig(config: MockSidebarConfig): void {
+export function saveMockConfig(config: MockSidebarConfig) {
   try {
     localStorage.setItem(MOCK_CONFIG_KEY, JSON.stringify(normalizeConfig(config)));
   } catch (error) {

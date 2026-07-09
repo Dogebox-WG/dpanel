@@ -12,6 +12,12 @@ import { createAlert } from '/components/common/alert.js';
 // Import component chunks
 import * as renderMethods from './renders/index.js';
 
+/** sl-tab exposes its target panel name as an element property. */
+interface SlTabEl extends HTMLElement { panel?: string }
+
+/** sl-tab-group exposes an imperative show() method. */
+interface SlTabGroupEl extends HTMLElement { show: (panel: string) => void }
+
 export class PupSnapshot extends LitElement {
 
   // From manifest / state (see static properties below)
@@ -116,8 +122,10 @@ export class PupSnapshot extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.pkgController.addObserver(this);
-    this.addEventListener('form-dirty-change', this.handleDirtyChange.bind(this), { composed: true } as AddEventListenerOptions)
-    this.addEventListener('form-submit-success', this.handlePupUpdateSuccess.bind(this), { composed: true } as AddEventListenerOptions)
+    // `composed` isn't a standard addEventListener option but is retained here to preserve existing behaviour.
+    const listenerOptions: AddEventListenerOptions & { composed?: boolean } = { composed: true };
+    this.addEventListener('form-dirty-change', this.handleDirtyChange.bind(this), listenerOptions)
+    this.addEventListener('form-submit-success', this.handlePupUpdateSuccess.bind(this), listenerOptions)
   }
 
   firstUpdated() {
@@ -135,7 +143,10 @@ export class PupSnapshot extends LitElement {
   }
 
   handleDirtyChange(event: Event) {
-    this._dirty = (event as CustomEvent<{ dirty: number }>).detail.dirty;
+    if (event instanceof CustomEvent) {
+      const detail: { dirty: number } = event.detail;
+      this._dirty = detail.dirty;
+    }
   }
 
   async handlePupUpdateSuccess() {
@@ -164,7 +175,7 @@ export class PupSnapshot extends LitElement {
         // To cease the form from spinning
         dynamicForm.retainChanges();
         // Display a failure banner
-        this.displayConfigUpdateErr(errorPayload as { id?: string } | undefined)
+        this.displayConfigUpdateErr(errorPayload)
       }
     }
 
@@ -176,8 +187,12 @@ export class PupSnapshot extends LitElement {
     }
   }
 
-  displayConfigUpdateErr(failedTxnPayload: { id?: string } | undefined) {
-    const failedTxnId = failedTxnPayload?.id ? `(${failedTxnPayload.id})` : '';
+  displayConfigUpdateErr(failedTxnPayload: unknown) {
+    const failedId =
+      failedTxnPayload && typeof failedTxnPayload === 'object' && 'id' in failedTxnPayload && typeof failedTxnPayload.id === 'string'
+        ? failedTxnPayload.id
+        : undefined;
+    const failedTxnId = failedId ? `(${failedId})` : '';
     createAlert('danger', ['Failed to update Pup configuration', `Refer to logs ${failedTxnId}`], 'exclamation-diamond');
     console.warn(`Doge is sad because ${failedTxnId}: `, failedTxnPayload)
   }
@@ -192,7 +207,8 @@ export class PupSnapshot extends LitElement {
     // unsaved changes.
     event.stopPropagation();
 
-    const panel = (event.target as HTMLElement & { panel?: string }).panel;
+    const target: SlTabEl | null = event.target instanceof HTMLElement ? event.target : null;
+    const panel = target?.panel;
 
     // If not dirty, force tab change.
     if (!this._dirty) {
@@ -222,8 +238,7 @@ export class PupSnapshot extends LitElement {
     // Reveal specific tab
     if (!tabName) return;
     this.activeTab = tabName;
-    const tabGroup = this.shadowRoot?.querySelector('sl-tab-group#PupTabs') as
-      (HTMLElement & { show: (panel: string) => void }) | null;
+    const tabGroup = this.shadowRoot?.querySelector<SlTabGroupEl>('sl-tab-group#PupTabs');
     tabGroup?.show(tabName);
   }
 

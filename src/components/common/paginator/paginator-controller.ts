@@ -62,7 +62,7 @@ export class PaginationController<T = unknown> {
     return this.data.slice(startIndex, endIndex);
   }
 
-  getTotalPages(): number {
+  getTotalPages() {
     return Math.ceil(this.data.length / this.itemsPerPage);
   }
 

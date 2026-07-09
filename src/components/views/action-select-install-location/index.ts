@@ -21,6 +21,13 @@ const PAGE_FOUR = "installation";
 
 import type { Disk } from "/api/disks/disks.js";
 
+/** Shoelace checkbox exposing a boolean checked state as an element property. */
+interface SlCheckedEl extends HTMLElement { checked: boolean }
+
+function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
+  return target instanceof HTMLElement;
+}
+
 export class LocationPickerView extends LitElement {
   declare installationBootMedia: string;
   declare installationState: string;
@@ -491,7 +498,8 @@ export class LocationPickerView extends LitElement {
   };
 
   handleCheckboxChange(e: Event) {
-    this._confirmation_checked = (e.target as HTMLInputElement).checked;
+    if (!isSlCheckedEl(e.target)) return;
+    this._confirmation_checked = e.target.checked;
   }
 
   handleStay() {

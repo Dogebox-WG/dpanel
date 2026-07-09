@@ -1,6 +1,9 @@
 import { html, css } from '/lib/lit-all.js';
 import type { PupSnapshot } from '../index.js';
 
+/** sl-dialog exposes an imperative show() method. */
+interface SlDialogEl extends HTMLElement { show: () => void }
+
 export function renderSectionScreens(this: PupSnapshot) {
 
   // TODO: image urls provided by manifest possibly or scrap this.
@@ -12,10 +15,9 @@ export function renderSectionScreens(this: PupSnapshot) {
   ]
 
   const showDialogWithImage = (imageUrl: string) => {
-    const imageDialog = this.shadowRoot?.querySelector('.image-dialog') as
-      (HTMLElement & { show: () => void }) | null;
+    const imageDialog = this.shadowRoot?.querySelector<SlDialogEl>('.image-dialog');
     if (!imageDialog) return;
-    const dialogImage = imageDialog.querySelector('.dialog-image') as HTMLImageElement | null;
+    const dialogImage = imageDialog.querySelector<HTMLImageElement>('.dialog-image');
     if (!dialogImage) return;
     dialogImage.src = imageUrl;
     imageDialog.show();

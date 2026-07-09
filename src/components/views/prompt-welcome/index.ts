@@ -1,5 +1,8 @@
 import { LitElement, html, css } from '/lib/lit-all.js';
 
+/** sl-dialog exposes an imperative hide() method. */
+interface SlDialogEl extends HTMLElement { hide: () => void }
+
 class WelcomeDialog extends LitElement {
 
   static styles = css`
@@ -40,8 +43,7 @@ class WelcomeDialog extends LitElement {
   `
 
   closeWelcomeDialog() {
-    const dialog = this.shadowRoot?.querySelector('sl-dialog') as
-      (HTMLElement & { hide: () => void }) | null;
+    const dialog = this.shadowRoot?.querySelector<SlDialogEl>('sl-dialog');
     dialog?.hide();
   }
 

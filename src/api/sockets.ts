@@ -47,12 +47,12 @@ export default class WebSocketClient extends ReactiveClass {
     this._isConnecting = false;
   }
 
-  requestUpdate(): void {
+  requestUpdate() {
     super.requestUpdate();
     this.networkContext = this.context.store.networkContext;
   }
 
-  connect(): void {
+  connect() {
     if (
       this._isConnected ||
       this._isConnecting
@@ -69,7 +69,7 @@ export default class WebSocketClient extends ReactiveClass {
     this._isConnecting = false;
   }
 
-  startWebSocketConnection(): void {
+  startWebSocketConnection() {
     // Preserve any existing query params, then append the auth token.
     const socketUrl = new URL(this.url);
     if (this.token) {
@@ -90,7 +90,7 @@ export default class WebSocketClient extends ReactiveClass {
     };
   }
 
-  startMocking(): void {
+  startMocking() {
     if (this._isConnected) {
       console.log("Mock is already running.");
       return;
@@ -105,7 +105,7 @@ export default class WebSocketClient extends ReactiveClass {
     this.onOpen(); // Simulate open event for mocks
   }
 
-  disconnect(): void {
+  disconnect() {
     if (this.socket) {
       this.socket.close();
     }
@@ -116,11 +116,11 @@ export default class WebSocketClient extends ReactiveClass {
     }
   }
 
-  get isConnected(): boolean {
+  get isConnected() {
     return this._isConnected;
   }
 
-  onOpen(): void {
+  onOpen() {
     console.log("WebSocket connection or mock started");
   }
 
@@ -128,11 +128,11 @@ export default class WebSocketClient extends ReactiveClass {
     console.log("Message received:", message.data);
   }
 
-  onError(error: unknown): void {
+  onError(error: unknown) {
     console.error("WebSocket encountered an error:", error);
   }
 
-  onClose(event?: unknown): void {
+  onClose(event?: unknown) {
     console.log("WebSocket connection or mock stopped");
   }
 }

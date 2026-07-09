@@ -11,6 +11,14 @@ interface SparkPoint {
 /** What the sparkline lib hands to onmousemove (loosely shaped). */
 type SparkDatapoint = number | (SparkPoint & { index?: number; y?: number; n?: number });
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isIterable(value: unknown): value is Iterable<unknown> {
+  return isRecord(value) && Symbol.iterator in value;
+}
+
 interface SparklineV2Options {
   onmousemove: (event: MouseEvent, datapoint: SparkDatapoint | null | undefined) => void;
   onmouseout: () => void;
@@ -103,7 +111,7 @@ class SparklineChart extends LitElement {
     this.options = {
       onmousemove: (event, datapoint) => {
         if (this.disabled || datapoint == null) return;
-        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
+        const tooltip = this.shadowRoot?.querySelector<HTMLElement>('.tooltip');
         if (!tooltip) return;
 
         const val =
@@ -113,7 +121,7 @@ class SparklineChart extends LitElement {
 
         const idx =
           typeof datapoint === 'object' && Number.isInteger(datapoint.index)
-            ? datapoint.index as number
+            ? Number(datapoint.index)
             : 0;
 
         const ts = this._timestamps?.[idx];
@@ -148,7 +156,7 @@ class SparklineChart extends LitElement {
       },
       onmouseout: () => {
         if (this.disabled) return;
-        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
+        const tooltip = this.shadowRoot?.querySelector<HTMLElement>('.tooltip');
         if (tooltip) tooltip.style.display = 'none';
       },
       interactive: true
@@ -209,20 +217,20 @@ class SparklineChart extends LitElement {
         return k ? obj[k] : undefined;
       };
 
-      for (const item of Array.from(arrLike as Iterable<unknown>)) {
+      const source: Iterable<unknown> = isIterable(arrLike) ? arrLike : [];
+      for (const item of source) {
         let v: unknown, tVal: unknown;
 
         if (Array.isArray(item) && item.length >= 2) {
           // [timestamp, value]
           tVal = item[0];
           v = item[1];
-        } else if (item && typeof item === 'object') {
+        } else if (isRecord(item)) {
           // { value, ts/time/timestamp/... }
-          const record = item as Record<string, unknown>;
-          const key = ['value','v','n','val','y','x'].find(k => record[k] != null);
-          v = key ? record[key] : item;
-          tVal = pickTs(record);
-          if (tVal == null && record.meta) tVal = pickTs(record.meta as Record<string, unknown>);
+          const key = ['value','v','n','val','y','x'].find(k => item[k] != null);
+          v = key ? item[key] : item;
+          tVal = pickTs(item);
+          if (tVal == null && isRecord(item.meta)) tVal = pickTs(item.meta);
         } else {
           // primitive number/string
           v = item;
@@ -232,7 +240,7 @@ class SparklineChart extends LitElement {
         const n = Number(v);
         if (Number.isFinite(n)) {
           const p: SparkPoint = { value: n };
-          if (tVal != null) p.ts = tVal as number | string;
+          if (tVal != null) p.ts = typeof tVal === 'number' ? tVal : String(tVal);
           points.push(p);
         }
       }
@@ -244,7 +252,7 @@ class SparklineChart extends LitElement {
       ? toPoints(generateMockSparklineData(10))
       : toPoints(this.data);
 
-    const svg = this.shadowRoot?.querySelector('svg[part="sparkline-svg"]') as SVGSVGElement | null;
+    const svg = this.shadowRoot?.querySelector<SVGSVGElement>('svg[part="sparkline-svg"]');
     if (!svg) return;
 
     // Clear and compute concrete size the lib can read (width/height attributes)
@@ -292,7 +300,7 @@ class SparklineChart extends LitElement {
     }
   }
 
-  _fmtTs(ts: number | string | null | undefined): string {
+  _fmtTs(ts: number | string | null | undefined) {
     if (ts == null || ts === '') return 'n/a';
     // If numeric-ish, decide seconds vs ms
     if (typeof ts === 'number' || (typeof ts === 'string' && ts.trim !== undefined && ts.trim() !== '' && !isNaN(Number(ts)))) {

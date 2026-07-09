@@ -1,7 +1,7 @@
 // Client side hashing for the purpose of
 // minimizing handling/exposure of clear text secrets
 // This is by no means a sufficient security measure.
-export async function hash(password: string): Promise<string> {
+export async function hash(password: string) {
   // Encode the password as UTF-8
   const encoder = new TextEncoder();
   const data = encoder.encode(password);

@@ -120,7 +120,7 @@ class PupUpdatePanel extends LitElement {
       }
     } catch (error) {
       console.error('Upgrade failed:', error);
-      this._error = (error as Error).message || 'Failed to start upgrade';
+      this._error = (error instanceof Error ? error.message : '') || 'Failed to start upgrade';
       createAlert('danger', `Upgrade failed: ${this._error}`, 'exclamation-triangle', 0);
     } finally {
       this._isUpgrading = false;
@@ -139,7 +139,7 @@ class PupUpdatePanel extends LitElement {
       }));
     } catch (error) {
       console.error('Failed to skip update:', error);
-      createAlert('danger', `Failed to skip update: ${(error as Error).message}`, 'exclamation-triangle', 5000);
+      createAlert('danger', `Failed to skip update: ${error instanceof Error ? error.message : String(error)}`, 'exclamation-triangle', 5000);
     }
   }
 

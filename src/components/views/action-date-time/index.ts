@@ -20,9 +20,9 @@ interface DeFormChange {
 }
 
 /** de-form element exposing shoelace-style form validation. */
-type DeFormEl = HTMLElement & {
+interface DeFormEl extends HTMLElement {
   checkValidity: (form: HTMLFormElement) => boolean;
-};
+}
 
 export class DateTimeSettings extends LitElement {
   declare _loading: boolean;
@@ -162,7 +162,7 @@ export class DateTimeSettings extends LitElement {
   }
 
   _isTimezoneFormValid() {
-    const timezoneForm = this.shadowRoot?.querySelector('de-form') as DeFormEl | null;
+    const timezoneForm = this.shadowRoot?.querySelector<DeFormEl>('de-form') ?? null;
     const form = timezoneForm?.shadowRoot?.querySelector('form');
     return !form || (timezoneForm?.checkValidity(form) ?? true);
   }

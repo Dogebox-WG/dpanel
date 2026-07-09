@@ -17,7 +17,7 @@ const updateMessages = [
   "Running post-install scripts...",
 ];
 
-export function emitSyntheticSystemProgress(): void {
+export function emitSyntheticSystemProgress() {
 
   const randomMsg = updateMessages[Math.floor(Math.random() * updateMessages.length)];
 

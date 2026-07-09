@@ -18,9 +18,26 @@ import {
 } from "/api/sidebar-pups/sidebar-pups.mocks.js";
 import { compareVersions } from "/utils/version.js";
 import type { MockDescriptor } from "/api/client.js";
-import type { NetworkContext } from "/state/store.js";
+import type { NetworkContext, PartialStoreState } from "/state/store.js";
 import type { MockPupUpdatesConfig } from "/api/pup-updates/pup-updates.mocks.js";
 import type { MockSidebarConfig } from "/api/sidebar-pups/sidebar-pups.mocks.js";
+
+/** Shoelace form controls (sl-switch/sl-input/etc.) expose these value props. */
+interface SlFormControlEl extends HTMLElement {
+  name: string;
+  value: string;
+  checked: boolean;
+}
+
+function isSlFormControl(target: EventTarget | null): target is SlFormControlEl {
+  return target instanceof HTMLElement;
+}
+
+function networkContextChange(key: string, value: unknown): PartialStoreState {
+  const networkContext: Partial<NetworkContext> = {};
+  Object.assign(networkContext, { [key]: value });
+  return { networkContext };
+}
 
 class DebugSettingsDialog extends LitElement {
   static properties = {
@@ -120,22 +137,22 @@ class DebugSettingsDialog extends LitElement {
   }
 
   handleToggle(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const changes = { networkContext: { [target.name]: target.checked } as Partial<NetworkContext> };
-    store.updateState(changes);
+    const target = event.target;
+    if (!isSlFormControl(target)) return;
+    store.updateState(networkContextChange(target.name, target.checked));
   }
 
   handleInput(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const changes = { networkContext: { [target.name]: target.value } as unknown as Partial<NetworkContext> };
-    store.updateState(changes);
+    const target = event.target;
+    if (!isSlFormControl(target)) return;
+    store.updateState(networkContextChange(target.name, target.value));
   }
 
   handleMockToggle(event: Event) {
-    const target = event.target as HTMLInputElement;
+    const target = event.target;
+    if (!isSlFormControl(target)) return;
     const uniqueMockID = `mock::${target.getAttribute('group')}::${target.getAttribute('name')}::${target.getAttribute('method')}`
-    const changes = { networkContext: { [uniqueMockID]: target.checked } as Partial<NetworkContext> };
-    store.updateState(changes);
+    store.updateState(networkContextChange(uniqueMockID, target.checked));
   }
 
   toggleExpandable() {
@@ -248,7 +265,7 @@ class DebugSettingsDialog extends LitElement {
                                 style="flex: 1;"
                                 value=${pup.name}
                                 ?disabled=${!networkContext.useMocks}
-                                @sl-change=${(e: Event) => this.handleRenameSidebarPup(pup.id, (e.target as HTMLInputElement).value)}
+                                @sl-change=${(e: Event) => { if (isSlFormControl(e.target)) this.handleRenameSidebarPup(pup.id, e.target.value); }}
                               ></sl-input>
                               <sl-icon-button
                                 name="x-lg"
@@ -273,7 +290,7 @@ class DebugSettingsDialog extends LitElement {
                         size="small"
                         value=${this._pupUpdateConfig.currentVersion}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e: Event) => this.handlePupUpdateConfigChange('currentVersion', (e.target as HTMLInputElement).value)}
+                        @sl-change=${(e: Event) => { if (isSlFormControl(e.target)) this.handlePupUpdateConfigChange('currentVersion', e.target.value); }}
                       ></sl-input>
                     </div>
                     
@@ -283,7 +300,7 @@ class DebugSettingsDialog extends LitElement {
                         size="small"
                         value=${this._pupUpdateConfig.latestVersion}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e: Event) => this.handlePupUpdateConfigChange('latestVersion', (e.target as HTMLInputElement).value)}
+                        @sl-change=${(e: Event) => { if (isSlFormControl(e.target)) this.handlePupUpdateConfigChange('latestVersion', e.target.value); }}
                       ></sl-input>
                     </div>
                     
@@ -292,7 +309,7 @@ class DebugSettingsDialog extends LitElement {
                         size="small"
                         ?checked=${this._pupUpdateConfig.updateAvailable}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-change=${(e: Event) => this.handlePupUpdateConfigChange('updateAvailable', (e.target as HTMLInputElement).checked)}
+                        @sl-change=${(e: Event) => { if (isSlFormControl(e.target)) this.handlePupUpdateConfigChange('updateAvailable', e.target.checked); }}
                       >Update Available</sl-switch>
                     </div>
                     
@@ -322,7 +339,7 @@ class DebugSettingsDialog extends LitElement {
                         style="flex: 1;"
                         value=${this._newVersionInput}
                         ?disabled=${!networkContext.useMocks}
-                        @sl-input=${(e: Event) => this._newVersionInput = (e.target as HTMLInputElement).value}
+                        @sl-input=${(e: Event) => { if (isSlFormControl(e.target)) this._newVersionInput = e.target.value; }}
                         @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this.handleAddVersion()}
                       ></sl-input>
                       <sl-button size="small" ?disabled=${!networkContext.useMocks} @click=${this.handleAddVersion}>Add</sl-button>
@@ -489,7 +506,7 @@ class DebugSettingsDialog extends LitElement {
   }
 
   denyClose = (event: Event) => {
-    if ((event as CustomEvent<{ source: string }>).detail.source === "overlay") {
+    if (event instanceof CustomEvent && event.detail?.source === "overlay") {
       event.preventDefault();
     }
   };

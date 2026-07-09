@@ -17,15 +17,15 @@ class HookManager {
     HookManager.instance = this;
   }
 
-  enable(hookName: string): void {
+  enable(hookName: string) {
     this.hooks.set(hookName, true);
   }
 
-  disable(hookName: string): void {
+  disable(hookName: string) {
     this.hooks.set(hookName, false);
   }
 
-  set(hookName: string, enabled: boolean): void {
+  set(hookName: string, enabled: boolean) {
     this.hooks.set(hookName, enabled);
   }
 
@@ -38,7 +38,7 @@ class HookManager {
       if (this.hooks.get(hookName) === true) {
         try {
           console.debug("Hook modified response before delivery: ", hookName, { original_data: JSON.parse(JSON.stringify(data)), modified_data: adjustedData });
-          adjustedData = { ...(adjustedData as object), ...(hookFn(adjustedData) as object) };
+          adjustedData = Object.assign({}, adjustedData, hookFn(adjustedData));
         } catch (err) {
           console.warn(`Hook ${hookName} failed:`, err);
         }
@@ -48,7 +48,7 @@ class HookManager {
     return adjustedData;
   }
 
-  clear(): void {
+  clear() {
     this.hooks.clear();
   }
 }

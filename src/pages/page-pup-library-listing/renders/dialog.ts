@@ -40,7 +40,10 @@ export function renderDialog(this: PupPage) {
     <p>Are you sure you want to uninstall ${pupName}?</p>
     <sl-input 
       placeholder="Type '${pupName}' to confirm" 
-      @sl-input=${(e: Event) => this._confirmedName = (e.target as HTMLInputElement).value }
+      @sl-input=${(e: Event) => {
+        const t = e.target;
+        if (t instanceof HTMLElement && 'value' in t && typeof t.value === 'string') this._confirmedName = t.value;
+      }}
       @keydown=${(e: KeyboardEvent) => {
         if (e.key === 'Enter' && 
             this._confirmedName === pupName && 

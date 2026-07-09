@@ -152,8 +152,7 @@ class DebugPanel extends LitElement {
   };
 
   showSettingsDialog() {
-    const dialog = this.shadowRoot?.querySelector("debug-settings-dialog") as
-      (HTMLElement & { openDialog: () => void }) | null;
+    const dialog = this.shadowRoot?.querySelector<HTMLElement & { openDialog: () => void }>("debug-settings-dialog");
     dialog?.openDialog();
   }
 
@@ -187,6 +186,7 @@ class DebugPanel extends LitElement {
       alert.toast();
     } catch (error) {
       console.error('Failed to check for updates:', error);
+      const message = error instanceof Error ? error.message : String(error);
       const alert = Object.assign(document.createElement('sl-alert'), {
         variant: 'danger',
         duration: 5000,
@@ -194,7 +194,7 @@ class DebugPanel extends LitElement {
       });
       alert.innerHTML = `
         <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-        Failed to check for updates: ${(error as Error).message}
+        Failed to check for updates: ${message}
       `;
       document.body.appendChild(alert);
       alert.toast();
@@ -249,8 +249,7 @@ class DebugPanel extends LitElement {
     
     const randomJob = jobTypes[Math.floor(Math.random() * jobTypes.length)];
 
-    const jobWS = (window as unknown as Record<string, unknown>).__jobWS as
-      { createMockJob: (displayName: string) => void } | undefined;
+    const jobWS = window.__jobWS;
     if (jobWS) {
       jobWS.createMockJob(randomJob.displayName);
     } else {
@@ -265,7 +264,14 @@ class DebugPanel extends LitElement {
     }
 
     try {
-      const result = await createOrphanedJobCandidate() as { job?: { id?: string } } | undefined;
+      const result: unknown = await createOrphanedJobCandidate();
+      let jobId = '';
+      if (result && typeof result === 'object' && 'job' in result) {
+        const job = result.job;
+        if (job && typeof job === 'object' && 'id' in job && typeof job.id === 'string') {
+          jobId = job.id;
+        }
+      }
       const alert = Object.assign(document.createElement('sl-alert'), {
         variant: 'success',
         duration: 5000,
@@ -273,12 +279,13 @@ class DebugPanel extends LitElement {
       });
       alert.innerHTML = `
         <sl-icon slot="icon" name="exclamation-octagon"></sl-icon>
-        Created orphan candidate job ${result?.job?.id || ''}. It will be marked orphaned on the next detector pass.
+        Created orphan candidate job ${jobId}. It will be marked orphaned on the next detector pass.
       `;
       document.body.appendChild(alert);
       alert.toast();
     } catch (error) {
       console.error('Failed to create orphaned job candidate:', error);
+      const message = error instanceof Error ? error.message : String(error);
       const alert = Object.assign(document.createElement('sl-alert'), {
         variant: 'danger',
         duration: 5000,
@@ -286,7 +293,7 @@ class DebugPanel extends LitElement {
       });
       alert.innerHTML = `
         <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-        Failed to create orphaned job candidate: ${(error as Error).message}
+        Failed to create orphaned job candidate: ${message}
       `;
       document.body.appendChild(alert);
       alert.toast();

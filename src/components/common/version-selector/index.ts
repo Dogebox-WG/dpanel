@@ -54,7 +54,11 @@ class VersionSelector extends LitElement {
   }
 
   _handleChange(e: Event) {
-    const value = (e.target as HTMLInputElement).value;
+    const target = e.target;
+    const value =
+      target && "value" in target && typeof target.value === "string"
+        ? target.value
+        : "";
     this.dispatchEvent(new CustomEvent('version-change', {
       detail: { version: value },
       bubbles: true,
@@ -65,7 +69,7 @@ class VersionSelector extends LitElement {
   /**
    * Get version string from version item (handles both string and object)
    */
-  _getVersionString(version: VersionItem): string {
+  _getVersionString(version: VersionItem) {
     return typeof version === 'string' ? version : version.version;
   }
 

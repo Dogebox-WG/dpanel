@@ -77,7 +77,8 @@ export function renderStatus(this: PupPage, labels: PupLabels, pkg: EnrichedPup,
       }
     } catch (error) {
       console.error('Rollback failed:', error);
-      createAlert('danger', `Rollback failed: ${(error as Error).message}`, 'exclamation-triangle', 0);
+      const message = error instanceof Error ? error.message : String(error);
+      createAlert('danger', `Rollback failed: ${message}`, 'exclamation-triangle', 0);
     }
   };
 
@@ -132,7 +133,8 @@ export function renderStatus(this: PupPage, labels: PupLabels, pkg: EnrichedPup,
 function getBrokenReason(pkg: EnrichedPup): [string, boolean] {
   // Widened to string: older backends emitted reasons (e.g. manifest_load_failed)
   // that are no longer in the BrokenReason union.
-  switch(pkg.state?.brokenReason as string | undefined) {
+  const reason: string | undefined = pkg.state?.brokenReason;
+  switch(reason) {
     case "state_update_failed": {
       return [ "We were unable to update the state for this pup.", true ]
     }

@@ -1,4 +1,4 @@
-export function isUnauthedRoute(): boolean {
+export function isUnauthedRoute() {
   const pathname = window.location.pathname;
 
   if (pathname.startsWith("/login")) {
@@ -12,7 +12,7 @@ export function isUnauthedRoute(): boolean {
   return false;
 }
 
-export function hasFlushParam(): boolean {
+export function hasFlushParam() {
   const searchParams = new URLSearchParams(window.location.search);
   return searchParams.has("flush");
 }

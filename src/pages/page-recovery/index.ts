@@ -71,7 +71,9 @@ class SetupCompleteView extends LitElement {
   ];
 
   handleMgmtOptionClick(e: Event, hideViewClose?: boolean) {
-    store.updateState({ setupContext: { view: (e.currentTarget as HTMLElement).getAttribute('data-id'), hideViewClose: hideViewClose }});
+    const el = e.currentTarget;
+    if (!(el instanceof HTMLElement)) return;
+    store.updateState({ setupContext: { view: el.getAttribute('data-id'), hideViewClose: hideViewClose }});
   }
 
   firstUpdated() {

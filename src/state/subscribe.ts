@@ -19,7 +19,7 @@ export class StoreSubscriber implements ReactiveController {
     this.store.subscribe(this);
   }
 
-  stateChanged(): void {
+  stateChanged() {
     this.host.requestUpdate();
   }
 }

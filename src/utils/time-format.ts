@@ -3,7 +3,7 @@
  * @param timestamp - The timestamp to format
  * @returns Human-readable time like "just now", "5 minutes ago", etc.
  */
-export function timeAgo(timestamp: string | number | Date | null | undefined): string {
+export function timeAgo(timestamp: string | number | Date | null | undefined) {
   if (!timestamp) return "";
 
   const now = new Date();
@@ -41,7 +41,7 @@ export function timeAgo(timestamp: string | number | Date | null | undefined): s
  * @param timestamp - The timestamp to format
  * @returns Date/time like "09-Apr-2026 14:30"
  */
-export function formatDateTime(timestamp: string | number | Date | null | undefined): string {
+export function formatDateTime(timestamp: string | number | Date | null | undefined) {
   if (timestamp == null || timestamp === "") return "";
 
   const d = new Date(timestamp);

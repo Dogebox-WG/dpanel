@@ -10,6 +10,13 @@ import { createAlert } from "/components/common/alert.js";
 import { getKeymap, getKeymaps, setKeymap } from "/api/system/keymaps.js";
 import type { Keymap } from "/api/system/keymaps.js";
 
+/** Shoelace select/input exposing a string value as an element property. */
+interface SlValueEl extends HTMLElement { value: string }
+
+function isSlValueEl(target: EventTarget | null): target is SlValueEl {
+  return target instanceof HTMLElement;
+}
+
 export class LanguageSettings extends LitElement {
   declare _loading: boolean;
   declare _inflight: boolean;
@@ -135,7 +142,8 @@ export class LanguageSettings extends LitElement {
   }
 
   _handleKeymapInputChange(e: Event) {
-    const target = e.target as HTMLInputElement;
+    if (!isSlValueEl(e.target)) return;
+    const target = e.target;
     const field = target.getAttribute('data-field');
     if (field) this._changes[field] = target.value;
   }

@@ -4,6 +4,12 @@ import { postWelcomeComplete } from "/api/system/post-welcome-complete.js";
 import { postInstallPupCollection } from "/api/system/post-install-pup-collection.js";
 import "/components/common/dbx-modal/index.js";
 
+declare global {
+  interface HTMLElementTagNameMap {
+    "x-welcome-modal": WelcomeModal;
+  }
+}
+
 class WelcomeModal extends LitElement {
   static styles = css`
     :host {
@@ -256,7 +262,7 @@ class WelcomeModal extends LitElement {
 customElements.define('x-welcome-modal', WelcomeModal);
 
 export function showWelcomeModal() {
-  const dialog = document.createElement('x-welcome-modal') as WelcomeModal;
+  const dialog = document.createElement('x-welcome-modal');
   dialog.open = true;
   dialog.onClose = () => {
     dialog.open = false;

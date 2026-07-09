@@ -56,7 +56,7 @@ class SystemPrompt extends LitElement {
     this.style.animation = "fadeOut 0.2s ease-in forwards";
     this.style.animationDelay = "100ms";
     // Animate panel (slide)
-    const innerEl = this.shadowRoot?.querySelector(".inner") as HTMLElement | null;
+    const innerEl = this.shadowRoot?.querySelector<HTMLElement>(".inner") ?? null;
     if (innerEl) innerEl.style.animation = "slideOut 0.3s ease-in forwards";
 
     setTimeout(() => {

@@ -40,9 +40,23 @@ interface DeFormChange {
 }
 
 /** de-form element exposing shoelace-style form validation. */
-type DeFormEl = HTMLElement & {
+interface DeFormEl extends HTMLElement {
   checkValidity: (form: HTMLFormElement) => boolean;
-};
+}
+
+/** Shoelace input/select exposing a string value as an element property. */
+interface SlValueEl extends HTMLElement { value: string }
+
+/** Shoelace checkbox exposing a boolean checked state as an element property. */
+interface SlCheckedEl extends HTMLElement { checked: boolean }
+
+function isSlValueEl(target: EventTarget | null): target is SlValueEl {
+  return target instanceof HTMLElement;
+}
+
+function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
+  return target instanceof HTMLElement;
+}
 
 class SystemSettings extends LitElement {
   declare onBack: (() => void) | null;
@@ -248,10 +262,11 @@ class SystemSettings extends LitElement {
   }
 
   _handleInputChange(e: Event) {
-    const target = e.target as HTMLInputElement;
+    if (!isSlValueEl(e.target)) return;
+    const target = e.target;
     const field = target.getAttribute("data-field");
     if (!field) return;
-    (this._changes as unknown as Record<string, unknown>)[field] = target.value;
+    Object.assign(this._changes, { [field]: target.value });
     
     // Disk selection requires additional validation
     if (field === 'disk') {
@@ -265,7 +280,7 @@ class SystemSettings extends LitElement {
   }
 
   _isTimezoneFormValid() {
-    const timezoneForm = this.shadowRoot?.querySelector('de-form') as DeFormEl | null;
+    const timezoneForm = this.shadowRoot?.querySelector<DeFormEl>('de-form') ?? null;
     const form = timezoneForm?.shadowRoot?.querySelector('form');
     return !form || (timezoneForm?.checkValidity(form) ?? true);
   }
@@ -304,7 +319,20 @@ class SystemSettings extends LitElement {
   }
 
   handleCheckboxChange(e: Event) {
-    this._confirmation_checked = (e.target as HTMLInputElement).checked;
+    if (!isSlCheckedEl(e.target)) return;
+    this._confirmation_checked = e.target.checked;
+  }
+
+  _handleOsCacheChange(e: Event) {
+    if (!isSlCheckedEl(e.target)) return;
+    this._changes.use_fdn_os_binary_cache = e.target.checked;
+    this.requestUpdate();
+  }
+
+  _handlePupCacheChange(e: Event) {
+    if (!isSlCheckedEl(e.target)) return;
+    this._changes.use_fdn_pup_binary_cache = e.target.checked;
+    this.requestUpdate();
   }
 
   handleBackClick = () => {
@@ -388,7 +416,7 @@ class SystemSettings extends LitElement {
                 name="use_fdn_os_binary_cache"
                 ?checked=${this._changes.use_fdn_os_binary_cache}
                 .value=${this._changes.use_fdn_os_binary_cache}
-                @sl-change=${(e: Event) => { this._changes.use_fdn_os_binary_cache = (e.target as HTMLInputElement).checked; this.requestUpdate(); }}
+                @sl-change=${this._handleOsCacheChange}
                 help-text="Uncheck to opt out of using the Dogecoin Foundation OS binary cache">
                 Use Dogecoin FDN OS binary cache
               </sl-checkbox>
@@ -396,7 +424,7 @@ class SystemSettings extends LitElement {
                 name="use_fdn_pup_binary_cache"
                 ?checked=${this._changes.use_fdn_pup_binary_cache}
                 .value=${this._changes.use_fdn_pup_binary_cache}
-                @sl-change=${(e: Event) => { this._changes.use_fdn_pup_binary_cache = (e.target as HTMLInputElement).checked; this.requestUpdate(); }}
+                @sl-change=${this._handlePupCacheChange}
                 help-text="Uncheck to opt out of using the Dogecoin Foundation Pup binary cache">
                 Use Dogecoin FDN Pup binary cache
               </sl-checkbox>

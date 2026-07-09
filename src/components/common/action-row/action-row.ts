@@ -228,7 +228,7 @@ class ActionRow extends LitElement {
   handleClick = (e: Event) => {
     // Rows can be nested inside other clickable rows; only handle the
     // innermost row for a given click.
-    const handledEvent = e as Event & { __actionRowHandled?: boolean };
+    const handledEvent: Event & { __actionRowHandled?: boolean } = e;
     if (handledEvent.__actionRowHandled) {
       return;
     }

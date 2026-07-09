@@ -32,8 +32,13 @@ import { store } from "/state/store.js";
 
 import type { KeyRecord } from "/api/keys/get-keylist.js";
 
-type SlDialogEl = HTMLElement & { show: () => void; hide: () => void };
-type SlButtonEl = HTMLElement & { loading: boolean };
+interface SlDialogEl extends HTMLElement { show: () => void; hide: () => void }
+interface SlButtonEl extends HTMLElement { loading: boolean }
+interface SlCheckedEl extends HTMLElement { checked: boolean }
+
+function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
+  return target instanceof HTMLElement;
+}
 
 class CreateKey extends LitElement {
   declare showSuccessAlert: boolean;
@@ -135,7 +140,7 @@ class CreateKey extends LitElement {
 
 
   async handleGenKeyClick() {
-    const genKeyBtn = this.shadowRoot?.querySelector("#GenKeyBtn") as SlButtonEl | null;
+    const genKeyBtn = this.shadowRoot?.querySelector<SlButtonEl>("#GenKeyBtn") ?? null;
 
     if (genKeyBtn) genKeyBtn.loading = true;
     await asyncTimeout(1000);
@@ -177,6 +182,11 @@ class CreateKey extends LitElement {
 
   _handleContinueClick() {
     this.handleSuccess();
+  }
+
+  _handleTermsChange(e: Event) {
+    if (!isSlCheckedEl(e.target)) return;
+    this._termsChecked = e.target.checked;
   }
 
   handleBackClick = () => {
@@ -254,7 +264,7 @@ class CreateKey extends LitElement {
         <sl-divider></sl-divider>
         <div class="phraseProceedActions">
           <sl-checkbox
-            @sl-change=${(e: Event) => (this._termsChecked = (e.target as HTMLInputElement).checked)}
+            @sl-change=${this._handleTermsChange}
             >I understand this phrase is the only way to recover my
             Dogebox</sl-checkbox
           >

@@ -66,17 +66,17 @@ export class Router {
     };
   }
 
-  setRoutes(routes: RouteDefinition[]): void {
+  setRoutes(routes: RouteDefinition[]) {
     routes.forEach((route) => {
       this.addRoute(route.path, route.component, route);
     });
   }
 
-  processCurrentRoute(): void {
+  processCurrentRoute() {
     this.handleNavigation(window.location.pathname);
   }
 
-  addRoute(path: string, component: string | undefined, route: RouteDefinition): void {
+  addRoute(path: string, component: string | undefined, route: RouteDefinition) {
     const componentClass = component ? customElements.get(component) : undefined;
     if (component && !componentClass) {
       console.error(`Component ${component} not found.`);
@@ -91,15 +91,15 @@ export class Router {
     });
   }
 
-  addBeforeHook(fn: RouteHook): void {
+  addBeforeHook(fn: RouteHook) {
     this.beforeHooks.push(fn);
   }
 
-  addAfterHook(fn: RouteHook): void {
+  addAfterHook(fn: RouteHook) {
     this.afterHooks.push(fn);
   }
 
-  go(path: string, options: NavigationOptions = {}): void {
+  go(path: string, options: NavigationOptions = {}) {
     const changeState = options?.replace ? "replaceState" : "pushState";
 
     // Update the URL without refreshing the page
@@ -109,7 +109,7 @@ export class Router {
     this.handleNavigation(path);
   }
 
-  handleNavigation(path: string, options: NavigationOptions = {}): void {
+  handleNavigation(path: string, options: NavigationOptions = {}) {
     // Match against the pathname only; query string and hash are preserved in
     // the browser URL (via pushState) for pages to read, but must not affect
     // route pattern matching (e.g. "/explore?search=foo" should match "/explore").
@@ -148,7 +148,7 @@ export class Router {
 
         // Check if middleware has provided a modified component instance
         const componentToRender = route.componentInstance || new route.componentClass!();
-        this.performTransition(componentToRender as HTMLElement, route, options);
+        this.performTransition(componentToRender, route, options);
 
         if (route.after) {
           for (const func of route.after) {
@@ -174,10 +174,11 @@ export class Router {
     processRoute().catch(console.error);
   }
 
-  setupLinkInterceptor(): void {
+  setupLinkInterceptor() {
     document.addEventListener("click", (event) => {
       const path = event.composedPath();
-      const target = path[0] as HTMLElement;
+      const target = path[0];
+      if (!(target instanceof HTMLElement)) return;
       const anchor = target.closest("a");
 
       // Do not intercept for these cases.
@@ -195,7 +196,7 @@ export class Router {
     });
   }
 
-  extractParams(routePath: string, paramsMatch: RegExpExecArray | null): Record<string, string> {
+  extractParams(routePath: string, paramsMatch: RegExpExecArray | null) {
     const paramNames = routePath.match(/:([^/]+)/g) || [];
     const params: Record<string, string> = {};
     paramNames.forEach((name, index) => {
@@ -208,13 +209,13 @@ export class Router {
     incomingComponent: HTMLElement,
     route: CompiledRoute,
     options: NavigationOptions,
-  ): void {
+  ) {
     if (this.currentTransition) {
       clearTimeout(this.currentTransition);
       this.outlet.firstChild && this.outlet.removeChild(this.outlet.firstChild);
     }
 
-    const outgoingComponent = this.outlet.firstChild as HTMLElement | null;
+    const outgoingComponent = this.outlet.firstChild instanceof HTMLElement ? this.outlet.firstChild : null;
 
     let transDuration = 1;
     let doAnimate = false;

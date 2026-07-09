@@ -79,7 +79,7 @@ class DogeboxLauncherButton extends LitElement {
         this._ready = true;
       }
     } catch (e) {
-      if ((e as Error).message.includes("not found")) {
+      if (e instanceof Error && e.message.includes("not found")) {
         // Ignore, we just haven't got an IP address yet.
         return;
       }

@@ -1,11 +1,11 @@
 import { openDbxModal } from "/components/common/dbx-modal/open-modal.js";
 
-type SlAlertEl = HTMLElement & {
+interface SlAlertEl extends HTMLElement {
   variant: string;
   closable: boolean;
   duration: number;
   toast: () => void;
-};
+}
 
 export interface AlertAction {
   text?: string;
@@ -21,7 +21,7 @@ export function createAlert(
   errorDetail?: unknown,
 ) {
   try {
-    const alert = document.createElement('sl-alert') as SlAlertEl;
+    const alert: SlAlertEl = document.createElement('sl-alert');
     alert.variant = variant;
     alert.closable = true;
     if (duration) {
@@ -66,7 +66,7 @@ export function createAlert(
 }
 
 // Utility function to escape HTML
-function escapeHtml(html: string): string {
+function escapeHtml(html: string) {
   const div = document.createElement('div');
   div.textContent = html;
   return div.innerHTML;

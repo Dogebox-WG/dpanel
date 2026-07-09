@@ -12,6 +12,10 @@ interface SparklineOptions {
   onmouseout?: (event?: Event) => void;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 class SparklineChart extends LitElement {
   static properties = {
     data: { type: Array },
@@ -71,7 +75,7 @@ class SparklineChart extends LitElement {
     this.options = {
       onmousemove: (event, datapoint) => {
         if (this.disabled || !datapoint) return;
-        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
+        const tooltip = this.shadowRoot?.querySelector<HTMLElement>('.tooltip');
         if (!tooltip) return;
 
         tooltip.style.display = 'block';
@@ -81,7 +85,7 @@ class SparklineChart extends LitElement {
       },
       onmouseout: () => {
         if (this.disabled) return;
-        const tooltip = this.shadowRoot?.querySelector('.tooltip') as HTMLElement | null;
+        const tooltip = this.shadowRoot?.querySelector<HTMLElement>('.tooltip');
         if (!tooltip) return;
         tooltip.style.display = 'none';
       }
@@ -108,7 +112,14 @@ class SparklineChart extends LitElement {
   handleMouseMove(event: MouseEvent) {
     // Delegate to sparkline's mousemove handler if options are set
     if (this.options.onmousemove) {
-      const datapoint = this.dataToUse[(event as MouseEvent & { detail: { index: number } }).detail.index];
+      // The sparkline lib may attach an index to the event detail; DOM
+      // MouseEvents expose detail as a number, so narrow before reading it.
+      const detail: unknown = event.detail;
+      const index =
+        isRecord(detail) && typeof detail.index === 'number'
+          ? detail.index
+          : undefined;
+      const datapoint = index !== undefined ? this.dataToUse[index] : undefined;
       this.options.onmousemove(event, datapoint);
     }
   }
@@ -134,10 +145,10 @@ class SparklineChart extends LitElement {
       this.dataToUse = generateMockSparklineData(mockDataCount);
     }
 
-    const svg = this.shadowRoot?.querySelector('svg[part="sparkline-svg"]');
+    const svg = this.shadowRoot?.querySelector<SVGSVGElement>('svg[part="sparkline-svg"]');
     if (!svg) return;
     // Pass options to the sparkline function
-    sparkline(svg as SVGSVGElement, this.dataToUse, this.options);
+    sparkline(svg, this.dataToUse, this.options);
   }
 }
 

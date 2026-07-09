@@ -11,32 +11,48 @@ import {
 } from './action.mocks.js'
 
 import { setProvider } from '../providers/providers.js';
+import type { SetProviderRequest } from '../providers/providers.js';
 
 const client = new ApiClient(store.networkContext.apiBaseUrl)
 
-export async function installPup(pupId: string, body?: unknown) {
+/** Request payload for installing a pup (PUT /pup). */
+export interface InstallPupRequest {
+  sourceId?: string;
+  pupName?: string;
+  pupVersion?: string;
+  autoInstallDependencies?: boolean;
+  installWithDevModeEnabled?: boolean;
+}
+
+export async function installPup(pupId: string, body?: InstallPupRequest) {
   return client.put<ActionSubmissionResponse>(`/pup`, body, { mock: installMock });
 }
 
-export async function uninstallPup(pupId: string, body?: unknown) {
-  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/uninstall`, body, { mock: uninstallMock });
+export async function uninstallPup(pupId: string) {
+  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/uninstall`, undefined, { mock: uninstallMock });
 }
 
-export async function purgePup(pupId: string, body?: unknown) {
-  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/purge`, body, { mock: purgeMock });
+export async function purgePup(pupId: string) {
+  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/purge`, undefined, { mock: purgeMock });
 }
 
-export async function startPup(pupId: string, body?: unknown) {
-  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/enable`, body, { mock: startMock });
+export async function startPup(pupId: string) {
+  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/enable`, undefined, { mock: startMock });
 }
 
-export async function stopPup(pupId: string, body?: unknown) {
-  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/disable`, body, { mock: stopMock });
+export async function stopPup(pupId: string) {
+  return client.post<ActionSubmissionResponse>(`/pup/${pupId}/disable`, undefined, { mock: stopMock });
 }
 
 
 
-export function pickAndPerformPupAction(pupId: string, action: string, body?: unknown) {
+function isSetProviderRequest(
+  body: InstallPupRequest | SetProviderRequest,
+): body is SetProviderRequest {
+  return Object.values(body).every((v) => typeof v === 'string' || v === undefined);
+}
+
+export function pickAndPerformPupAction(pupId: string, action: string, body?: InstallPupRequest | SetProviderRequest) {
   switch(action) {
     case 'install':
       return installPup(pupId, body);
@@ -54,7 +70,7 @@ export function pickAndPerformPupAction(pupId: string, action: string, body?: un
       return stopPup(pupId);
       break;
     case 'set-provider':
-      return setProvider(pupId, body);
+      return setProvider(pupId, body && isSetProviderRequest(body) ? body : undefined);
       break;
 
     default:

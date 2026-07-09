@@ -103,7 +103,7 @@ export function buildPupConfig(
 function normalizeFieldValue(
   field: PupManifestConfigField,
   storedValue: unknown,
-): string | boolean {
+) {
   const value = storedValue ?? field.default;
 
   switch (field.type) {

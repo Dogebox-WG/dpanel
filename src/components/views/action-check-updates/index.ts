@@ -33,6 +33,13 @@ type ResolvedUpdatablePackage = Omit<UpdatablePackage, "latestUpdate"> & {
 /** Activity log entries; mock logs only carry a msg. */
 type UpdateLogEntry = Partial<ActionProgress> & { msg?: string };
 
+/** Shoelace checkbox exposing a boolean checked state as an element property. */
+interface SlCheckedEl extends HTMLElement { checked: boolean }
+
+function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
+  return target instanceof HTMLElement;
+}
+
 export class CheckUpdatesView extends LitElement {
   declare mode: string; // either canInstall or mustInstall
   declare open: boolean;
@@ -141,7 +148,9 @@ export class CheckUpdatesView extends LitElement {
     // In response to pkgControllers notification of an 'activity'
     // this function can determine whether there are new system logs
     // to display to the user.
-    if (this.pkgController && (options as { type?: string } | undefined)?.type === 'system-activity') {
+    const optionType =
+      options && typeof options === "object" && "type" in options ? options.type : undefined;
+    if (this.pkgController && optionType === 'system-activity') {
 
       // TODO
       // Filter these logs so only lines relating to the particular
@@ -168,7 +177,8 @@ export class CheckUpdatesView extends LitElement {
       this._systemJobId = actionID;
     }
     // errorMessage is not part of ActionProgress proper, but tolerate it on the wire.
-    const isError = log?.error === true || Boolean((log as { errorMessage?: string })?.errorMessage);
+    const errorMessage = log && "errorMessage" in log ? log.errorMessage : undefined;
+    const isError = log?.error === true || Boolean(errorMessage);
     return isError && actionID === this._systemJobId;
   }
 
@@ -449,7 +459,8 @@ export class CheckUpdatesView extends LitElement {
   }
 
   handleCheckboxChange(e: Event) {
-    this._confirmation_checked = (e.target as HTMLInputElement).checked;
+    if (!isSlCheckedEl(e.target)) return;
+    this._confirmation_checked = e.target.checked;
   }
 
   seedPendingSystemUpdate(jobId: string) {
@@ -459,7 +470,7 @@ export class CheckUpdatesView extends LitElement {
 
     const jobs = Array.isArray(store.jobsContext.jobs) ? store.jobsContext.jobs : [];
     const started = new Date().toISOString();
-    // Partial placeholder until the first real job update arrives over the socket.
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     const placeholderJob = {
       id: jobId,
       action: "system-update",

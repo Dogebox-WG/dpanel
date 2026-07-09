@@ -773,7 +773,7 @@ class MonitoringPage extends LitElement {
             name: manifestMetric.name,
             label: manifestMetric.label,
             type: manifestMetric.type,
-            values: [] as unknown[]
+            values: new Array<unknown>()
           };
         }
         return null;

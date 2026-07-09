@@ -62,6 +62,16 @@ import { pupUpdates } from "/state/pup-updates.js";
 import { jobWebSocket } from "/controllers/sockets/job-channel.js";
 import { jobsController } from "/controllers/jobs/index.js";
 
+/** sl-drawer exposes an imperative show() we call to open the drawer. */
+interface SlDrawerEl extends HTMLElement {
+  show: () => void;
+}
+
+/** system-prompt exposes an imperative close() we call to dismiss it. */
+interface SystemPromptEl extends HTMLElement {
+  close: () => void;
+}
+
 export class DPanelApp extends LitElement {
   declare ready: boolean;
   declare menuAnimating: boolean;
@@ -140,7 +150,7 @@ export class DPanelApp extends LitElement {
     }
 
     // Initialise our router singleton and provide it a target elemenet.
-    const outlet = this.shadowRoot!.querySelector("#Outlet") as HTMLElement;
+    const outlet = this.shadowRoot!.querySelector<HTMLElement>("#Outlet")!;
     // this.outletWrapper = this.shadowRoot.querySelector("#OutletWrapper")
     this.router = new Router(outlet);
     setRouterInstance(this.router);
@@ -213,13 +223,13 @@ export class DPanelApp extends LitElement {
   }
 
   openDrawer() {
-    const drawer = this.shadowRoot?.querySelector("sl-drawer") as (HTMLElement & { show: () => void }) | null;
+    const drawer = this.shadowRoot?.querySelector<SlDrawerEl>("sl-drawer");
     drawer?.show();
   }
 
   enableSystemPrompt() {
     if (this.systemPromptActive) {
-      (this.shadowRoot?.querySelector("system-prompt") as (HTMLElement & { close: () => void }) | null)?.close();
+      this.shadowRoot?.querySelector<SystemPromptEl>("system-prompt")?.close();
       setTimeout(() => {
         this.systemPromptActive = false;
       }, 400);

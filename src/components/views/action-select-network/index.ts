@@ -120,7 +120,7 @@ class SelectNetwork extends LitElement {
   }
 
   firstUpdated() {
-    this._form = this.shadowRoot?.querySelector("de-form") as DeFormEl | null;
+    this._form = this.shadowRoot?.querySelector<DeFormEl>("de-form") ?? null;
     this._fetchAvailableNetworks();
   }
 
@@ -282,12 +282,14 @@ class SelectNetwork extends LitElement {
 
   async handleLabelActionClick(event: Event) {
     event.stopPropagation();
-    switch ((event as CustomEvent<{ actionName: string }>).detail.actionName) {
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { actionName?: string } = event.detail;
+    switch (detail.actionName) {
       case "refresh":
         await this._fetchAvailableNetworks();
         break;
       default:
-        console.warn("Unhandled form action received", (event as CustomEvent).detail);
+        console.warn("Unhandled form action received", detail);
     }
   }
 
@@ -325,9 +327,13 @@ class SelectNetwork extends LitElement {
     }
 
     // Handle error
-    if ((response as { error?: unknown }).error) {
+    const responseError =
+      typeof response === "object" && response !== null && "error" in response
+        ? response.error
+        : undefined;
+    if (responseError) {
       dynamicFormInstance.retainChanges(); // stops spinner
-      this.handleError((response as { error?: unknown }).error);
+      this.handleError(responseError);
       return;
     }
 
@@ -345,12 +351,13 @@ class SelectNetwork extends LitElement {
       useFoundationOSBinaryCache: store.setupContext.useFoundationOSBinaryCache
     }).catch((error: unknown) => {
       this.handleBootstrapError(error);
-      return { errorHandled: true } as { errorHandled: true; jobId?: string };
+      const handled: { errorHandled: true; jobId?: string } = { errorHandled: true };
+      return handled;
     });
 
     // Bootstrap start errors are handled either by the catch block above or by
     // the missing-jobId guard below.
-    if ((finalSystemBootstrap as { errorHandled?: boolean })?.errorHandled) {
+    if (finalSystemBootstrap && "errorHandled" in finalSystemBootstrap && finalSystemBootstrap.errorHandled) {
       dynamicFormInstance.retainChanges(); // stops spinner
       return;
     }
@@ -386,7 +393,7 @@ class SelectNetwork extends LitElement {
   }
 
   handleBootstrapError(err: unknown) {
-    const detail = (err as Error)?.message ?? "No details were returned by the server.";
+    const detail = (err instanceof Error ? err.message : undefined) ?? "No details were returned by the server.";
     createAlert(
       "danger",
       [
@@ -442,8 +449,7 @@ class SelectNetwork extends LitElement {
     if (change.fieldName !== "network-pass") return;
 
     const state = deform.getState();
-    const input = deform.shadowRoot?.querySelector('[name=network-pass]') as
-      (HTMLInputElement & { reportValidity: () => void }) | null;
+    const input = deform.shadowRoot?.querySelector<HTMLInputElement>('[name=network-pass]') ?? null;
     if (!input) return;
 
     const isHiddenNetwork = state.network?.value === "hidden";

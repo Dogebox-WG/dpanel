@@ -158,7 +158,7 @@ class SystemUpgradeModal extends LitElement {
   }
 
   buildOutcomeHash(outcome: string, jobId = "") {
-    const prefix = outcomeHashes[outcome as keyof typeof outcomeHashes];
+    const prefix = outcomeHashes[outcome];
     if (!prefix) {
       return "";
     }

@@ -45,10 +45,12 @@ export function renderActions(this: PupPage, labels: PupLabels, hasLogs: number)
   const pkg = this.getPup();
   let { installationId, statusId, statusLabel } = labels
 
+  const manifest = pkg?.state?.manifest;
+  const hasGui = manifest && 'gui' in manifest ? Boolean(manifest.gui) : false;
   const hasButtons =
     ["needs_deps", "needs_config"].includes(statusId ?? "")
     || ["uninstalled"].includes(installationId ?? "")
-    || (pkg?.state?.manifest as { gui?: unknown } | undefined)?.gui;
+    || hasGui;
 
   const styles = css`
     .action-wrap {

@@ -172,18 +172,28 @@ export class StoreView extends LitElement {
 
   handlePupInstalled(event: Event) {
     event.stopPropagation();
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { pupid: string } = event.detail;
     // installPkg no longer exists on pkgController; guarded so a stray
     // pup-installed event (legacy card-pup-snapshot) cannot throw.
-    (this.pkgController as { installPkg?: (pupId: string) => void }).installPkg?.((event as CustomEvent<{ pupid: string }>).detail.pupid)
+    const controller = this.pkgController;
+    if ('installPkg' in controller && typeof controller.installPkg === 'function') {
+      controller.installPkg(detail.pupid);
+    }
     this.requestUpdate();
   }
 
   handlePupClick(event: Event) {
-    this.inspectedPup = (event.currentTarget as HTMLElement & { pupId?: string }).pupId
+    const el = event.currentTarget;
+    if (el instanceof HTMLElement && 'pupId' in el) {
+      this.inspectedPup = typeof el.pupId === 'string' ? el.pupId : undefined;
+    }
   }
 
   handleForcedTabShow(event: Event) {
-    this.inspectedPup = (event as CustomEvent<{ pupId: string }>).detail.pupId
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { pupId: string } = event.detail;
+    this.inspectedPup = detail.pupId
   }
 
   async fetchBootstrap() {
@@ -218,7 +228,9 @@ export class StoreView extends LitElement {
   }
 
   handleActionsMenuSelect(event: Event) {
-    const selectedItemValue = (event as CustomEvent<{ item: { value: string } }>).detail.item.value;
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { item: { value: string } } = event.detail;
+    const selectedItemValue = detail.item.value;
     switch (selectedItemValue) {
       case 'refresh':
         this.fetchBootstrap();
@@ -245,16 +257,21 @@ export class StoreView extends LitElement {
   }
 
   handleSearchInput(event: Event) {
-    this.searchValue = (event.target as HTMLInputElement).value;
+    const target = event.target;
+    if (target instanceof HTMLElement && 'value' in target && typeof target.value === 'string') {
+      this.searchValue = target.value;
+    }
   }
 
   handleSearchOptionChange(event: Event) {
-    const target = event.target as HTMLInputElement;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
     const option = target.dataset.option;
+    const checked = 'checked' in target ? Boolean(target.checked) : false;
     if (option === 'description') {
-      this.searchInDescription = target.checked;
+      this.searchInDescription = checked;
     } else if (option === 'interfaces') {
-      this.searchInInterfaces = target.checked;
+      this.searchInInterfaces = checked;
     }
   }
 
@@ -264,13 +281,13 @@ export class StoreView extends LitElement {
     const def = pkg?.def;
     const latestVersion = def?.latestVersion ?? "";
     // Older sources used descShort/descLong for the meta description keys.
-    const meta = (def?.versions?.[latestVersion]?.meta || {}) as {
+    const meta: {
       name?: string;
       shortDescription?: string;
       longDescription?: string;
       descShort?: string;
       descLong?: string;
-    };
+    } = def?.versions?.[latestVersion]?.meta || {};
     const version = def?.versions?.[latestVersion] || {};
 
     const parts = [def?.key || "", meta.name || ""];

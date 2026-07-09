@@ -135,7 +135,13 @@ export class PupPage extends LitElement {
   }
 
   requestUpdate(options?: unknown) {
-    if (this.pkgController && (options as { type?: string } | undefined)?.type === 'activity') {
+    if (
+      this.pkgController &&
+      typeof options === 'object' &&
+      options !== null &&
+      'type' in options &&
+      options.type === 'activity'
+    ) {
       if (this.context.store.pupContext?.state?.id) {
         this.updateActivityLogs();
       }
@@ -206,7 +212,9 @@ export class PupPage extends LitElement {
       onSuccess: () => dynamicForm.commitChanges(formNode),
       onError: (errorPayload?: unknown) => {
         dynamicForm.retainChanges();
-        this.displayConfigUpdateErr(errorPayload as { id?: string; error?: string });
+        this.displayConfigUpdateErr(
+          errorPayload && typeof errorPayload === "object" ? errorPayload : undefined,
+        );
       },
     };
 
@@ -242,7 +250,9 @@ export class PupPage extends LitElement {
 
   async handleStartStop(e: Event) {
     const pupId = this.context.store.pupContext!.state!.id
-    const checked = (e.target as HTMLInputElement).checked;
+    const target = e.target;
+    if (!(target instanceof HTMLElement) || !('checked' in target)) return;
+    const checked = Boolean(target.checked);
     this.inflight_startstop = true;
     this.pupEnabled = checked;
     this.requestUpdate();
@@ -258,7 +268,9 @@ export class PupPage extends LitElement {
 
   async handleSidebarToggle(e: Event) {
     const pupId = this.context.store.pupContext!.state!.id;
-    const checked = (e.target as HTMLInputElement).checked;
+    const target = e.target;
+    if (!(target instanceof HTMLElement) || !('checked' in target)) return;
+    const checked = Boolean(target.checked);
     const currentPinned = this.context.store.sidebarContext?.pinned || [];
     
     // Optimistically update store (which triggers re-render with new state)
@@ -421,7 +433,8 @@ export class PupPage extends LitElement {
     }
 
     // appContext.path is legacy (never populated).
-    const path = (this.context.store?.appContext as { path?: string[] })?.path || [];
+    const appCtx = this.context.store?.appContext;
+    const path = appCtx && 'path' in appCtx && Array.isArray(appCtx.path) ? appCtx.path : [];
     const pkg = this.getPup();
 
     if (!pkg) {
@@ -439,7 +452,11 @@ export class PupPage extends LitElement {
       `;
     }
 
-    const hasChecks = ((pkg.state?.manifest as { checks?: unknown[] } | undefined)?.checks || []).length > 0;
+    const manifestWithChecks = pkg.state?.manifest;
+    const checksList = manifestWithChecks && 'checks' in manifestWithChecks && Array.isArray(manifestWithChecks.checks)
+      ? manifestWithChecks.checks
+      : [];
+    const hasChecks = checksList.length > 0;
 
     let labels: PupLabels = { ...(pkg?.computed || {}) }
     let isInstallationLoadingStatus =  ["installing", "upgrading", "uninstalling", "purging"].includes(labels.installationId ?? "");
@@ -452,7 +469,7 @@ export class PupPage extends LitElement {
     const short = pkg?.state?.manifest?.meta?.shortDescription || '';
     const long = pkg?.state?.manifest?.meta?.longDescription || ''
 
-    const logo = (pkg?.assets as { logos?: { mainLogoBase64?: string } } | null | undefined)?.logos?.mainLogoBase64
+    const logo = pkg?.assets?.logos?.mainLogoBase64
 
     const renderHealthChecks = () => {
       return this.checks.map(
@@ -516,15 +533,18 @@ export class PupPage extends LitElement {
       `;
     };
 
+    const statsMetrics: MetricEntry[] = Array.isArray(pkg?.stats?.metrics) ? pkg.stats!.metrics : [];
+    const manifestMetricDefs: MetricDef[] = pkg.state?.manifest?.metrics ?? [];
     const renderStats = () => renderMetricCollection(
-      Array.isArray(pkg?.stats?.metrics) ? (pkg.stats!.metrics as MetricEntry[]) : [],
-      (pkg.state?.manifest?.metrics as MetricDef[] | undefined) ?? [],
+      statsMetrics,
+      manifestMetricDefs,
       "Such empty. Pup reports no metrics",
     );
 
     const renderResources = () => {
+      const systemMetrics: MetricEntry[] = pkg.stats?.systemMetrics ?? [];
       return renderMetricCollection(
-        (pkg.stats?.systemMetrics as MetricEntry[] | undefined) ?? [],
+        systemMetrics,
         [],
         "No resource metrics available",
       );
@@ -535,7 +555,8 @@ export class PupPage extends LitElement {
     const isInSidebar = pinnedPups.includes(pkg.state?.id ?? "");
     const hasStatsMetrics = (pkg.stats?.metrics || []).length > 0;
     const source = pkg?.state?.source || pkg?.def?.source || null;
-    const sourceLocation = (source as { location?: string } | null)?.location?.trim();
+    const locationValue = source?.location;
+    const sourceLocation = typeof locationValue === "string" ? locationValue.trim() : undefined;
     const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
     const canCopy = canCopyToClipboard();
 
@@ -628,7 +649,6 @@ export class PupPage extends LitElement {
     const hasLogs = this.activityLogs.length
 
     if (this.context.store?.networkContext?.logPupDerivations) {
-      // eslint-disable-next-line no-console
       console.log("[PupPage] derive", {
         routePupId: pupContext?.state?.id,
         pkgId: pkg?.state?.id,

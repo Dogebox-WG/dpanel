@@ -8,7 +8,7 @@
  * @param ianaId - IANA timezone identifier (e.g., "Australia/Adelaide")
  * @returns Formatted GMT offset (e.g., "GMT +10:30")
  */
-function getGMTOffset(ianaId: string): string {
+function getGMTOffset(ianaId: string) {
   try {
     const date = new Date();
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -418,7 +418,7 @@ const timezoneNameMapping: Record<string, TimezoneCityRegion> = {
  * @param ianaId - IANA timezone identifier
  * @returns Parsed city and region
  */
-function parseTimezoneId(ianaId: string): TimezoneCityRegion {
+function parseTimezoneId(ianaId: string) {
   // Handle special cases
   if (ianaId === 'UTC' || ianaId === 'GMT') {
     return { city: ianaId, region: '' };
@@ -442,7 +442,7 @@ function parseTimezoneId(ianaId: string): TimezoneCityRegion {
  * @param ianaId - IANA timezone identifier (e.g., "Australia/Adelaide")
  * @returns Formatted label (e.g., "Adelaide, Australia (GMT +10:30)")
  */
-export function formatTimezoneLabel(ianaId: string): string {
+export function formatTimezoneLabel(ianaId: string) {
   const { city, region } = parseTimezoneId(ianaId);
   const offset = getGMTOffset(ianaId);
   

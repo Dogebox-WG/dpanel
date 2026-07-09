@@ -167,14 +167,16 @@ export class PupInstallPage extends LitElement {
     }
 
     // appContext.path is legacy (never populated); popover_page stays undefined.
-    const path = (this.context.store?.appContext as { path?: string[] })?.path || [];
+    const appCtx = this.context.store?.appContext;
+    const path = appCtx && 'path' in appCtx && Array.isArray(appCtx.path) ? appCtx.path : [];
     const pkg = this.getPup();
 
     if (!pkg) return;
 
     const { installationId, isInstalled } = pkg.computed ?? { installationId: "", isInstalled: false };
     const source = pkg?.def?.source || pkg?.state?.source || null;
-    const sourceLocation = (source as { location?: string } | null)?.location?.trim();
+    const locationValue = source?.location;
+    const sourceLocation = typeof locationValue === "string" ? locationValue.trim() : undefined;
     const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
     const canCopy = canCopyToClipboard();
     const popover_page = path[1];
@@ -226,7 +228,10 @@ export class PupInstallPage extends LitElement {
                 <sl-checkbox
                   ?checked=${this.autoInstallDependencies}
                   ?disabled=${installationId === "installing"}
-                  @sl-change=${(e: Event) => this.autoInstallDependencies = (e.target as HTMLInputElement).checked}
+                  @sl-change=${(e: Event) => {
+                    const t = e.target;
+                    if (t instanceof HTMLElement && 'checked' in t) this.autoInstallDependencies = Boolean(t.checked);
+                  }}
                 >
                 <span style="display: flex; align-items: center; gap: 0.5em;">
                   Install dependencies 
@@ -242,7 +247,10 @@ export class PupInstallPage extends LitElement {
                 <sl-checkbox
                   ?checked=${this.installWithDevModeEnabled}
                   ?disabled=${installationId === "installing"}
-                  @sl-change=${(e: Event) => this.installWithDevModeEnabled = (e.target as HTMLInputElement).checked}
+                  @sl-change=${(e: Event) => {
+                    const t = e.target;
+                    if (t instanceof HTMLElement && 'checked' in t) this.installWithDevModeEnabled = Boolean(t.checked);
+                  }}
                 >
                   <span style="display: flex; align-items: center; gap: 0.5em;">
                     Development Mode

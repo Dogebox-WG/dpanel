@@ -71,30 +71,30 @@ export class MockJobWebSocket {
     return this;
   }
 
-  on(event: string, handler: MockSocketHandler): void {
+  on(event: string, handler: MockSocketHandler) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
     this.listeners.get(event)!.push(handler);
   }
 
-  trigger(event: string, data?: { data: string }): void {
+  trigger(event: string, data?: { data: string }) {
     const handlers = this.listeners.get(event) || [];
     handlers.forEach(handler => handler(data));
   }
 
-  send(message: unknown): void {
+  send(message: unknown) {
     // Simulate receiving a message
     this.trigger('message', { data: JSON.stringify(message) });
   }
 
-  close(): void {
+  close() {
     this.connected = false;
     this.trigger('close');
   }
 
   // Helper: Simulate creating a new job
-  simulateJobCreated(displayName = 'Mock Job'): void {
+  simulateJobCreated(displayName = 'Mock Job') {
     const job: MockJob = {
       id: mockJobId++,
       started: new Date().toISOString(),
@@ -120,7 +120,7 @@ export class MockJobWebSocket {
   }
 
   // Helper: Simulate progress updates
-  simulateProgress(jobId: number): void {
+  simulateProgress(jobId: number) {
     const job = mockJobs.find(a => a.id === jobId);
     if (!job) return;
 
@@ -187,7 +187,7 @@ export const mockJobApi = {
   },
 
   getJob: (id: number | string) => {
-    const job = mockJobs.find(j => j.id === id);
+    const job = mockJobs.find(j => String(j.id) === String(id));
     return Promise.resolve({
       success: !!job,
       job: job || null
@@ -245,7 +245,7 @@ export class MockLogWebSocket {
     this.logIndex = 0;
   }
 
-  timestamp(): string {
+  timestamp() {
     return new Date().toISOString().split('T')[1].split('.')[0];
   }
 
@@ -257,19 +257,19 @@ export class MockLogWebSocket {
     return this;
   }
 
-  on(event: string, handler: MockSocketHandler): void {
+  on(event: string, handler: MockSocketHandler) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
     this.listeners.get(event)!.push(handler);
   }
 
-  trigger(event: string, data?: { data: string }): void {
+  trigger(event: string, data?: { data: string }) {
     const handlers = this.listeners.get(event) || [];
     handlers.forEach(handler => handler(data));
   }
 
-  streamLogs(): void {
+  streamLogs() {
     const interval = setInterval(() => {
       if (this.logIndex < this.logLines.length) {
         this.trigger('message', {
@@ -283,7 +283,7 @@ export class MockLogWebSocket {
     }, 800);
   }
 
-  close(): void {
+  close() {
     this.trigger('close');
   }
 }
@@ -298,5 +298,5 @@ export function createMockJobWebSocket(): MockJobWebSocket {
 
 // Expose to dev tools for manual testing
 if (typeof window !== 'undefined') {
-  (window as unknown as Record<string, unknown>).__mockJobWS = mockJobWS;
+  window.__mockJobWS = mockJobWS;
 }

@@ -16,16 +16,16 @@ export class ReactiveClass {
     this.controllers = new Set();
   }
 
-  addController(controller: ReactiveClassController): void {
+  addController(controller: ReactiveClassController) {
     this.controllers.add(controller);
     controller.hostConnected?.();
   }
 
-  removeController(controller: ReactiveClassController): void {
+  removeController(controller: ReactiveClassController) {
     this.controllers.delete(controller);
   }
 
-  requestUpdate(): void {
+  requestUpdate() {
     this.controllers.forEach((controller) => {
       controller.hostUpdate?.();
     });

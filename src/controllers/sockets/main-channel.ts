@@ -13,10 +13,28 @@ import {
 import { isUnauthedRoute } from "/utils/url-utils.js";
 import type { MainChannelMessage } from "/types/websocket";
 import type { JobRecord } from "/types/jobs";
+import type { PupUpdateInfo } from "/types/pup-updates";
 
+/**
+ * Result payload of a completed `check-updates` action (dogeboxd's
+ * checkPupUpdates j.Success map). An all-pups check returns `updateInfo` as a
+ * map keyed by pupId; a single-pup check returns one PupUpdateInfo.
+ */
 interface CheckUpdatesActionResult {
-  pupsChecked?: unknown;
-  updateInfo?: unknown;
+  message?: string;
+  pupsChecked?: number;
+  pupsFailed?: number;
+  updatesFound?: number;
+  pupId?: string;
+  updateInfo?: Record<string, PupUpdateInfo> | PupUpdateInfo;
+}
+
+function isCheckUpdatesResult(u: unknown): u is CheckUpdatesActionResult {
+  return (
+    typeof u === "object" &&
+    u !== null &&
+    ("pupsChecked" in u || "updateInfo" in u)
+  );
 }
 
 export interface MainChannelObserver {
@@ -26,7 +44,7 @@ export interface MainChannelObserver {
 
 async function mockedMainChannelRunner(
   onMessageCallback: (event: SocketMessageEvent) => void,
-): Promise<void> {
+) {
   if (store.networkContext.demoSystemPrompt) {
     setTimeout(() => {
       const mockData = {
@@ -57,24 +75,18 @@ class SocketChannel {
   reconnectInterval = 500;
   maxReconnectInterval = 10000;
   recoveryLogs: string[] = ["Connecting to WebSocket"];
-  wsClient: WebSocketClient | null;
-  isConnected: boolean;
+  wsClient: WebSocketClient | null = null;
+  isConnected = false;
 
   constructor() {
-    this.wsClient = null;
-    this.isConnected = false;
-
     this.setupSocketConnection();
 
-    // Cast needed: TS narrows wsClient to null from the assignment above and
-    // cannot see that setupSocketConnection() may have reassigned it.
-    const client = this.wsClient as WebSocketClient | null;
-    if (!this.isConnected && client) {
-      client.connect();
+    if (!this.isConnected && this.wsClient) {
+      this.wsClient.connect();
     }
   }
 
-  setupSocketConnection(): void {
+  setupSocketConnection() {
     if (this.isConnected) {
       return;
     }
@@ -103,7 +115,8 @@ class SocketChannel {
     this.wsClient.onMessage = async (event) => {
       let data: MainChannelMessage | undefined;
       try {
-        data = JSON.parse(event.data) as MainChannelMessage;
+        const parsed: MainChannelMessage = JSON.parse(event.data);
+        data = parsed;
       } catch (parseErr) {
         console.warn("failed to JSON.parse incoming event", event, parseErr);
       }
@@ -164,11 +177,7 @@ class SocketChannel {
           await asyncTimeout(500); // Why?
 
           // Check if this is a check-pup-updates action (system-wide action, not pup-specific)
-          const actionResult = data.update as CheckUpdatesActionResult | undefined;
-          const isCheckUpdatesAction =
-            actionResult &&
-            (actionResult.pupsChecked !== undefined ||
-              actionResult.updateInfo !== undefined);
+          const isCheckUpdatesAction = isCheckUpdatesResult(data.update);
 
           if (isCheckUpdatesAction) {
             if (!data.error) {
@@ -253,7 +262,7 @@ class SocketChannel {
     };
   }
 
-  attemptReconnect(): void {
+  attemptReconnect() {
     if (!this.isConnected) {
       setTimeout(() => {
         console.log(`Attempting to reconnect...`);
@@ -272,14 +281,14 @@ class SocketChannel {
   }
 
   // Register an observer
-  addObserver(observer: MainChannelObserver): void {
+  addObserver(observer: MainChannelObserver) {
     if (!this.observers.includes(observer)) {
       this.observers.push(observer);
     }
   }
 
   // Remove an observer
-  removeObserver(observer: MainChannelObserver): void {
+  removeObserver(observer: MainChannelObserver) {
     const index = this.observers.indexOf(observer);
     if (index > -1) {
       this.observers.splice(index, 1);
@@ -287,7 +296,7 @@ class SocketChannel {
   }
 
   // Notify one or all registered observers of a change
-  notify(id?: string): void {
+  notify(id?: string) {
     for (const observer of this.observers) {
       if (!id) {
         observer.requestUpdate();
@@ -298,17 +307,17 @@ class SocketChannel {
     }
   }
 
-  doThing(): void {
+  doThing() {
     this.notify();
   }
 
   // Get current messages
-  getRecoveryLogs(): string[] {
+  getRecoveryLogs() {
     return this.recoveryLogs || [];
   }
 
   // Subscribe to message updates
-  subscribeToRecoveryLogs(callback: (logs: string[]) => void): () => void {
+  subscribeToRecoveryLogs(callback: (logs: string[]) => void) {
     const messageObserver: MainChannelObserver = {
       requestUpdate: () => {
         callback(this.recoveryLogs || []);
@@ -324,7 +333,7 @@ export type { SocketChannel };
 // Instance holder
 let instance: SocketChannel | undefined;
 
-function getInstance(): SocketChannel {
+function getInstance() {
   if (!instance) {
     instance = new SocketChannel();
   }

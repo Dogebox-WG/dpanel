@@ -204,7 +204,7 @@ class ChangePassView extends LitElement {
       // Handle error
       if (response.error) {
         dynamicFormInstance.retainChanges(); // stops spinner
-        this.handleError(response.error as string);
+        this.handleError(String(response.error));
         return;
       }
     }

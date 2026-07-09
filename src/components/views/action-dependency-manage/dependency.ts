@@ -225,7 +225,8 @@ class DependencyList extends LitElement {
         console.log('Failed to set provider', err);
         const message = ["Failed to set provider"];
         const action = { text: "View details" };
-        createAlert("danger", message, "emoji-frown", null, action, new Error(String((err as { error?: unknown })?.error)));
+        const errDetail = err && typeof err === "object" && "error" in err ? err.error : undefined;
+        createAlert("danger", message, "emoji-frown", null, action, new Error(String(errDetail)));
         this.inflight = false;
       },
       onTimeout: async () => {

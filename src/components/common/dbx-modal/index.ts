@@ -262,17 +262,16 @@ export class DbxModal extends LitElement {
     const visit = (node: Document | Element | ShadowRoot | null) => {
       if (!node) return;
 
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as Element;
-        if (el.localName === "x-dbx-modal" && (el as DbxModal).open) {
-          modals.push(el as DbxModal);
+      if (node instanceof Element) {
+        if (node instanceof DbxModal && node.open) {
+          modals.push(node);
         }
-        if (el.shadowRoot) {
-          visit(el.shadowRoot);
+        if (node.shadowRoot) {
+          visit(node.shadowRoot);
         }
       }
 
-      for (const child of (node as Element).children || []) {
+      for (const child of node.children || []) {
         visit(child);
       }
     };
@@ -288,8 +287,8 @@ export class DbxModal extends LitElement {
 
   _blurActiveControl() {
     const blurDeep = (root: ShadowRoot | null): boolean => {
-      const activeElement = root?.activeElement as HTMLElement | null | undefined;
-      if (!activeElement) return false;
+      const activeElement = root?.activeElement;
+      if (!(activeElement instanceof HTMLElement)) return false;
 
       if (activeElement.shadowRoot && blurDeep(activeElement.shadowRoot)) {
         return true;

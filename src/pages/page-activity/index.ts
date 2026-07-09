@@ -178,7 +178,7 @@ class JobActivityPage extends LitElement {
 
   updated() {
     if (!this.targetJobId || this._didScrollToTarget) return;
-    const target = this.renderRoot?.querySelector(`#job-${this.targetJobId}`) as HTMLElement | null;
+    const target = this.renderRoot?.querySelector<HTMLElement>(`#job-${this.targetJobId}`) ?? null;
     if (target) {
       this._didScrollToTarget = true;
       setTimeout(() => {
@@ -196,7 +196,11 @@ class JobActivityPage extends LitElement {
   }
 
   getScrollContainer(target: HTMLElement) {
-    return this.getScrollParent(target) || (document.scrollingElement as HTMLElement | null) || document.documentElement;
+    const parent = this.getScrollParent(target);
+    if (parent) return parent;
+    const scrolling = document.scrollingElement;
+    if (scrolling instanceof HTMLElement) return scrolling;
+    return document.documentElement;
   }
 
   getPageHeaderOffset() {
@@ -208,8 +212,14 @@ class JobActivityPage extends LitElement {
   getScrollParent(element: HTMLElement): HTMLElement | null {
     let current: HTMLElement | null = element;
     while (current) {
-      const parent = (current.parentElement ||
-        (current.getRootNode?.() as ShadowRoot).host) as HTMLElement | null | undefined;
+      let parent: HTMLElement | null = current.parentElement;
+      if (!parent) {
+        // Document has no .host; only cross the shadow boundary via its host.
+        const root = current.getRootNode?.();
+        if (root instanceof ShadowRoot && root.host instanceof HTMLElement) {
+          parent = root.host;
+        }
+      }
       if (!parent || parent === current) break;
       const style = getComputedStyle(parent);
       const overflowY = style.overflowY;
@@ -226,7 +236,8 @@ class JobActivityPage extends LitElement {
     let current: HTMLElement | null = element;
     while (current && current !== container) {
       offsetTop += current.offsetTop || 0;
-      current = current.offsetParent as HTMLElement | null;
+      const next: Element | null = current.offsetParent;
+      current = next instanceof HTMLElement ? next : null;
     }
     return offsetTop;
   }
@@ -271,19 +282,30 @@ class JobActivityPage extends LitElement {
   }
   
   handleSearchInput(e: Event) {
-    this.searchQuery = (e.target as HTMLInputElement).value.toLowerCase();
+    const t = e.target;
+    if (t instanceof HTMLElement && 'value' in t && typeof t.value === 'string') {
+      this.searchQuery = t.value.toLowerCase();
+    }
   }
   
   handleStatusFilter(e: Event) {
-    this.statusFilter = (e.target as HTMLInputElement).value;
+    const t = e.target;
+    if (t instanceof HTMLElement && 'value' in t && typeof t.value === 'string') {
+      this.statusFilter = t.value;
+    }
   }
   
   handleDateFilter(e: Event) {
-    this.dateFilter = (e.target as HTMLInputElement).value;
+    const t = e.target;
+    if (t instanceof HTMLElement && 'value' in t && typeof t.value === 'string') {
+      this.dateFilter = t.value;
+    }
   }
 
   async handleDeleteJob(e: Event) {
-    const job = (e as CustomEvent<{ job?: JobRecord }>).detail?.job;
+    if (!(e instanceof CustomEvent)) return;
+    const detail: { job?: JobRecord } = e.detail;
+    const job = detail?.job;
     if (!job?.id) return;
 
     const confirmed = confirm(`Delete "${job.displayName}"? This action cannot be undone.`);

@@ -1,4 +1,4 @@
-export async function customElementsReady(containerElement: Element): Promise<void> {
+export async function customElementsReady(containerElement: Element) {
   if (!(containerElement instanceof Element)) {
     throw new Error("The argument must be a DOM element.");
   }

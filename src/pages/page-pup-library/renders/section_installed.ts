@@ -66,18 +66,20 @@ export function renderSectionInstalledBody(this: LibraryView, ready: unknown, SK
     ${ready && hasItems('installed') ? html`
       <div class="pup-card-grid">
         ${repeat(this.installedList.getCurrentPageData(), (pkg: EnrichedPup) => `${pkg.state?.id}-${pkg.state?.version}`, (pkg: EnrichedPup) => {
+          const computed = pkg.computed;
+          const pupURL = computed && 'pupURL' in computed && typeof computed.pupURL === 'string' ? computed.pupURL : undefined;
           return html`
             <pup-card
               defaultIcon="box"
               pupId=${pkg.state?.id}
               pupName=${pkg.state?.manifest?.meta?.name}
               version=${pkg.state?.version}
-              logoBase64=${(pkg?.assets as { logos?: { mainLogoBase64?: string } } | null | undefined)?.logos?.mainLogoBase64}
+              logoBase64=${pkg?.assets?.logos?.mainLogoBase64}
               status=${pkg.computed?.statusLabel}
               ?sourceUnavailable=${pkg.computed?.unavailableFromSource || false}
               .upstreamVersions=${pkg.state?.manifest?.meta?.upstreamVersions || {}}
               href=${pkg.computed?.libraryURL}
-              gref=${(pkg.computed as { pupURL?: string } | null)?.pupURL}
+              gref=${pupURL}
               ?hasGui=${false}
             ></pup-card>
           `}

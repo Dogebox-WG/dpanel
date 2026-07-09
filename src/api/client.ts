@@ -60,7 +60,7 @@ export default class ApiClient extends ReactiveClass {
     }
   }
 
-  requestUpdate(): void {
+  requestUpdate() {
     super.requestUpdate();
     this.networkContext = this.context.store.networkContext;
   }
@@ -82,14 +82,21 @@ export default class ApiClient extends ReactiveClass {
   }
 
   async request<T = unknown>(path: string, config: RequestConfig): Promise<T> {
+    const data = await this.resolveResponse(path, config);
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    return data as T;
+  }
+
+  private async resolveResponse(path: string, config: RequestConfig): Promise<unknown> {
     // if config.body is an empty object, remove the property.
     // this is to prevent the browser from sending an empty body to the server
     // which is not what we want.
     let serialisedBody: string | undefined;
-    if (Object.keys((config.body as object) || {}).length === 0) {
-      delete config.body;
+    const body = config.body;
+    if (body && typeof body === "object" && Object.keys(body).length > 0) {
+      serialisedBody = JSON.stringify(body);
     } else {
-      serialisedBody = JSON.stringify(config.body);
+      delete config.body;
     }
 
     // Debug, if the dev has forceDelay, wait the delay time in seconds before making request
@@ -102,7 +109,7 @@ export default class ApiClient extends ReactiveClass {
     const useMocks = this.networkContext.useMocks;
     const specificMockEnabled = hasMock && useMocks && isMockEnabled(config.mock!.group, config.mock!.name, config.mock!.method, this.networkContext);
     if (useMocks && hasMock && specificMockEnabled) {
-      return await returnMockedResponse(path, config, this.networkContext) as T;
+      return await returnMockedResponse(path, config, this.networkContext);
     }
 
     // Otherwise, perform the fetch request
@@ -113,7 +120,8 @@ export default class ApiClient extends ReactiveClass {
       headers.Authorization = `Bearer ${this.networkContext.token}`;
     }
 
-    let response: Response, data: T;
+    let response: Response;
+    let data: unknown;
 
     try {
       response = await fetch(url, { ...config, body: serialisedBody, headers });
@@ -126,14 +134,14 @@ export default class ApiClient extends ReactiveClass {
     }
 
     if (response.status === 403) {
-      return { success: false, error: true, status: 403 } as T;
+      return { success: false, error: true, status: 403 };
     }
 
     if (response.status === 401) {
       if (config.noLogoutRedirect) {
-        return { success: false, error: true, status: 401 } as T;
+        return { success: false, error: true, status: 401 };
       } else {
-        return (window.location.href = window.location.origin + "/logout") as T;
+        return (window.location.href = window.location.origin + "/logout");
       }
     }
 
@@ -160,7 +168,7 @@ export default class ApiClient extends ReactiveClass {
     // if hook enabled, process and return adusted data.
     // if hook not enabled, return unmodified data.
     try {
-      return hookManager.process(config.hooks, data) as T;
+      return hookManager.process(config.hooks, data);
     } catch (hookProcessingErr) {
       console.warn("Hook failed to process with the following error:", hookProcessingErr);
       console.log("Returning unmodified data");
@@ -203,7 +211,7 @@ function isMockEnabled(
   name: string,
   method: string,
   networkContext: NetworkContext,
-): boolean {
+) {
   if (!group || !name || !method) {
     console.warn("Mock check was provided invalid group, name or method", { group, name, method });
     return false;

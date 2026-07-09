@@ -9,7 +9,7 @@
  * @param b - Second version (e.g., "1.2.3" or "v1.2.3")
  * @returns -1 if a < b, 0 if a == b, 1 if a > b
  */
-export function compareVersions(a: string | null | undefined, b: string | null | undefined): number {
+export function compareVersions(a: string | null | undefined, b: string | null | undefined) {
   if (!a || !b) return 0;
 
   // Remove 'v' prefix if present for consistent comparison
@@ -26,7 +26,7 @@ export function compareVersions(a: string | null | undefined, b: string | null |
  * @param versions - Array of version strings
  * @returns Sorted array (descending)
  */
-export function sortVersionsDescending(versions: string[]): string[] {
+export function sortVersionsDescending(versions: string[]) {
   return [...versions].sort((a, b) => compareVersions(b, a));
 }
 
@@ -35,7 +35,7 @@ export function sortVersionsDescending(versions: string[]): string[] {
  * @param versions - Array of version strings
  * @returns Sorted array (ascending)
  */
-export function sortVersionsAscending(versions: string[]): string[] {
+export function sortVersionsAscending(versions: string[]) {
   return [...versions].sort((a, b) => compareVersions(a, b));
 }
 
@@ -48,10 +48,15 @@ export function sortVersionsAscending(versions: string[]): string[] {
 export function sortByVersionDescending<T extends Record<string, unknown>>(
   items: T[],
   versionKey = "version",
-): T[] {
-  return [...items].sort((a, b) =>
-    compareVersions(b[versionKey] as string, a[versionKey] as string),
-  );
+) {
+  return [...items].sort((a, b) => {
+    const av = a[versionKey];
+    const bv = b[versionKey];
+    return compareVersions(
+      typeof bv === "string" ? bv : undefined,
+      typeof av === "string" ? av : undefined,
+    );
+  });
 }
 
 /**
@@ -63,8 +68,13 @@ export function sortByVersionDescending<T extends Record<string, unknown>>(
 export function sortByVersionAscending<T extends Record<string, unknown>>(
   items: T[],
   versionKey = "version",
-): T[] {
-  return [...items].sort((a, b) =>
-    compareVersions(a[versionKey] as string, b[versionKey] as string),
-  );
+) {
+  return [...items].sort((a, b) => {
+    const av = a[versionKey];
+    const bv = b[versionKey];
+    return compareVersions(
+      typeof av === "string" ? av : undefined,
+      typeof bv === "string" ? bv : undefined,
+    );
+  });
 }

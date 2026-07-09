@@ -24,11 +24,6 @@ interface CachedUpdates {
   lastChecked: string | null;
 }
 
-/**
- * Runtime guard for data crossing a boundary (localStorage or the API):
- * ensures the value is a plain object map rather than a string, array or
- * null.
- */
 function isObjectMap(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -51,7 +46,7 @@ class PupUpdates {
    * Initialize - loads cached data immediately from localStorage and backend
    * Does NOT trigger a backend refresh (backend handles periodic checks automatically)
    */
-  async init(): Promise<void> {
+  async init() {
     this._loadCachedUpdates();
     await this._loadSkippedFromBackend();
 
@@ -63,7 +58,7 @@ class PupUpdates {
    * Reconcile the update cache with actually installed pups
    * Removes entries for pups that are no longer installed
    */
-  _reconcileCache(): void {
+  _reconcileCache() {
     let updateInfo: UpdateInfoMap = store.pupUpdatesContext.updateInfo || {};
     // Ensure updateInfo is actually an object, not a string or other type
     if (!isObjectMap(updateInfo)) {
@@ -129,18 +124,18 @@ class PupUpdates {
    * Manually trigger cache reconciliation
    * Useful for debugging or recovering from sync issues
    */
-  reconcile(): void {
+  reconcile() {
     this._reconcileCache();
   }
 
   /**
    * Load cached update info from localStorage for immediate display on page load
    */
-  _loadCachedUpdates(): void {
+  _loadCachedUpdates() {
     try {
       const stored = localStorage.getItem(CACHED_UPDATES_STORAGE_KEY);
       if (stored) {
-        const cached = JSON.parse(stored) as CachedUpdates;
+        const cached: CachedUpdates = JSON.parse(stored);
 
         // Check cache version - invalidate if mismatch
         if (cached.version !== CACHE_VERSION) {
@@ -198,7 +193,7 @@ class PupUpdates {
   _saveCachedUpdates(
     updateInfo: UpdateInfoMap,
     lastChecked: string | null,
-  ): void {
+  ) {
     try {
       localStorage.setItem(
         CACHED_UPDATES_STORAGE_KEY,
@@ -219,7 +214,7 @@ class PupUpdates {
   /**
    * Clear cached updates from localStorage
    */
-  clearCachedUpdates(): void {
+  clearCachedUpdates() {
     localStorage.removeItem(CACHED_UPDATES_STORAGE_KEY);
   }
 
@@ -228,7 +223,7 @@ class PupUpdates {
    * Note: The backend handles periodic checking automatically.
    * This just fetches the current cached state.
    */
-  async refresh(): Promise<void> {
+  async refresh() {
     // Set loading state
     store.updateState({
       pupUpdatesContext: {
@@ -323,7 +318,7 @@ class PupUpdates {
     pupId: string,
     debug = false,
     updateInfoData: UpdateInfoMap | null = null,
-  ): boolean {
+  ) {
     // Get info from provided data or from store
     const info = updateInfoData
       ? this._getUpdateInfoFromData(updateInfoData, pupId)
@@ -371,7 +366,8 @@ class PupUpdates {
     try {
       const stored = localStorage.getItem(SKIPPED_UPDATES_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored) as SkippedUpdatesMap;
+        const parsed: SkippedUpdatesMap = JSON.parse(stored);
+        return parsed;
       }
     } catch (error) {
       console.error(
@@ -386,7 +382,7 @@ class PupUpdates {
    * Load skipped updates from backend (authoritative source)
    * Updates localStorage cache after loading
    */
-  async _loadSkippedFromBackend(): Promise<void> {
+  async _loadSkippedFromBackend() {
     try {
       const skipped = await getSkippedUpdates();
 
@@ -419,7 +415,7 @@ class PupUpdates {
   /**
    * Save skipped updates to localStorage (as cache)
    */
-  _saveSkippedToLocalStorage(): void {
+  _saveSkippedToLocalStorage() {
     try {
       localStorage.setItem(
         SKIPPED_UPDATES_STORAGE_KEY,
@@ -436,7 +432,7 @@ class PupUpdates {
    * Now persists to backend instead of just localStorage
    * @param pupId - The pup ID
    */
-  async skipUpdate(pupId: string): Promise<void> {
+  async skipUpdate(pupId: string) {
     const info = this.getUpdateInfo(pupId);
     if (!info || !info.updateAvailable) {
       return;
@@ -466,7 +462,7 @@ class PupUpdates {
    * @param latestVersion - The current latest version available
    * @returns True if updates are skipped and latestVersion <= skippedVersion
    */
-  isUpdateSkipped(pupId: string, latestVersion: string): boolean {
+  isUpdateSkipped(pupId: string, latestVersion: string) {
     const skippedVersion = this.skippedUpdates[pupId];
     if (!skippedVersion) {
       return false;
@@ -481,7 +477,7 @@ class PupUpdates {
    * @returns -1 if a < b, 0 if a == b, 1 if a > b
    * @deprecated Use compareVersions from /utils/version.js instead
    */
-  _compareVersions(a: string, b: string): number {
+  _compareVersions(a: string, b: string) {
     return compareVersions(a, b);
   }
 
@@ -490,7 +486,7 @@ class PupUpdates {
    * Now persists to backend instead of just localStorage
    * @param pupId - The pup ID
    */
-  async clearSkipped(pupId: string): Promise<void> {
+  async clearSkipped(pupId: string) {
     try {
       // Call backend API to clear the skip
       await apiClearSkippedUpdate(pupId);
@@ -513,7 +509,7 @@ class PupUpdates {
    * Clear update info for a pup (called when pup is uninstalled)
    * @param pupId - The pup ID
    */
-  clearUpdateInfo(pupId: string): void {
+  clearUpdateInfo(pupId: string) {
     let updateInfo: UpdateInfoMap = store.pupUpdatesContext.updateInfo || {};
     // Ensure updateInfo is actually an object, not a string or other type
     if (!isObjectMap(updateInfo)) {
@@ -573,7 +569,7 @@ class PupUpdates {
    * Update the total updates count in the store
    * (called after skip/unskip operations)
    */
-  _updateTotalCount(): void {
+  _updateTotalCount() {
     let updateInfo: UpdateInfoMap = store.pupUpdatesContext.updateInfo || {};
     // Ensure updateInfo is actually an object, not a string or other type
     if (!isObjectMap(updateInfo)) {
@@ -606,7 +602,7 @@ class PupUpdates {
   /**
    * @deprecated Use skipUpdate instead
    */
-  ignoreUpdate(pupId: string, version?: string): void {
+  ignoreUpdate(pupId: string, version?: string) {
     console.warn("ignoreUpdate is deprecated, use skipUpdate instead");
     this.skipUpdate(pupId);
   }
@@ -614,7 +610,7 @@ class PupUpdates {
   /**
    * @deprecated Use isUpdateSkipped instead
    */
-  isUpdateIgnored(pupId: string, version?: string): boolean {
+  isUpdateIgnored(pupId: string, version?: string) {
     const info = this.getUpdateInfo(pupId);
     return this.isUpdateSkipped(pupId, info?.latestVersion || version || "");
   }
@@ -622,7 +618,7 @@ class PupUpdates {
   /**
    * @deprecated Use clearSkipped instead
    */
-  clearIgnored(pupId: string): void {
+  clearIgnored(pupId: string) {
     this.clearSkipped(pupId);
   }
 }
@@ -634,7 +630,7 @@ export const pupUpdates = new PupUpdates();
 
 // Expose debug utilities to window
 if (typeof window !== "undefined") {
-  (window as unknown as Record<string, unknown>).pupUpdates = {
+  window.pupUpdates = {
     reconcile: () => {
       console.log("[Debug] Manually triggering cache reconciliation");
       pupUpdates.reconcile();

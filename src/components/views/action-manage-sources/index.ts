@@ -9,6 +9,13 @@ import "/components/common/dbx-modal/index.js";
 
 import type { SourceListItem } from "/controllers/package/index.js";
 
+/** Shoelace input exposing a string value as an element property. */
+interface SlValueEl extends HTMLElement { value: string }
+
+function isSlValueEl(target: EventTarget | null): target is SlValueEl {
+  return target instanceof HTMLElement;
+}
+
 export class SourceManagerView extends LitElement {
   declare _ready: boolean;
   declare _showSourceRemovalConfirmation: boolean;
@@ -165,6 +172,11 @@ export class SourceManagerView extends LitElement {
     event.stopPropagation();
   }
 
+  _handleAddSourceInput(e: Event) {
+    if (!isSlValueEl(e.target)) return;
+    this._addSourceInputURL = e.target.value;
+  }
+
 
   render() {
 
@@ -189,7 +201,7 @@ export class SourceManagerView extends LitElement {
             slot="custom"
             label="Enter source URL"
             placeholder="Eg: https://github.com/Dogebox-WG/pups.git"
-            @sl-input=${(e: Event) => this._addSourceInputURL = (e.target as HTMLInputElement).value }
+            @sl-input=${this._handleAddSourceInput}
             autofocus
             >
           </sl-input>

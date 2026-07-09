@@ -5,7 +5,12 @@ import { asyncTimeout } from '/utils/timeout.js'
 import type { PupSnapshot } from '../index.js';
 
 /** sl-button exposes loading/disabled as element properties. */
-type SlButtonEl = HTMLElement & { loading: boolean; disabled: boolean };
+interface SlButtonEl extends HTMLElement { loading: boolean; disabled: boolean }
+
+/** Narrow an event target to the sl-button that dispatched the event. */
+function isSlButton(target: EventTarget | null): target is SlButtonEl {
+  return target instanceof HTMLElement;
+}
 
 export function renderSummaryActions(this: PupSnapshot) {
 
@@ -81,9 +86,10 @@ export async function handleInstallAction (this: PupSnapshot, event: Event, acti
   event.stopPropagation();
   event.preventDefault();
   if (action !== 'install') return
-  if ((event.target as SlButtonEl).disabled) return;
+  if (isSlButton(event.target) && event.target.disabled) return;
 
-  let button = event.currentTarget as SlButtonEl;
+  if (!isSlButton(event.currentTarget)) return;
+  const button = event.currentTarget;
 
   button.loading = true;
   button.disabled = true;
@@ -112,13 +118,15 @@ export async function handleRunningAction (this: PupSnapshot, event: Event, acti
   event.preventDefault();
 
   // Prevent issuing another request if already loading
-  if ((event.target as SlButtonEl).disabled) return;
+  if (isSlButton(event.target) && event.target.disabled) return;
 
   // Placeholder for err flag.
   let actionFailed;
-  let button = event.currentTarget as SlButtonEl;
 
   // We know the target is a sl-button element (thx currentTarget)
+  if (!isSlButton(event.currentTarget)) return;
+  const button = event.currentTarget;
+
   // Set its loading property to true to beging the button spinner
   button.loading = true;
   button.disabled = true;
@@ -127,7 +135,7 @@ export async function handleRunningAction (this: PupSnapshot, event: Event, acti
   this.dispatchEvent(new CustomEvent('busy-start', { bubbles: true, composed: true }));
 
   // Set this pupSnapshot as having focus (reactive prop shadowing HTMLElement.focus)
-  (this as unknown as { focus: boolean }).focus = true;
+  Reflect.set(this, 'focus', true);
 
   try {
     
@@ -170,7 +178,7 @@ export async function handleRunningAction (this: PupSnapshot, event: Event, acti
 
     // Remove focus from this snapshot, after a small delay
     setTimeout(() => {
-      (this as unknown as { focus: boolean }).focus = false;
+      Reflect.set(this, 'focus', false);
     }, 500);
   }
 }
@@ -185,7 +193,8 @@ export function handleLaunchAction (this: PupSnapshot, event: Event) {
   event.stopPropagation();
   event.preventDefault();
 
-  const button = event.currentTarget as SlButtonEl;
+  if (!isSlButton(event.currentTarget)) return;
+  const button = event.currentTarget;
 
   // Start button spinner
   button.loading = true;

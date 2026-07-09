@@ -52,6 +52,7 @@ class IframeView extends LitElement {
   }
 
   getIframeManifest(): IframeManifest | undefined {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     return (this.context.store.pupContext as { manifest?: IframeManifest }).manifest;
   }
 

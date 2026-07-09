@@ -79,7 +79,7 @@ export function getInstallationStateProperties(
  * @param stateId - The installation state ID
  * @returns Whether the state is a loading state
  */
-export function isInstallationLoadingState(stateId: string | null | undefined): boolean {
+export function isInstallationLoadingState(stateId: string | null | undefined) {
   if (!stateId) {
     return false;
   }

@@ -250,14 +250,16 @@ class PageCustomiseOS extends LitElement {
   }
 
   handleContentChange(e: Event) {
-    const textarea = e.target as HTMLTextAreaElement;
+    const textarea = e.target;
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
     this._content = textarea.value;
     this.syncScroll(textarea);
     this.scheduleValidation();
   }
 
   handleScroll(e: Event) {
-    this.syncScroll(e.target as HTMLTextAreaElement);
+    const textarea = e.target;
+    if (textarea instanceof HTMLTextAreaElement) this.syncScroll(textarea);
   }
 
   syncScroll(textarea: HTMLTextAreaElement) {
@@ -332,7 +334,8 @@ class PageCustomiseOS extends LitElement {
     // Handle Tab key for indentation
     if (e.key === 'Tab') {
       e.preventDefault();
-      const textarea = e.target as HTMLTextAreaElement;
+      const textarea = e.target;
+      if (!(textarea instanceof HTMLTextAreaElement)) return;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       

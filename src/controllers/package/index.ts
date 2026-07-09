@@ -1,5 +1,7 @@
 import { postConfig } from "/api/config/config.js";
 import { pickAndPerformPupAction } from "/api/action/action.js";
+import type { InstallPupRequest } from "/api/action/action.js";
+import type { SetProviderRequest } from "/api/providers/providers.js";
 import { isActiveJobStatus } from "/controllers/jobs/status.js";
 import { store } from "/state/store.js";
 import type { PupState, PupStats, PupAsset } from "/types/pup";
@@ -7,7 +9,6 @@ import type {
   EnrichedPup,
   PupComputedVals,
   PupDefinition,
-  SourceData,
   SourceMap,
 } from "/types/pup-model";
 import type { ActionProgress, JobRecord } from "/types/jobs";
@@ -92,14 +93,14 @@ class PkgController {
   }
 
   // Register an observer
-  addObserver(observer: PkgObserver): void {
+  addObserver(observer: PkgObserver) {
     if (!this.observers.includes(observer)) {
       this.observers.push(observer);
     }
   }
 
   // Remove an observer
-  removeObserver(observer: PkgObserver): void {
+  removeObserver(observer: PkgObserver) {
     const index = this.observers.indexOf(observer);
     if (index > -1) {
       this.observers.splice(index, 1);
@@ -107,7 +108,7 @@ class PkgController {
   }
 
   // Notify all registered observers of a state change
-  notify(pupId?: string | null, options: Record<string, unknown> = {}): void {
+  notify(pupId?: string | null, options: Record<string, unknown> = {}) {
     for (const observer of this.observers) {
       if (!pupId) {
         observer.requestUpdate(options);
@@ -121,7 +122,7 @@ class PkgController {
     }
   }
 
-  setData(bootstrapResponseV2: BootstrapResponse, meta: ChangeMeta = {}): void {
+  setData(bootstrapResponseV2: BootstrapResponse, meta: ChangeMeta = {}) {
     const { states, stats, assets, sidebarPreferences } = bootstrapResponseV2;
     this.handleBootstrapResponse(states, stats, assets, { ...meta, ts: bootstrapResponseV2?.ts });
 
@@ -137,7 +138,7 @@ class PkgController {
     this.notify();
   }
 
-  setStoreData(storeListingRes: SourceMap): void {
+  setStoreData(storeListingRes: SourceMap) {
     this.handleSourcesResponse(storeListingRes);
     this.notify();
   }
@@ -147,7 +148,7 @@ class PkgController {
     stats: Record<string, PupStats> | null | undefined,
     assets: Record<string, PupAsset> | null | undefined,
     meta: ChangeMeta = {},
-  ): void {
+  ) {
     const incomingStates = states || {};
     const incomingStats = stats || {};
     const incomingAssets = assets || {};
@@ -164,7 +165,7 @@ class PkgController {
     this.assetIndex = { ...incomingAssets };
     this.pups = [];
 
-    const shouldPreserve = (pupId: string): boolean => {
+    const shouldPreserve = (pupId: string) => {
       const wsTs = this.lastWsTsByPupId?.[pupId] || 0;
       return bootstrapTs > 0 && wsTs > bootstrapTs;
     };
@@ -200,10 +201,9 @@ class PkgController {
           stats: this.statsIndex[stateKey],
           assets: this.assetIndex[stateKey],
         });
-        this.pups[this.pups.length - 1].computed = {
-          ...(this.pups[this.pups.length - 1].computed || {}),
-          ...this.determineCalculatedVals(this.pups[this.pups.length - 1]),
-        } as PupComputedVals;
+        this.pups[this.pups.length - 1].computed =
+          this.determineCalculatedVals(this.pups[this.pups.length - 1]) ??
+          this.pups[this.pups.length - 1].computed;
       }
 
       if (!existing) {
@@ -255,7 +255,7 @@ class PkgController {
     return out;
   }
 
-  isPupUnavailableFromSource(pup: EnrichedPup): boolean {
+  isPupUnavailableFromSource(pup: EnrichedPup) {
     if (!this.hasLoadedSources) return false;
 
     const sourceId = pup?.state?.source?.id;
@@ -283,7 +283,7 @@ class PkgController {
     return !sourceData.pups?.[pupName];
   }
 
-  handleSourcesResponse(sources: SourceMap): void {
+  handleSourcesResponse(sources: SourceMap) {
     this.sourcesIndex = sources;
     this.hasLoadedSources = true;
 
@@ -333,17 +333,16 @@ class PkgController {
             pup?.def?.key === pkgName)
           );
 
+          // Avoid adding the .pups[] property of the source to a specific pups def.
+          const { pups: _sourcePups, ...sourceWithoutPups } = sourceData;
           const def: PupDefinition = {
             ...pupDefinitionData,
             key: pkgName,
             source: {
               id: sourceId,
-              ...sourceData,
+              ...sourceWithoutPups,
             },
           };
-
-          // Avoid adding the .pups[] property of the source to a specific pups def.
-          delete (def.source as SourceData).pups;
 
           // Update it in place.
           const found = foundIndex >= 0;
@@ -352,10 +351,9 @@ class PkgController {
               ...this.pups[foundIndex],
               def,
             };
-            this.pups[foundIndex].computed = {
-              ...this.pups[foundIndex].computed,
-              ...this.determineCalculatedVals(this.pups[foundIndex]),
-            } as PupComputedVals;
+            this.pups[foundIndex].computed =
+              this.determineCalculatedVals(this.pups[foundIndex]) ??
+              this.pups[foundIndex].computed;
           }
 
           // Not found. create and push to pups array.
@@ -407,7 +405,7 @@ class PkgController {
     }
   }
 
-  removePupsBySourceId(sourceId: string): void {
+  removePupsBySourceId(sourceId: string) {
     this.pups = this.pups.filter((p) => p?.def?.source?.id !== sourceId);
     if (this.sourcesIndex[sourceId]) {
       delete this.sourcesIndex[sourceId];
@@ -415,7 +413,7 @@ class PkgController {
     this.notify();
   }
 
-  removePupById(pupId: string | undefined, meta: ChangeMeta = {}): void {
+  removePupById(pupId: string | undefined, meta: ChangeMeta = {}) {
     if (!pupId) return;
     delete this.stateIndex[pupId];
     delete this.statsIndex[pupId];
@@ -432,7 +430,7 @@ class PkgController {
     pupId: string,
     timeout?: number,
     action?: string,
-  ): void {
+  ) {
     if (!txn || !callbacks || !actionType || !pupId) {
       console.warn(
         `
@@ -473,7 +471,7 @@ class PkgController {
     });
   }
 
-  resolveAction(txn: string, payload: Change<"action", unknown>, meta: ChangeMeta = {}): void {
+  resolveAction(txn: string, payload: Change<"action", unknown>, meta: ChangeMeta = {}) {
     const foundActionIndex = this.actions.findIndex(
       (action) => action.txn === txn,
     );
@@ -499,14 +497,18 @@ class PkgController {
 
     switch (foundAction.actionType) {
       case "UPDATE-PUP":
-        this.updatePupModel(foundAction.pupId, payload.update as PupState, meta);
+        if (isPupState(payload.update)) {
+          this.updatePupModel(foundAction.pupId, payload.update, meta);
+        }
         break;
       case "PUP-ACTION":
         // TODO.
         if (foundAction.pupId === "--") {
           return;
         }
-        this.updatePupModel(foundAction.pupId, payload.update as PupState, meta);
+        if (isPupState(payload.update)) {
+          this.updatePupModel(foundAction.pupId, payload.update, meta);
+        }
         break;
     }
 
@@ -521,7 +523,7 @@ class PkgController {
     }
   }
 
-  updatePupStatsModel(pupId: string, newPupStatsData: PupStats, meta: ChangeMeta = {}): void {
+  updatePupStatsModel(pupId: string, newPupStatsData: PupStats, meta: ChangeMeta = {}) {
     if (this.stateIndex[newPupStatsData.id]) {
       // Update index data in place.
       this.statsIndex[newPupStatsData.id] = newPupStatsData;
@@ -548,7 +550,7 @@ class PkgController {
     }
   }
 
-  updatePupModel(pupId: string, newPupStateData: PupState, meta: ChangeMeta = {}): void {
+  updatePupModel(pupId: string, newPupStateData: PupState, meta: ChangeMeta = {}) {
     if (!isValidState(newPupStateData)) {
       console.warn("Validation error. Invalid pupState structure");
       return;
@@ -576,7 +578,7 @@ class PkgController {
       // the user has called /bootstrap.
       const pup: EnrichedPup = {
         computed: null,
-        def: (this.sourcesIndex[newPupStateData.source.id]?.pups?.[newPupStateData.manifest.meta.name] as PupDefinition | undefined) || null,
+        def: this.sourcesIndex[newPupStateData.source.id]?.pups?.[newPupStateData.manifest.meta.name] || null,
         state: newPupStateData,
         assets: null,
         stats: this.statsIndex[newPupStateData.id] || null,
@@ -639,7 +641,7 @@ class PkgController {
     pupId: string,
     action: string,
     callbacks: ActionCallbacks,
-    body?: unknown,
+    body?: InstallPupRequest | SetProviderRequest,
   ): Promise<boolean> {
     if (!pupId || !action || !callbacks) {
       console.warn(
@@ -677,7 +679,7 @@ class PkgController {
     return true;
   }
 
-  transactionTimeoutChecker(): void {
+  transactionTimeoutChecker() {
     setInterval(() => {
       if (this.actions.length === 0) return;
       this.actions.forEach((a) => {
@@ -753,7 +755,7 @@ class PkgController {
     return null;
   }
 
-  recomputeAllDerivedValues(): void {
+  recomputeAllDerivedValues() {
     // Re-derive computed values for all pups (called when jobs are loaded after page refresh)
     for (const pup of this.pups) {
       if (pup.state) {
@@ -784,7 +786,7 @@ class PkgController {
     });
   }
 
-  ingestProgressUpdate(data: Change<"progress", ActionProgress>): void {
+  ingestProgressUpdate(data: Change<"progress", ActionProgress>) {
     // Two types of updates:
     // those with a PupID (obviously relating to that Pup
     // those without (related to system)
@@ -804,7 +806,7 @@ class PkgController {
       }
     }*/
 
-    const update = data?.update as ProgressUpdate | undefined;
+    const update: ProgressUpdate | undefined = data?.update;
     // Backend is inconsistent in its use of pupID vs PupID vs pupId, and
     // system actions marshal pupID as an empty string, so treat any falsy id
     // as a system update.
@@ -843,9 +845,13 @@ function getInstance(): PkgController {
 
 export const pkgController = getInstance();
 
-function isValidState(pupState: PupState | null | undefined): boolean {
+function isValidState(pupState: PupState | null | undefined) {
   // TODO. PupState validity check
   return !!(pupState && pupState.manifest);
+}
+
+function isPupState(value: unknown): value is PupState {
+  return typeof value === "object" && value !== null && "manifest" in value;
 }
 
 function determineInstallationId(state: PupState | null): StatusDescriptor {

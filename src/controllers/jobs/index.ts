@@ -99,18 +99,18 @@ class JobsController {
     };
   }
 
-  isSystemUpdateJobPending(job: Partial<JobRecord> | null | undefined): boolean {
+  isSystemUpdateJobPending(job: Partial<JobRecord> | null | undefined) {
     const action = (job?.action || "").toLowerCase();
     const status = (job?.status || "").toLowerCase();
 
     return action === "system-update" && isActiveJobStatus(status);
   }
 
-  getDisplayStatus(status: string | undefined): string {
+  getDisplayStatus(status: string | undefined) {
     return ((status || "").toLowerCase() || "active").replace(/_/g, " ");
   }
 
-  hydrateFromBootstrap(setupFacts: Partial<BootstrapFacts> = {}): void {
+  hydrateFromBootstrap(setupFacts: Partial<BootstrapFacts> = {}) {
     const jobId = setupFacts?.activeSystemUpdateJobId || "";
     const status = (
       setupFacts?.activeSystemUpdateStatus || "in_progress"
@@ -127,19 +127,19 @@ class JobsController {
     }
   }
 
-  addObserver(observer: JobsObserver): void {
+  addObserver(observer: JobsObserver) {
     if (observer && typeof observer === "object") {
       this.observers.add(observer);
     }
   }
 
-  removeObserver(observer: JobsObserver): void {
+  removeObserver(observer: JobsObserver) {
     if (observer && this.observers.has(observer)) {
       this.observers.delete(observer);
     }
   }
 
-  notifyObservers(): void {
+  notifyObservers() {
     for (const observer of this.observers) {
       if (typeof observer?.onJobsUpdate === "function") {
         observer.onJobsUpdate(this.state);
@@ -147,11 +147,11 @@ class JobsController {
     }
   }
 
-  isSystemUpdateLocked(): boolean {
+  isSystemUpdateLocked() {
     return this.state.isSystemUpdateLocked;
   }
 
-  getActiveSystemUpdateStatus(): string {
+  getActiveSystemUpdateStatus() {
     return this.state.systemUpdateStatus;
   }
 

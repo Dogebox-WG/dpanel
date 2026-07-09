@@ -18,6 +18,19 @@ interface LogPage {
   hasMoreOlderLogs: boolean;
 }
 
+/** Object-form log socket payloads carry the line under message/data. */
+interface LogSocketMessage {
+  message?: string;
+  data?: string;
+}
+
+/** Shoelace checkbox exposing a boolean checked state as an element property. */
+interface SlCheckedEl extends HTMLElement { checked: boolean }
+
+function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
+  return target instanceof HTMLElement;
+}
+
 class LogViewer extends LitElement {
   declare autostart: boolean;
   declare logs: string[];
@@ -191,7 +204,8 @@ class LogViewer extends LitElement {
 
   handleFollowChange(e: Event) {
     e.stopPropagation(); // Prevent event from bubbling up to parent
-    this.follow = (e.target as HTMLInputElement).checked;
+    if (!isSlCheckedEl(e.target)) return;
+    this.follow = e.target.checked;
     if (this.follow) {
       const logContainer = this.shadowRoot?.querySelector('#LogContainer');
       if (logContainer) {
@@ -463,7 +477,7 @@ class LogViewer extends LitElement {
           logMessage = event.data;
         }
       } else if (typeof event.data === 'object') {
-        const dataObj = event.data as { message?: string; data?: string };
+        const dataObj: LogSocketMessage = event.data;
         logMessage = dataObj.message || dataObj.data || JSON.stringify(event.data);
       }
       
@@ -587,7 +601,7 @@ class LogViewer extends LitElement {
   }
 
   _onTransitionEnd(e: Event) {
-    if (e.target !== this || (e as TransitionEvent).propertyName !== 'max-height' || !this.closing) return;
+    if (e.target !== this || !(e instanceof TransitionEvent) || e.propertyName !== 'max-height' || !this.closing) return;
     this.dispatchEvent(new CustomEvent('log-viewer-closed', {
       bubbles: true,
       composed: true,

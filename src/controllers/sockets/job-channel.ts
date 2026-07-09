@@ -4,6 +4,20 @@ import type { MockJobWebSocket } from "/api/jobs/jobs.mocks.js";
 import type { JobChannelMessage } from "/types/websocket";
 import type { JobRecord } from "/types/jobs";
 
+/** MockJobWebSocket carries a `connected` flag that the real WebSocket lacks. */
+function isMockSocket(
+  ws: WebSocket | MockJobWebSocket | null,
+): ws is MockJobWebSocket {
+  return ws !== null && "connected" in ws;
+}
+
+/** A live socket that is not the mock is the real browser WebSocket. */
+function isRealSocket(
+  ws: WebSocket | MockJobWebSocket | null,
+): ws is WebSocket {
+  return ws !== null && !("connected" in ws);
+}
+
 /**
  * Job WebSocket Channel
  * Handles real-time job updates via WebSocket
@@ -24,7 +38,7 @@ class JobWebSocketService {
     this.backendAvailable = false;
   }
 
-  connect(): void {
+  connect() {
     const { useMocks, wsApiBaseUrl } = store.networkContext;
     this.isMockMode = Boolean(useMocks);
 
@@ -35,14 +49,15 @@ class JobWebSocketService {
     }
 
     if (this.ws) {
-      if (this.isMockMode && (this.ws as MockJobWebSocket).connected) {
+      if (this.isMockMode && isMockSocket(this.ws) && this.ws.connected) {
         return;
       }
 
       if (
         !this.isMockMode &&
-        ((this.ws as WebSocket).readyState === WebSocket.OPEN ||
-          (this.ws as WebSocket).readyState === WebSocket.CONNECTING)
+        isRealSocket(this.ws) &&
+        (this.ws.readyState === WebSocket.OPEN ||
+          this.ws.readyState === WebSocket.CONNECTING)
       ) {
         return;
       }
@@ -69,8 +84,9 @@ class JobWebSocketService {
     }
   }
 
-  setupMockHandlers(): void {
-    const ws = this.ws as MockJobWebSocket;
+  setupMockHandlers() {
+    if (!isMockSocket(this.ws)) return;
+    const ws = this.ws;
 
     ws.on("open", () => {
       this.reconnectAttempts = 0;
@@ -78,7 +94,7 @@ class JobWebSocketService {
 
     ws.on("message", (event) => {
       // The mock always attaches a payload to "message" events.
-      const message = JSON.parse(event!.data) as JobChannelMessage;
+      const message: JobChannelMessage = JSON.parse(event!.data);
       this.handleMessage(message);
     });
 
@@ -89,8 +105,9 @@ class JobWebSocketService {
     ws.connect();
   }
 
-  setupRealHandlers(): void {
-    const ws = this.ws as WebSocket;
+  setupRealHandlers() {
+    if (!isRealSocket(this.ws)) return;
+    const ws = this.ws;
 
     ws.onopen = () => {
       this.reconnectAttempts = 0;
@@ -99,7 +116,7 @@ class JobWebSocketService {
 
     ws.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data) as JobChannelMessage;
+        const message: JobChannelMessage = JSON.parse(event.data);
         this.handleMessage(message);
       } catch (err) {
         console.error("[Activity WS] Failed to parse message:", err);
@@ -123,7 +140,7 @@ class JobWebSocketService {
     };
   }
 
-  handleMessage(message: JobChannelMessage): void {
+  handleMessage(message: JobChannelMessage) {
     const { type } = message;
 
     switch (type) {
@@ -151,7 +168,7 @@ class JobWebSocketService {
     }
   }
 
-  handleInitialJobs(jobs: JobRecord[]): void {
+  handleInitialJobs(jobs: JobRecord[]) {
     store.updateState({
       jobsContext: {
         jobs: Array.isArray(jobs) ? jobs : [],
@@ -167,7 +184,7 @@ class JobWebSocketService {
     });
   }
 
-  handleJobCreated(job: JobRecord): void {
+  handleJobCreated(job: JobRecord) {
     const existingJobs = Array.isArray(store.jobsContext.jobs) ? store.jobsContext.jobs : [];
     const existingIndex = existingJobs.findIndex((item) => item.id === job?.id);
     const jobs = existingIndex === -1
@@ -178,7 +195,7 @@ class JobWebSocketService {
     });
   }
 
-  handleJobUpdated(job: JobRecord): void {
+  handleJobUpdated(job: JobRecord) {
     const existingJobs = Array.isArray(store.jobsContext.jobs) ? store.jobsContext.jobs : [];
     const hasExistingJob = existingJobs.some((item) => item.id === job?.id);
     const jobs = hasExistingJob
@@ -189,14 +206,14 @@ class JobWebSocketService {
     });
   }
 
-  handleJobDeleted(job: JobRecord): void {
+  handleJobDeleted(job: JobRecord) {
     const jobs = store.jobsContext.jobs.filter((j) => j.id !== job?.id);
     store.updateState({
       jobsContext: { jobs },
     });
   }
 
-  attemptReconnect(): void {
+  attemptReconnect() {
     if (this.isMockMode) {
       // Don't reconnect in mock mode
       return;
@@ -212,7 +229,7 @@ class JobWebSocketService {
     setTimeout(() => this.connect(), delay);
   }
 
-  disconnect(): void {
+  disconnect() {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -220,9 +237,9 @@ class JobWebSocketService {
   }
 
   // Helper for dev tools - create mock job
-  createMockJob(displayName?: string): void {
-    if (this.isMockMode && this.ws) {
-      (this.ws as MockJobWebSocket).simulateJobCreated(displayName);
+  createMockJob(displayName?: string) {
+    if (this.isMockMode && isMockSocket(this.ws)) {
+      this.ws.simulateJobCreated(displayName);
     } else {
       console.warn("[Job WS] Can only create mock jobs in mock mode");
     }
@@ -235,5 +252,5 @@ export const jobWebSocket = new JobWebSocketService();
 
 // Expose to window for dev tools
 if (typeof window !== "undefined") {
-  (window as unknown as Record<string, unknown>).__jobWS = jobWebSocket;
+  window.__jobWS = jobWebSocket;
 }

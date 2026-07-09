@@ -80,9 +80,13 @@ export function renderNav(this: DPanelApp, CURPATH: string) {
                 ${pinnedPups.map(pup => {
                   const pupId = pup.state!.id;
                   const name = pup.state?.manifest?.meta?.name || 'Unknown';
-                  const assets = pup.assets as { logos?: { mainLogoBase64?: string }; iconColor?: string } | null | undefined;
+                  const assets = pup.assets;
                   const logo = assets?.logos?.mainLogoBase64;
-                  const iconColor = assets?.iconColor || "hsl(220 10% 65%)";
+                  // iconColor is a runtime-only extra not present on PupAsset.
+                  const iconColor =
+                    (assets && "iconColor" in assets && typeof assets.iconColor === "string"
+                      ? assets.iconColor
+                      : "") || "hsl(220 10% 65%)";
                   const isActive = CURPATH.includes(`/pups/${pupId}`);
                   
                   return html`
@@ -111,10 +115,11 @@ export function renderNav(this: DPanelApp, CURPATH: string) {
 
 export function handleExpandableMenuClick(this: DPanelApp, e: Event) {
   e.preventDefault();
-  const sourceEl = e.currentTarget as HTMLElement;
+  const sourceEl = e.currentTarget;
+  if (!(sourceEl instanceof HTMLElement)) return;
   const targetEl = this.shadowRoot?.querySelector(
     `.sub-menu-list[for=${sourceEl.getAttribute("name")}]`,
   );
-  (sourceEl.parentNode as HTMLElement)?.classList.toggle("expand");
+  sourceEl.parentElement?.classList.toggle("expand");
   targetEl?.classList.toggle("hidden");
 }

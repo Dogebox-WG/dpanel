@@ -20,11 +20,18 @@ export async function doBootstrap() {
   return pkgController.setData(await getBootstrapV2());
 }
 
+interface VersionPayload {
+  version?: { release?: string };
+}
+
+function hasVersion(payload: unknown): payload is VersionPayload {
+  return !!payload && typeof payload === "object";
+}
+
 // Response hooks
 const bumpVersionHook: ResponseHook = {
   'bump-version': (payload) => {
-    const data = payload as { version?: { release?: string } } | null;
-    if (data?.version) { data.version.release = "v.9000" }
+    if (hasVersion(payload) && payload.version) { payload.version.release = "v.9000" }
     return payload
   }
 }

@@ -56,19 +56,19 @@ export function generateStatesV2(
   }, {});
 }
 
-function generateRandomIp(): string {
+function generateRandomIp() {
   return `10.0.0.${Math.floor(Math.random() * 255)}`;
 }
 
-function generateSourceLocation(manifest: MockManifest): string {
+function generateSourceLocation(manifest: MockManifest) {
   return `https://github.com/flibble/${manifest.meta.name.toLowerCase().replace(/\s+/g, '-')}.git`;
 }
 
-function generateSourceId(manifest: MockManifest): string {
+function generateSourceId(manifest: MockManifest) {
   return manifest.meta.name.toLowerCase().replace(/\s+/g, '-') + '-source';
 }
 
-function generateSourceName(manifest: MockManifest): string {
+function generateSourceName(manifest: MockManifest) {
   return manifest.meta.name.toLowerCase().replace(/\s+/g, '');
 }
 

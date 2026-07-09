@@ -11,12 +11,20 @@ function useMock<T>(mockFn: () => Promise<T>, realFn: () => Promise<T>, fnName?:
   return useMocks ? mockFn : realFn;
 }
 
+// Variant for endpoints whose mock intentionally returns a dev-shaped payload
+// (e.g. Date objects where the wire format uses strings).
+function useLooseMock<T>(mockFn: () => Promise<unknown>, realFn: () => Promise<T>, fnName?: string): () => Promise<T> {
+  const useMocks = store.networkContext.useMocks;
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return useMocks ? (mockFn as () => Promise<T>) : realFn;
+}
+
 // GET all pup updates
 export async function getAllPupUpdates(): Promise<Record<string, PupUpdateInfo>> {
-  const result = await useMock(
+  const result = await useLooseMock(
     // The mock returns Date objects where the wire format uses strings;
     // downstream consumers pass both through new Date().
-    () => mockPupUpdatesApi.getAllPupUpdates() as unknown as Promise<Record<string, PupUpdateInfo>>,
+    () => mockPupUpdatesApi.getAllPupUpdates(),
     () => client.get<Record<string, PupUpdateInfo>>('/pup/updates'),
     'getAllPupUpdates'
   )();
@@ -25,8 +33,8 @@ export async function getAllPupUpdates(): Promise<Record<string, PupUpdateInfo>>
 
 // GET updates for specific pup
 export async function getPupUpdate(pupId: string): Promise<PupUpdateInfo> {
-  const result = await useMock(
-    () => mockPupUpdatesApi.getPupUpdate(pupId) as unknown as Promise<PupUpdateInfo>,
+  const result = await useLooseMock(
+    () => mockPupUpdatesApi.getPupUpdate(pupId),
     () => client.get<PupUpdateInfo>(`/pup/${pupId}/updates`),
     'getPupUpdate'
   )();
@@ -66,8 +74,8 @@ export interface PreviousVersionResponse {
 
 // Rollback pup to previous version
 export async function rollbackPup(pupId: string) {
-  const result = await useMock(
-    () => mockPupUpdatesApi.rollbackPup(pupId) as Promise<{ jobId?: string }>,
+  const result = await useLooseMock(
+    () => mockPupUpdatesApi.rollbackPup(pupId),
     () => client.post<{ jobId?: string }>(`/pup/${pupId}/rollback`),
     'rollbackPup'
   )();
@@ -76,9 +84,9 @@ export async function rollbackPup(pupId: string) {
 
 // Get previous version info (for rollback)
 export async function getPreviousVersion(pupId: string) {
-  const result = await useMock(
+  const result = await useLooseMock(
     // The mock returns a snapshot object rather than the wire shape.
-    () => mockPupUpdatesApi.getPreviousVersion(pupId) as unknown as Promise<PreviousVersionResponse>,
+    () => mockPupUpdatesApi.getPreviousVersion(pupId),
     () => client.get<PreviousVersionResponse>(`/pup/${pupId}/previous-version`),
     'getPreviousVersion'
   )();

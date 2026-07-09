@@ -2,6 +2,23 @@ import { generateManifests } from "/api/manifest/manifest.mocks.js";
 import type { LegacyMockManifest, LegacyMockManifests } from "/api/manifest/manifest.mocks.js";
 import type { MockDescriptor } from "../client.js";
 
+/** Value union produced by generateValue for a mock config field. */
+type MockConfigValue = string | boolean | number | undefined;
+
+/** Legacy pup-state shape produced by the bootstrap mock. */
+interface MockPupState {
+  id: string;
+  package: string;
+  source: string;
+  status: string;
+  stats: ReturnType<typeof generateRandomStats>;
+  config: Record<string, MockConfigValue>;
+  installation: string;
+  enabled: boolean;
+  needs_deps: boolean;
+  needs_config: boolean;
+}
+
 export function generateBootstrap() {
   const manifests = generateManifests();
   const states = generateStates(manifests);
@@ -11,9 +28,9 @@ export function generateBootstrap() {
   }
 }
 
-function generateStates(manifests: LegacyMockManifests): Record<string, unknown> {
+function generateStates(manifests: LegacyMockManifests): Record<string, MockPupState> {
   const sources = [...manifests.local.available, ...(manifests.internal?.available ?? [])]
-  return sources.reduce((out: Record<string, unknown>, p) => {
+  return sources.reduce((out: Record<string, MockPupState>, p) => {
     if (['Core', 'Dogeboxd', 'Map', 'Identity', 'Tipjar', 'ShibeShop'].includes(p.package)) {
       out[p.package] = {
         id: p.id,
@@ -32,8 +49,8 @@ function generateStates(manifests: LegacyMockManifests): Record<string, unknown>
   }, {});
 }
 
-function generateConfigOptions(configManifest: LegacyMockManifest["command"]["config"]): Record<string, unknown> {
-  return configManifest.sections.reduce((result: Record<string, unknown>, section) => {
+function generateConfigOptions(configManifest: LegacyMockManifest["command"]["config"]): Record<string, MockConfigValue> {
+  return configManifest.sections.reduce((result: Record<string, MockConfigValue>, section) => {
     section.fields.forEach(field => {
       result[String(field.name)] = generateValue(String(field.name));
     });

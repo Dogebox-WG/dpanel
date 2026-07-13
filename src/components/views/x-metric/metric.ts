@@ -100,9 +100,9 @@ class MetricView extends LitElement {
     :host {
       position: relative;
       display: flex;
-      position: relative;
       flex-direction: column;
       align-items: start;
+      flex: 1 1 auto;
       border-radius: 4px;
       padding: var(--metric-padding, 1em);
       border: 1px solid #1d5145;
@@ -124,7 +124,7 @@ class MetricView extends LitElement {
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      flex: 0 0 auto;
+      flex: 1 1 auto;
       min-height: 0;
       height: auto;
       background: transparent;
@@ -134,12 +134,11 @@ class MetricView extends LitElement {
     }
     .value-container.chart {
       align-items: stretch;
-      flex: 1 1 auto;
       min-height: var(--metric-sparkline-height, 160px);
     }
 
     .value-container.value {
-      min-height: auto;
+      min-height: var(--metric-sparkline-height, auto);
     }
 
     .value-container > sparkline-chart-v2 {

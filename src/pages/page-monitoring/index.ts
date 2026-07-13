@@ -33,6 +33,13 @@ interface SystemStatCard {
   detail: string | null;
 }
 
+interface DisplayMetric {
+  name: string;
+  label: string;
+  type: string;
+  values: unknown[];
+}
+
 // Service definitions for display purposes
 const SERVICE_DEFINITIONS: Record<string, { name?: string; icon: string; description?: string }> = {
   tailscale: { name: 'Tailscale', icon: 'hdd-network', description: 'Secure network access' }
@@ -761,24 +768,23 @@ class MonitoringPage extends LitElement {
     // Filter and sort metrics based on visibleMetrics array
     // Use stats metrics if available, otherwise create placeholders from manifest
     const metricsToShow = visibleMetrics
-      .map(metricName => {
-        // If pup is running, use actual stats
-        if (isRunning && pup.stats?.metrics) {
-          return pup.stats.metrics.find(m => m.name === metricName);
-        }
-        // Otherwise, create placeholder from manifest
+      .map((metricName): DisplayMetric | null => {
         const manifestMetric = manifestMetrics.find(m => m.name === metricName);
-        if (manifestMetric) {
-          return {
-            name: manifestMetric.name,
-            label: manifestMetric.label,
-            type: manifestMetric.type,
-            values: new Array<unknown>()
-          };
-        }
-        return null;
+        const statsMetric = isRunning
+          ? pup.stats?.metrics.find(m => m.name === metricName)
+          : undefined;
+        const metric = statsMetric ?? manifestMetric;
+
+        if (!metric) return null;
+
+        return {
+          name: metric.name,
+          label: statsMetric?.label || manifestMetric?.label || manifestMetric?.name || metric.name,
+          type: metric.type,
+          values: statsMetric?.values ?? []
+        };
       })
-      .filter((m): m is NonNullable<typeof m> => Boolean(m));
+      .filter((metric): metric is DisplayMetric => metric !== null);
 
     if (metricsToShow.length === 0) return nothing;
 
@@ -807,12 +813,17 @@ class MonitoringPage extends LitElement {
         </div>
         <div class="metrics-container ${hasMany ? 'scrollable' : ''}">
           ${metricsToShow.map(metric => html`
-            <x-metric .metric=${{
-              name: metric.name,
-              label: metric.label,
-              type: metric.type,
-              values: metric.values || []
-            }}></x-metric>
+            <div class="metric-container">
+              <div class="metric-label" title=${metric.label || metric.name || ''}>
+                ${metric.label ?? metric.name ?? ''}
+              </div>
+              <x-metric .metric=${{
+                name: metric.name,
+                label: metric.label,
+                type: metric.type,
+                values: metric.values || []
+              }}></x-metric>
+            </div>
           `)}
         </div>
         ${this.editMode ? html`
@@ -1420,11 +1431,27 @@ class MonitoringPage extends LitElement {
       flex-wrap: wrap;
     }
 
-    .metrics-container x-metric {
+    .metrics-container .metric-container {
+      display: flex;
+      flex-direction: column;
       flex: 0 1 auto;
+      width: 200px;
       min-width: 0;
-      max-width: 200px;
-      height: auto;
+    }
+
+    .metrics-container .metric-label {
+      font-size: var(--metric-label-size, 0.8rem);
+      font-weight: 600;
+      color: #07ffae;
+      margin: 0 0 0.35rem 0;
+      user-select: text;
+      flex: 0 0 auto;
+    }
+
+    .metrics-container x-metric {
+      flex: 1 1 auto;
+      width: 100%;
+      min-width: 0;
       --metric-padding: 0.5em;
       --metric-sparkline-height: 60px;
       --metric-label-size: 0.8rem;
@@ -1442,7 +1469,7 @@ class MonitoringPage extends LitElement {
       padding-bottom: 1.5rem;
     }
 
-    .metrics-container.scrollable x-metric {
+    .metrics-container.scrollable .metric-container {
       scroll-snap-align: start;
       flex-shrink: 0;
     }

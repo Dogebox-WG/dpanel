@@ -5,9 +5,9 @@ import { store } from '/state/store.js';
 import '/components/views/x-log-viewer/index.js';
 import type { JobRecord } from '/types/jobs';
 
-/** Accepts real JobRecords and looser mock jobs (numeric ids). */
+/** Accepts partial JobRecords emitted during lifecycle updates. */
 type JobLike = Partial<Omit<JobRecord, 'id'>> & {
-  id?: string | number;
+  id?: JobRecord['id'];
   displayName?: string;
 };
 
@@ -429,4 +429,3 @@ class JobProgress extends LitElement {
 }
 
 customElements.define('job-progress', JobProgress);
-

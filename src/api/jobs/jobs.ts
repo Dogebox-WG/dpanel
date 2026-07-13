@@ -1,6 +1,7 @@
 import ApiClient from '/api/client.js';
 import { store } from '/state/store.js';
 import { mockJobApi } from './jobs.mocks.js';
+import type { JobRecord } from '/types/jobs';
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
@@ -20,7 +21,7 @@ export async function getAllJobs() {
 }
 
 // GET specific job
-export async function getJob(jobId: string | number) {
+export async function getJob(jobId: JobRecord['id']) {
   const result = await useMock(
     () => mockJobApi.getJob(jobId),
     () => client.get(`/jobs/${jobId}`)
@@ -29,7 +30,7 @@ export async function getJob(jobId: string | number) {
 }
 
 // DELETE specific job
-export async function deleteJob(jobId: string | number) {
+export async function deleteJob(jobId: JobRecord['id']) {
   const result = await useMock(
     () => mockJobApi.deleteJob(jobId),
     () => client.delete(`/jobs/${jobId}`)

@@ -1,5 +1,5 @@
 import { isActiveJobStatus, isFinishedJobStatus } from '/controllers/jobs/status.js';
-import type { JobStatus } from '/types/jobs';
+import type { JobRecord, JobStatus } from '/types/jobs';
 
 /**
  * Lightweight mock for job system
@@ -7,9 +7,8 @@ import type { JobStatus } from '/types/jobs';
  * NO complex job lifecycle management - just data flow testing
  */
 
-/** Mock jobs use numeric ids, unlike the backend's string JobRecord ids. */
 export interface MockJob {
-  id: number;
+  id: JobRecord['id'];
   started: string;
   finished: string | null;
   displayName: string;
@@ -22,9 +21,14 @@ export interface MockJob {
 type MockSocketHandler = (data?: { data: string }) => void;
 
 let mockJobId = 1;
+
+function nextMockJobId(): JobRecord['id'] {
+  return `mock-job-${mockJobId++}`;
+}
+
 let mockJobs: MockJob[] = [
   {
-    id: mockJobId++,
+    id: nextMockJobId(),
     started: new Date(Date.now() - 300000).toISOString(),
     finished: new Date(Date.now() - 60000).toISOString(),
     displayName: 'System Upgrade',
@@ -34,7 +38,7 @@ let mockJobs: MockJob[] = [
     errorMessage: null
   },
   {
-    id: mockJobId++,
+    id: nextMockJobId(),
     started: new Date(Date.now() - 120000).toISOString(),
     finished: new Date(Date.now() - 30000).toISOString(),
     displayName: 'Install Core Pup',
@@ -96,7 +100,7 @@ export class MockJobWebSocket {
   // Helper: Simulate creating a new job
   simulateJobCreated(displayName = 'Mock Job') {
     const job: MockJob = {
-      id: mockJobId++,
+      id: nextMockJobId(),
       started: new Date().toISOString(),
       finished: null,
       displayName,
@@ -120,7 +124,7 @@ export class MockJobWebSocket {
   }
 
   // Helper: Simulate progress updates
-  simulateProgress(jobId: number) {
+  simulateProgress(jobId: JobRecord['id']) {
     const job = mockJobs.find(a => a.id === jobId);
     if (!job) return;
 
@@ -186,17 +190,17 @@ export const mockJobApi = {
     });
   },
 
-  getJob: (id: number | string) => {
-    const job = mockJobs.find(j => String(j.id) === String(id));
+  getJob: (id: JobRecord['id']) => {
+    const job = mockJobs.find(j => j.id === id);
     return Promise.resolve({
       success: !!job,
       job: job || null
     });
   },
 
-  deleteJob: (id: number | string) => {
-    const deletedJob = mockJobs.find(j => String(j.id) === String(id));
-    mockJobs = mockJobs.filter(j => String(j.id) !== String(id));
+  deleteJob: (id: JobRecord['id']) => {
+    const deletedJob = mockJobs.find(j => j.id === id);
+    mockJobs = mockJobs.filter(j => j.id !== id);
     if (mockJobWS) {
       mockJobWS.send({
         type: 'job:deleted',
@@ -226,12 +230,12 @@ export const mockJobApi = {
 
 // Mock WebSocket for Log Streaming
 export class MockLogWebSocket {
-  jobId: number | string;
+  jobId: JobRecord['id'];
   listeners: Map<string, MockSocketHandler[]>;
   logLines: string[];
   logIndex: number;
 
-  constructor(jobId: number | string) {
+  constructor(jobId: JobRecord['id']) {
     this.jobId = jobId;
     this.listeners = new Map();
     this.logLines = [

@@ -9,7 +9,7 @@
     "build": "eslint . && tsc --noEmit && vite build && node scripts/copy-shoelace-assets.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "generate": "npx buf generate",
+    "generate": "node scripts/generate-protos.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

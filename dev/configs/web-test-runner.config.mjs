@@ -10,6 +10,7 @@ const srcRoot = join(repoRoot, 'src');
 const rootNodeModules = join(repoRoot, 'node_modules');
 const shoelacePublicPath = '/shoelace';
 const shoelaceCdnRoot = join(rootNodeModules, '@shoelace-style/shoelace/cdn');
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default {
   rootDir: '../src/',
@@ -64,7 +65,12 @@ export default {
     },
   },
   browsers: [
-    playwrightLauncher({ product: 'chromium' }),
+    playwrightLauncher({
+      product: 'chromium',
+      launchOptions: chromiumExecutablePath
+        ? { executablePath: chromiumExecutablePath }
+        : {},
+    }),
     // playwrightLauncher({ product: 'firefox' }),
     // playwrightLauncher({ product: 'webkit' })
   ],

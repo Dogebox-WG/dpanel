@@ -2,7 +2,6 @@
   inputs = {
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
-    playwright.url  = "github:pietdevries94/playwright-web-flake";
 
     dogeboxd-src = {
       # Pinned to the DTO schema branch while it is in review; move to main
@@ -17,25 +16,20 @@
     };
   };
   
-  outputs = inputs@{ self, nixpkgs, flake-utils, playwright, dogeboxd-src, protovalidate-src, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, dogeboxd-src, protovalidate-src, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlay = final: prev: {
-            inherit (playwright.packages.${system}) playwright-test playwright-driver;
-        };
-        pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ overlay ];
-        };
+        pkgs = import nixpkgs { inherit system; };
       in {
         devShells.default = pkgs.mkShell {
-          buildInputs = [ pkgs.nodejs_24 pkgs.screen 
-            pkgs.playwright-test
+          buildInputs = [ pkgs.nodejs_24 pkgs.screen pkgs.buf
+            pkgs.chromium
           ];
 
           shellHook = ''
             export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-            export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+            export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="${pkgs.chromium}/bin/chromium"
+            export DBX_BUF_EXECUTABLE="${pkgs.buf}/bin/buf"
 
             if [ ! -d node_modules/@deform-wg/deform ]; then
               echo "Installing root npm dependencies..."
@@ -48,7 +42,7 @@
           name = "dpanel";
           src = ./.;
 
-          npmDepsHash = "sha256-8u5TAf4uE+twwR0/F9NxB6PDbv55ngmSLTWXxHy3iO8=";
+          npmDepsHash = "sha256-Ud6fUHy+Edfkcb3syp3iSVBLWGodxHDl6WbMxxj0iD0=";
 
           nativeBuildInputs = [ pkgs.protobuf ];
 
@@ -98,7 +92,7 @@
 
         packages.test = pkgs.writeShellApplication {
           name = "dpanel-test";
-          runtimeInputs = [ pkgs.nodejs_24 pkgs.playwright-test ];
+          runtimeInputs = [ pkgs.nodejs_24 pkgs.chromium ];
           text = ''
             set -euo pipefail
 
@@ -116,7 +110,7 @@
             npm install
 
             export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-            export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+            export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="${pkgs.chromium}/bin/chromium"
             exec npm test
           '';
         };

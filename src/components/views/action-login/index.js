@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "/lib/lit-all.js";
-import { postLogin } from "/api/login/login.js";
+import { postLogin } from "/api/login/login.ts";
 import { store } from "/state/store.js";
 import { showWelcomeModal } from "/components/common/welcome-modal.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";

@@ -10,11 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: dev
+        working-directory: dpanel/dev
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: dpanel
+
+      # buf generate reads the proto schema from a sibling dogeboxd checkout
+      # (see buf.gen.yaml). Prefer the feat/proto branch while it exists,
+      # falling back to main once it has been merged.
+      - name: Checkout dogeboxd protocol schema
+        working-directory: .
+        run: |
+          git clone --depth 1 --branch feat/proto https://github.com/Dogebox-WG/dogeboxd.git dogeboxd \
+            || git clone --depth 1 https://github.com/Dogebox-WG/dogeboxd.git dogeboxd
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -22,8 +33,12 @@ jobs:
           node-version: 20
 
       - name: Install root dependencies
-        working-directory: .
+        working-directory: dpanel
         run: npm install
+
+      - name: Generate protobuf modules
+        working-directory: dpanel
+        run: npm run generate
 
       - name: Install dev dependencies
         run: npm install

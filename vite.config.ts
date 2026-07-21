@@ -77,6 +77,7 @@ export default defineConfig({
       '/styles': abs('./src/styles'),
       '/lib': abs('./src/lib'),
       '/bootstrap': abs('./src/bootstrap'),
+      '/gen': abs('./src/gen'),
     },
   },
 });

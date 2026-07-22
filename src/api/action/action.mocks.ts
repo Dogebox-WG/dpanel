@@ -6,13 +6,14 @@
  */
 
 import type { MockDescriptor, MockResOptions } from "../client.js";
+import { isRecord } from "/utils/type-guards.js";
 
-interface InstallBody {
-  pupName?: string;
+interface PupNamePayload {
+  pupName: string;
 }
 
-function hasPupName(value: unknown): value is InstallBody {
-  return !!value && typeof value === "object";
+function hasPupName(value: unknown): value is PupNamePayload {
+  return isRecord(value) && typeof value.pupName === "string" && value.pupName.length > 0;
 }
 
 const postResponse = {
@@ -49,7 +50,7 @@ export const installMock: MockDescriptor = {
   group: 'pup actions',
   res: (path: string, config: MockResOptions) => {
     const parsed: unknown = typeof config.body === 'string' ? JSON.parse(config.body) : config.body;
-    const pupName = (hasPupName(parsed) ? parsed.pupName : undefined) || 'Unknown Pup';
+    const pupName = hasPupName(parsed) ? parsed.pupName : 'Unknown Pup';
     // Backend will create activity via WebSocket
     return { ...postResponse, message: `Install ${pupName} initiated` };
   }
@@ -76,4 +77,3 @@ export const purgeMock: MockDescriptor = {
     return { ...postResponse, message: `Purge ${pupId} initiated` };
   }
 };
-

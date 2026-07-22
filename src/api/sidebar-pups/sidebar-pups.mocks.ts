@@ -1,3 +1,5 @@
+import { isRecord } from "/utils/type-guards.js";
+
 const MOCK_CONFIG_KEY = "dpanel:mockSidebarPups";
 
 const ADJECTIVES = [
@@ -87,10 +89,6 @@ function createSidebarPup(name: string = generateRandomPupName()): MockSidebarPu
     name,
     iconColor: generateRandomIconColor(),
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object";
 }
 
 function normalizePup(pup: unknown): MockSidebarPup | null {

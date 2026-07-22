@@ -1,6 +1,7 @@
 import { LitElement, html, css } from '/lib/lit-all.js';
 import sparkline from '@fnando/sparkline';
 import { generateMockSparklineData } from './mocks/sparkline.mocks.js';
+import { isRecord } from '/utils/type-guards.js';
 
 interface SparklinePoint {
   date: string;
@@ -10,10 +11,6 @@ interface SparklinePoint {
 interface SparklineOptions {
   onmousemove?: (event: MouseEvent, datapoint: SparklinePoint | undefined) => void;
   onmouseout?: (event?: Event) => void;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 class SparklineChart extends LitElement {

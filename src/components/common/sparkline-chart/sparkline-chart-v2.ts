@@ -1,6 +1,7 @@
 import { LitElement, html, css } from '/lib/lit-all.js';
 import sparkline from '@fnando/sparkline';
 import { generateMockSparklineData } from './mocks/sparkline.mocks.js';
+import { isRecord } from '/utils/type-guards.js';
 
 /** A normalized chart point; ts is epoch ms, seconds, or a date string. */
 interface SparkPoint {
@@ -11,12 +12,13 @@ interface SparkPoint {
 /** What the sparkline lib hands to onmousemove (loosely shaped). */
 type SparkDatapoint = number | (SparkPoint & { index?: number; y?: number; n?: number });
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 function isIterable(value: unknown): value is Iterable<unknown> {
-  return isRecord(value) && Symbol.iterator in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Symbol.iterator in value &&
+    typeof value[Symbol.iterator] === 'function'
+  );
 }
 
 interface SparklineV2Options {

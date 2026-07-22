@@ -5,6 +5,7 @@ import { mock } from './bootstrap.mocks.js'
 import { mockV2 } from './bootstrap.mocks.v2.js'
 import type { ResponseHook } from '/api/hooks.js';
 import type { BootstrapResponse } from '/types/bootstrap';
+import { isRecord } from '/utils/type-guards.js';
 
 const client = new ApiClient(store.networkContext.apiBaseUrl);
 
@@ -21,17 +22,19 @@ export async function doBootstrap() {
 }
 
 interface VersionPayload {
-  version?: { release?: string };
+  version: Record<string, unknown>;
 }
 
 function hasVersion(payload: unknown): payload is VersionPayload {
-  return !!payload && typeof payload === "object";
+  return isRecord(payload) && isRecord(payload.version);
 }
 
 // Response hooks
 const bumpVersionHook: ResponseHook = {
   'bump-version': (payload) => {
-    if (hasVersion(payload) && payload.version) { payload.version.release = "v.9000" }
+    if (hasVersion(payload)) {
+      payload.version.release = "v.9000"
+    }
     return payload
   }
 }

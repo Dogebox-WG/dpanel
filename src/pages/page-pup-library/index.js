@@ -24,7 +24,10 @@ class LibraryView extends LitElement {
     fetchError: { type: Boolean },
     packageList: { type: Array },
     busy: { type: Boolean },
-    inspectedPup: { type: String }
+    inspectedPup: { type: String },
+    searchValue: { type: String },
+    searchInDescription: { type: Boolean },
+    searchInInterfaces: { type: Boolean },
   }
 
   constructor() {
@@ -33,6 +36,9 @@ class LibraryView extends LitElement {
     this.busyQueue = [];
     this.fetchLoading = true;
     this.fetchError = false;
+    this.searchValue = "";
+    this.searchInDescription = false;
+    this.searchInInterfaces = false;
     this.itemsPerPage = 20;
     this.pkgController = pkgController;
     this.installedList = new PaginationController(this, undefined, this.itemsPerPage, { initialSort });
@@ -43,6 +49,7 @@ class LibraryView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.applySearchFromUrl();
     this.pkgController.addObserver(this);
     this.addEventListener('busy-start', this.handleBusyStart.bind(this));
     this.addEventListener('busy-stop', this.handleBusyStop.bind(this));
@@ -58,6 +65,25 @@ class LibraryView extends LitElement {
     this.removeEventListener('forced-tab-show', this.handleForcedTabShow.bind(this));
     this.pkgController.removeObserver(this);
     super.disconnectedCallback();
+  }
+
+  // Pre-fill the search from URL query params, e.g.
+  //   /pups?search=wallet&interfaces=1&description=1
+  applySearchFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+
+    const search = params.get('search') ?? params.get('q');
+    if (search !== null) {
+      this.searchValue = search;
+    }
+
+    const isTruthy = (v) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
+    if (params.has('interfaces')) {
+      this.searchInInterfaces = isTruthy(params.get('interfaces'));
+    }
+    if (params.has('description')) {
+      this.searchInDescription = isTruthy(params.get('description'));
+    }
   }
 
   reset() {
@@ -109,6 +135,9 @@ class LibraryView extends LitElement {
       const res = await getBootstrapV2()
       this.pkgController.setData(res);
       this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+      if ((this.searchValue || "").trim() !== "") {
+        this.filterInstalledList();
+      }
     } catch (err) {
       console.error(err);
       this.fetchError = true;
@@ -121,6 +150,9 @@ class LibraryView extends LitElement {
 
   updatePups() {
     this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    if ((this.searchValue || "").trim() !== "") {
+      this.filterInstalledList();
+    }
     this.requestUpdate();
   }
 
@@ -131,6 +163,62 @@ class LibraryView extends LitElement {
         this.fetchBootstrap();
         break;
     }
+  }
+
+  updated(changedProperties) {
+    if (
+      changedProperties.has('searchValue') ||
+      changedProperties.has('searchInDescription') ||
+      changedProperties.has('searchInInterfaces')
+    ) {
+      this.filterInstalledList();
+    }
+  }
+
+  handleSearchInput(event) {
+    this.searchValue = event.target.value;
+  }
+
+  handleSearchOptionChange(event) {
+    const option = event.target.dataset.option;
+    if (option === 'description') {
+      this.searchInDescription = event.target.checked;
+    } else if (option === 'interfaces') {
+      this.searchInInterfaces = event.target.checked;
+    }
+  }
+
+  getSearchableText(pkg) {
+    const manifest = pkg?.state?.manifest || {};
+    const meta = manifest.meta || {};
+
+    const parts = [meta.name || "", pkg?.state?.id || ""];
+
+    if (this.searchInDescription) {
+      parts.push(
+        meta.shortDescription || meta.descShort || "",
+        meta.longDescription || meta.descLong || "",
+      );
+    }
+
+    if (this.searchInInterfaces) {
+      (manifest.interfaces || []).forEach((iface) => parts.push(iface?.name || ""));
+    }
+
+    return parts.join(" ").toLowerCase();
+  }
+
+  filterInstalledList() {
+    const query = (this.searchValue || "").trim().toLowerCase();
+
+    this.installedList.currentPage = 1;
+
+    if (query === "") {
+      this.installedList.setFilter();
+      return;
+    }
+
+    this.installedList.setFilter((pkg) => this.getSearchableText(pkg).includes(query));
   }
 
   render() {
@@ -154,6 +242,39 @@ class LibraryView extends LitElement {
 
     return html`
       <div class="padded">
+        <div class="row search-wrap">
+          <div class="constrained w55 search-inner">
+            <sl-input
+              type="search"
+              size="large"
+              placeholder="Search"
+              clearable
+              .value=${this.searchValue}
+              @sl-input=${this.handleSearchInput}>
+              <sl-icon name="search" slot="prefix"></sl-icon>
+            </sl-input>
+            <div class="search-options">
+              <span class="search-options-label">Also search:</span>
+              <div class="search-options-checks">
+                <sl-checkbox
+                  size="small"
+                  data-option="description"
+                  ?checked=${this.searchInDescription}
+                  @sl-change=${this.handleSearchOptionChange}>
+                  Descriptions
+                </sl-checkbox>
+                <sl-checkbox
+                  size="small"
+                  data-option="interfaces"
+                  ?checked=${this.searchInInterfaces}
+                  @sl-change=${this.handleSearchOptionChange}>
+                  Interfaces Provided
+                </sl-checkbox>
+              </div>
+            </div>
+          </div>
+        </div>
+
         ${this.fetchLoading 
           ? html`<sl-spinner style="--indicator-color:#777;"></sl-spinner>
         ` : this.renderSectionInstalledBody(ready, SKELS, hasItems) }
@@ -185,6 +306,51 @@ class LibraryView extends LitElement {
     .padded {
       background: #23252a;
       margin: 1em;
+    }
+
+    div.row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2em;
+      width: 100%;
+    }
+
+    .constrained {
+      width: 100%;
+      @media (min-width:576px) {
+        &.w55 { width: 55% }
+      }
+    }
+
+    .search-inner sl-input {
+      width: 100%;
+    }
+
+    .search-options {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1em;
+      line-height: 0;
+      margin-top: 0.6em;
+      padding-left: 0.25em;
+    }
+
+    .search-options-checks {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5em;
+    }
+
+    .search-options-label {
+      text-transform: uppercase;
+      font-weight: bold;
+      color: var(--sl-color-neutral-500);
+      padding-left: 0.25em;
     }
 
     .pagination-dock {

@@ -1,5 +1,3 @@
-import { isRecord } from "/utils/type-guards.js";
-
 const MOCK_CONFIG_KEY = "dpanel:mockSidebarPups";
 
 const ADJECTIVES = [
@@ -91,8 +89,7 @@ function createSidebarPup(name: string = generateRandomPupName()): MockSidebarPu
   };
 }
 
-function normalizePup(pup: unknown): MockSidebarPup | null {
-  if (!isRecord(pup)) return null;
+function normalizePup(pup: MockSidebarPup): MockSidebarPup | null {
   const id = typeof pup.id === "string" ? pup.id.trim() : "";
   const name = typeof pup.name === "string" ? pup.name.trim() : "";
   const iconColor = typeof pup.iconColor === "string" && pup.iconColor.trim()
@@ -102,9 +99,8 @@ function normalizePup(pup: unknown): MockSidebarPup | null {
   return { id, name, iconColor };
 }
 
-function normalizeConfig(config: unknown): MockSidebarConfig {
-  const source: Record<string, unknown> = isRecord(config) ? config : {};
-  const pups = Array.isArray(source.pups) ? source.pups : [];
+function normalizeConfig(config: MockSidebarConfig): MockSidebarConfig {
+  const pups = Array.isArray(config.pups) ? config.pups : [];
   return {
     pups: pups.map(normalizePup).filter((pup): pup is MockSidebarPup => Boolean(pup)),
   };
@@ -114,7 +110,8 @@ export function getMockConfig(): MockSidebarConfig {
   try {
     const stored = localStorage.getItem(MOCK_CONFIG_KEY);
     if (!stored) return { ...defaultMockConfig };
-    const parsed = JSON.parse(stored);
+    //const parsed = JSON.parse(stored);
+    const parsed: MockSidebarConfig = JSON.parse(stored);
     return normalizeConfig(parsed);
   } catch (error) {
     console.error("[SidebarPups Mock] Failed to load mock sidebar pup config:", error);

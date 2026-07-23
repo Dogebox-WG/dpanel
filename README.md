@@ -5,14 +5,14 @@ Dogebox Panel - Web UI for managing a Dogebox Server
 
 `/src`
 
-> All source code lives here.  Whatever is contained in here is published. No build steps, compilation or transformation (at this stage), striving for “what you see is what you get”.
+> All source code lives here. Built with Vite (`npm run build`) into `/dist` for production.
 
 `/dev`
 
-> Dev server, configs and tooling to aid in the development process.
+> Test runner configs and tooling to aid in the development process.
 
-To run this in production, simply serve the /src directory.
-To run this locally (with some developer conveniences) follow the steps below.
+To run this in production, serve the `/dist` directory produced by `npm run build` (or the Nix package, which builds the same thing).
+To run this locally (with live reload) follow the steps below.
 
 ---
 
@@ -26,42 +26,31 @@ Prerequisites
 
 All commands below run from the repo root.
 
-Install dependencies and generate protobuf TypeScript bindings (requires `dogeboxd` at `../dogeboxd`):
+Install dependencies and start the development servers (protobuf TypeScript
+bindings are generated automatically before the servers start, which requires
+`dogeboxd` at `../dogeboxd`):
 
 ```
 npm install
-npm run generate
-```
-
-Install dev dependencies and add 3x hostname entries:
-
-```
-cd dev
-npm run setup
-```
-
-Start the development server:
-
-```
-npm start
+npm run dev
 ```
 
 Navigate to
 
 ```
-http://dogebox.local:8080
+http://localhost:9090
 ```
 
 ---
 
 ### Outcome:
 
-**dPanel** running at [http://dogebox.local:8080](http://dogebox.local:8080), with:
-- Hot reloading (auto browser refresh on modify)
-- SPA ready (index.html served at all routes)
-- Basic CORS configuration
-- API mocks (via Ctrl+L)
+Two live-reloading Vite dev servers:
+- **dPanel** (main UI) at [http://localhost:9090](http://localhost:9090)
+- **dPanel recovery UI** at [http://localhost:9091](http://localhost:9091)
 
-Two sample '**pups**' (web-apps that dPanel iframes), running at
-- [http://basic.pup.dogebox.local:9001](http://basic.pup.dogebox.local:9001)
-- [http://spa.pup.dogebox.local:9002](http://spa.pup.dogebox.local:9002)
+Both expect a running `dogeboxd` for the API on port 3000 (`make dev` in the
+`dogeboxd` repo; the recovery UI additionally needs `make recovery`). Running
+`make dev` in `dogeboxd` also serves a production build of dPanel at
+[http://localhost:8080](http://localhost:8080) (no live reload), built via this
+repo's Nix package — the same derivation the Dogebox OS image ships.

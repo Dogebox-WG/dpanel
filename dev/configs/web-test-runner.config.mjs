@@ -13,19 +13,19 @@ const shoelaceCdnRoot = join(rootNodeModules, '@shoelace-style/shoelace/cdn');
 
 export default {
   rootDir: '../src/',
-  files: ['../src/components/**/*.test.*'],
+  files: ['../src/**/*.test.*'],
   concurrentBrowsers: 1,
   concurrency: 2,
   nodeResolve: {
     exportConditions: ['production', 'default', 'import'],
     moduleDirs: [rootNodeModules, join(configDir, '../node_modules')],
   },
-  // Transpile TypeScript modules (e.g. /api/login/login.ts) the same way
+  // Transpile TypeScript modules (e.g. /state/store.impl.ts) the same way
   // Vite does for the app build.
   plugins: [esbuildPlugin({ ts: true, target: 'es2020' })],
   middleware: [
     // Match Vite's resolver: imports written with a .js extension may point
-    // at TypeScript sources (e.g. /gen/... generated modules).
+    // at TypeScript sources (e.g. /api/transport.js -> src/api/transport.ts).
     function tsSourceMiddleware(context, next) {
       const [url, query] = context.url.split('?');
       if (url.startsWith('/') && url.endsWith('.js')) {

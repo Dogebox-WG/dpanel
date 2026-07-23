@@ -4,13 +4,13 @@ import { AuthenticateService } from "/gen/authenticate/v1/authenticate_pb.js";
 import { getTransport } from "/api/transport.js";
 import { store } from "/state/store.js";
 
-type LoginRequest = {
+interface LoginRequest {
   password: string;
-};
+}
 
-type LoginErrorResponse = {
+interface LoginErrorResponse {
   error: "CHECK-CREDS";
-};
+}
 
 export async function postLogin(body: LoginRequest): Promise<AuthenticateResponse | LoginErrorResponse> {
   const client = createClient(AuthenticateService, getTransport());

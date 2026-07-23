@@ -1,0 +1,44 @@
+import ApiClient from "/api/client.js";
+import { store } from "/state/store.js";
+
+import { getResponse, postResponse } from "./updates.mocks.js";
+
+const client = new ApiClient(store.networkContext.apiBaseUrl);
+
+export interface PackageUpdate {
+  version: string;
+  summary?: string;
+  releaseURL?: string;
+  long?: string;
+}
+
+export interface UpdatablePackage {
+  name: string;
+  currentVersion: string;
+  latestUpdate: string;
+  updates: PackageUpdate[];
+}
+
+export interface CheckForUpdatesResponse {
+  packages: Record<string, UpdatablePackage>;
+}
+
+export async function checkForUpdates() {
+  const preRelease = store.networkContext?.includePreReleaseSystemUpdates;
+  const res = await client.get<CheckForUpdatesResponse>(`/system/updates${preRelease ? "?includePreReleases=true" : ""}`, {
+    noLogoutRedirect: true,
+    mock: getResponse,
+  });
+  return res;
+}
+
+export async function commenceUpdate(pkg: string, version: string) {
+  const res = await client.post<{ success?: boolean; id?: string }>(`/system/update`, {
+    package: pkg,
+    version
+  }, {
+    noLogoutRedirect: true,
+    mock: postResponse,
+  });
+  return res;
+}

@@ -1,0 +1,434 @@
+import {
+  LitElement,
+  html,
+  css,
+  nothing,
+  choose,
+  unsafeHTML,
+  classMap,
+  guard
+} from "/lib/lit-all.js";
+import { bindToClass } from "/utils/class-bind.js";
+import * as renderMethods from "./renders/index.js";
+import { store } from "/state/store.js";
+import { StoreSubscriber } from "/state/subscribe.js";
+import { pkgController } from "/controllers/package/index.js";
+import { asyncTimeout } from "/utils/timeout.js";
+import { canCopyToClipboard } from "/utils/clipboard.js";
+import "/components/common/action-row/action-row.js";
+import "/components/common/reveal-row/reveal-row.js";
+import "/components/common/page-container.js";
+import "/components/views/x-log-viewer/index.js";
+
+export class PupInstallPage extends LitElement {
+  declare open_dialog: string | false;
+  declare open_dialog_label: string;
+  declare busy: boolean;
+  declare inflight: boolean;
+  declare autoInstallDependencies: boolean;
+  declare installWithDevModeEnabled: boolean;
+  declare selectedInstallVersion: string | null;
+  declare _renderedJobId: string | null;
+
+  pupId: string | null;
+  pkgController: typeof pkgController;
+  context: StoreSubscriber;
+  open_page: boolean;
+  open_page_label: string;
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare renderStatus: () => unknown;
+  declare renderActions: () => unknown;
+  declare renderDialog: () => unknown;
+  declare handleInstall: () => Promise<void>;
+
+  static get properties() {
+    return {
+      open_dialog: { type: String },
+      open_dialog_label: { type: String },
+      busy: { type: Boolean },
+      inflight: { type: Boolean },
+      autoInstallDependencies: { type: Boolean },
+      installWithDevModeEnabled: { type: Boolean },
+      selectedInstallVersion: { type: String },
+      _renderedJobId: { type: String },
+    };
+  }
+
+  constructor() {
+    super();
+    bindToClass(renderMethods, this);
+    this.pupId = null;
+    this.pkgController = pkgController;
+    this._renderedJobId = null;
+    this.context = new StoreSubscriber(this, store);
+    this.open_dialog = "";
+    this.open_dialog_label = "";
+    this.open_page = false;
+    this.open_page_label = "";
+    this.busy = false;
+    this.inflight = false;
+    this.autoInstallDependencies = true;
+    this.installWithDevModeEnabled = false;
+    this.selectedInstallVersion = null; // null means use latest
+  }
+
+  getPup() {
+    return this.pkgController.getPupMaster({ 
+      sourceId: this.context.store.pupContext?.def?.source?.id,
+      pupName: this.context.store.pupContext?.def?.key,
+      lookupType: "byDefSourceIdAndPupName"
+    }).pup
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.pkgController.addObserver(this);
+  }
+
+  disconnectedCallback() {
+    this.pkgController.removeObserver(this);
+    super.disconnectedCallback();
+  }
+
+  firstUpdated() {
+    this.addEventListener("sl-hide", this.handleDialogClose);
+  }
+
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    super.updated(changedProperties);
+  }
+
+  handleDialogClose() {
+    this.clearDialog();
+  }
+
+  clearDialog() {
+    this.open_dialog = false;
+    this.open_dialog_label = "";
+  }
+
+  handleMenuClick = (event: Event, el: HTMLElement) => {
+    this.open_dialog = el.getAttribute("name") ?? "";
+    this.open_dialog_label = el.getAttribute("label") ?? "";
+  };
+
+  handleLogViewerClosed = () => {
+    this._renderedJobId = null;
+  };
+
+  renderLogViewer() {
+    const pupId = this.pupId || this.getPup()?.state?.id;
+    if (!pupId) return nothing;
+
+    const recentJob = this.pkgController.getRecentJobForPup(pupId);
+    if (recentJob) {
+      this._renderedJobId = recentJob.id;
+    }
+    if (!recentJob && !this._renderedJobId) return nothing;
+
+    return html`
+      <x-log-viewer
+        .jobId=${recentJob?.id || this._renderedJobId}
+        ?closing=${!recentJob}
+        ?animateOpen=${!!recentJob}
+        autostart
+        @log-viewer-closed=${this.handleLogViewerClosed}
+      ></x-log-viewer>
+    `;
+  }
+
+  render() {
+    const pupContext = this.context.store?.pupContext
+
+    if (!pupContext.ready) {
+      return html`
+      <div id="PageWrapper" class="wrapper">
+        <section>
+          <div class="section-title">
+            <h3 style="color:#777">HoDl tight &nbsp;<sl-spinner style="--indicator-color:#777; position: relative; top: 3px;"></sl-spinner></h3>
+          </div>
+          <!-- TODO More Skeleton -->
+        </section>
+      </div>`
+    }
+
+    if (pupContext.result !== 200) {
+      return html`
+      <div id="PageWrapper" class="wrapper">
+        <section>
+          <div class="section-title">
+            <h3>Such Empty</h3>
+            <p>Nothing to see here</p>
+            <!-- TODO Specific error handling -->
+          </div>
+        </section>
+      </div>`
+    }
+
+    // appContext.path is legacy (never populated); popover_page stays undefined.
+    const appCtx = this.context.store?.appContext;
+    const path = appCtx && 'path' in appCtx && Array.isArray(appCtx.path) ? appCtx.path : [];
+    const pkg = this.getPup();
+
+    if (!pkg) return;
+
+    const { installationId, isInstalled } = pkg.computed ?? { installationId: "", isInstalled: false };
+    const source = pkg?.def?.source || pkg?.state?.source || null;
+    const locationValue = source?.location;
+    const sourceLocation = typeof locationValue === "string" ? locationValue.trim() : undefined;
+    const isWebSource = /^https?:\/\//i.test(sourceLocation || "");
+    const canCopy = canCopyToClipboard();
+    const popover_page = path[1];
+
+    const wrapperClasses = classMap({
+      wrapper: true,
+      installed: ["ready", "unready"].includes(installationId),
+    });
+
+    // Placeholders for the disabled (false && ...) Provides/Dependencies
+    // sections below, kept for when that UI ships.
+    const hasInterfaces = false;
+    const dep = { id: "", name: "", condition: "" };
+    const renderDependancyList = () => nothing;
+
+    const renderInterfacesList = () => {
+      return html`
+        <action-row prefix="ui-checks-grid" name=${dep.id} label=${dep.name} href=${`/explore/${dep.id}/${dep.name}`}>
+          ${dep.condition}
+        </action-row>
+      `
+    }
+
+    const latestVersion = pkg?.def?.latestVersion ?? "";
+    const long = pkg?.def?.versions?.[latestVersion]?.meta?.longDescription || ''
+    const hasDependencies = (pkg?.def?.versions?.[latestVersion]?.dependencies?.length ?? 0) > 0;
+    const isDevModeAvailable = pkg?.def?.devModeAvailable;
+    const notInstalledOrBroken = !isInstalled && installationId !== "broken";
+
+    // Only show Install Options section if there is at least one option to show
+    const hasInstallOptions =
+      hasDependencies ||
+      isDevModeAvailable;
+
+    return html`
+      <div id="PageWrapper" class="${wrapperClasses}" ?data-freeze=${popover_page}>
+        <section class="status">
+          ${this.renderStatus()}
+          ${this.renderLogViewer()}
+          ${this.renderActions()}
+        </section>
+
+        ${(notInstalledOrBroken || installationId === "installing") && hasInstallOptions ? html`
+          <section>
+            <div class="section-title">
+              <h3>Install Options</h3>
+              ${hasDependencies ? html`
+              <div>
+                <sl-checkbox
+                  ?checked=${this.autoInstallDependencies}
+                  ?disabled=${installationId === "installing"}
+                  @sl-change=${(e: Event) => {
+                    const t = e.target;
+                    if (t instanceof HTMLElement && 'checked' in t) this.autoInstallDependencies = Boolean(t.checked);
+                  }}
+                >
+                <span style="display: flex; align-items: center; gap: 0.5em;">
+                  Install dependencies 
+                  <sl-tooltip content="Install all dependencies that are available. Uncheck to install only the pup itself.">
+                    <sl-icon name="info-circle"></sl-icon>
+                  </sl-tooltip>
+                  </span>
+                </sl-checkbox>
+              </div>
+              ` : nothing}
+              ${isDevModeAvailable ? html`
+              <div>
+                <sl-checkbox
+                  ?checked=${this.installWithDevModeEnabled}
+                  ?disabled=${installationId === "installing"}
+                  @sl-change=${(e: Event) => {
+                    const t = e.target;
+                    if (t instanceof HTMLElement && 'checked' in t) this.installWithDevModeEnabled = Boolean(t.checked);
+                  }}
+                >
+                  <span style="display: flex; align-items: center; gap: 0.5em;">
+                    Development Mode
+                    <sl-tooltip content="Install with Development Mode enabled.  Refer to the pup's documentation for more information.">
+                      <sl-icon name="info-circle"></sl-icon>
+                    </sl-tooltip>
+                  </span>
+                </sl-checkbox>
+              </div>
+            ` : nothing}
+            </div>
+          </section>
+        ` : nothing}
+
+        <section>
+          <div class="section-title">
+            <h3>About</h3>
+          </div>
+          <reveal-row style="margin-top:-1em;">
+            ${long
+              ? html`<p>${long}</p>`
+              : html`
+                <small style="font-family: 'Comic Neue'; color: var(--sl-color-neutral-600);">
+                  Such empty, no description.
+                </small>
+              `
+            }
+          </reveal-row>
+        </section>
+
+        ${false && hasInterfaces ? html`
+          <section>
+            <div class="section-title">
+              <h3>Provides</h3>
+            </div>
+            <div class="grid-list-wrap">
+              ${renderInterfacesList()}
+            </div>
+          </section>`
+          : nothing
+        }
+
+        ${false && hasDependencies ? html`
+          <section>
+            <div class="section-title">
+              <h3>Dependencies</h3>
+            </div>
+            <div class="grid-list-wrap">
+              ${renderDependancyList()}
+            </div>
+          </section>`
+          : nothing
+        }
+
+        <section>
+          <div class="section-title">
+            <h3>Such Info</h3>
+          </div>
+          <div class="list-wrap">
+            <action-row prefix="list-ul" name="readme" label="Read me" .trigger=${this.handleMenuClick}>
+              Many info
+            </action-row>
+            <action-row prefix="boxes" name=deps label=Dependencies .trigger=${this.handleMenuClick}>
+              Functionality this pup depends on from other pups.
+            </action-row>
+            <action-row prefix="box-arrow-up" name=ints label=Interfaces .trigger=${this.handleMenuClick}>
+              Functionality this pup provides for other pups.
+            </action-row>
+            ${sourceLocation ? html`
+              <action-row
+                prefix="link-45deg"
+                label="Source"
+                href=${isWebSource ? sourceLocation : ""}
+                target=${isWebSource ? "_blank" : "_self"}
+              >
+                <span title=${sourceLocation}>${sourceLocation}</span>
+                ${!isWebSource && canCopy ? html`
+                  <sl-copy-button
+                    slot="suffix"
+                    value=${sourceLocation}
+                    title="Copy source path"
+                    @click=${(event: Event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                  ></sl-copy-button>
+                ` : nothing}
+              </action-row>
+            ` : nothing}
+          </div>
+        </section>
+
+      </div>
+
+      <aside>
+        <sl-dialog
+          class="distinct-header"
+          id="PupMgmtDialog"
+          ?open=${this.open_dialog}
+          label=${this.open_dialog_label}
+        >
+          ${this.renderDialog()}
+        </sl-dialog>
+      </aside>
+    `;
+  }
+
+  static styles = css`
+    :host {
+      position: relative;
+      display: block;
+    }
+
+    .wrapper {
+      display: block;
+      padding: 2em;
+      position: relative;
+    }
+
+    .wrapper[data-freeze] {
+      overflow: hidden;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      padding: 0;
+    }
+
+    section {
+      margin-bottom: 2em;
+    }
+
+    section .section-title {
+      margin-bottom: 0em;
+    }
+
+    section .section-title h3 {
+      text-transform: uppercase;
+      font-family: "Comic Neue";
+    }
+
+    aside.page-popver {
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 0;
+      height: calc(100vh - 80px);
+      width: calc(100vw - var(--page-margin-left));
+      margin-left: var(--page-margin-left);
+      z-index: 600;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background: #23252a;
+    }
+
+    aside.page-popver[data-open] {
+      display: block;
+    }
+
+    sl-dialog.distinct-header::part(header) {
+      z-index: 960;
+      background: rgb(24, 24, 24);
+    }
+
+    .grid-list-wrap {
+      display: grid;
+      row-gap: 0.5em;
+      column-gap: 2em;
+      grid-template-columns: 1fr;
+
+      @media (min-width: 576px) {
+        grid-template-columns: 1fr 1fr; /* Two columns of equal width */
+      }
+    }
+  `;
+}
+
+customElements.define("x-page-pup-store-listing", PupInstallPage);

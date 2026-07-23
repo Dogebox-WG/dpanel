@@ -10,7 +10,7 @@ import {
 import "/components/common/action-row/action-row.js";
 import "/components/views/x-check/index.js";
 import "/components/common/page-container.js";
-import "/components/common/sparkline-chart/sparkline-chart-v2.js";
+import "/components/common/sparkline-chart/sparkline-chart.js";
 import "/components/views/x-metric/metric.js";
 import "/components/views/x-activity-log.js";
 import "/components/common/reveal-row/reveal-row.js";

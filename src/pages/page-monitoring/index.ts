@@ -7,7 +7,7 @@ import { getBootstrapV2 } from '/api/bootstrap/bootstrap.js';
 import '/components/views/x-metric/metric.js';
 import '/components/views/service-status-card/index.js';
 import '/components/common/action-row/action-row.js';
-import '/components/common/sparkline-chart/sparkline-chart-v2.js';
+import '/components/common/sparkline-chart/sparkline-chart.js';
 import '/components/common/dbx-modal/index.js';
 
 // A single card placed on a monitoring dashboard.
@@ -618,7 +618,7 @@ class MonitoringPage extends LitElement {
         <div class="stat-detail">${stat.detail || html`&nbsp;`}</div>
         ${hasChart ? html`
           <div class="stat-chart">
-            <sparkline-chart-v2 .data="${values}"></sparkline-chart-v2>
+            <sparkline-chart .data="${values}"></sparkline-chart>
           </div>
         ` : nothing}
       </div>
@@ -1387,7 +1387,7 @@ class MonitoringPage extends LitElement {
       overflow: visible;
     }
 
-    .stat-chart sparkline-chart-v2 {
+    .stat-chart sparkline-chart {
       display: block;
       width: 100%;
       height: 100%;
@@ -1396,7 +1396,7 @@ class MonitoringPage extends LitElement {
       --sparkline-width: 100%;
     }
 
-    .stat-chart sparkline-chart-v2::part(sparkline-svg) {
+    .stat-chart sparkline-chart::part(sparkline-svg) {
       width: 100% !important;
     }
 

@@ -48,4 +48,9 @@ const chartStyles = css`
     display: flex;
     justify-content: center;
   }
+
+  .charts-grid sparkline-chart {
+    width: 100px;
+    --sparkline-height: 30px;
+  }
 `

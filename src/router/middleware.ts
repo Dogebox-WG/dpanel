@@ -3,6 +3,7 @@ import { store } from "/state/store.js";
 import { pkgController } from "/controllers/package/index.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { getStoreListing } from "/api/sources/sources.js";
+import { postLogout } from "/api/session/logout.js";
 import type { RouteContext, RouteCommands } from "./router.js";
 
 export async function loadPup(context: RouteContext, commands: RouteCommands) {
@@ -79,8 +80,15 @@ export function isAuthed(context: RouteContext, commands: RouteCommands): undefi
   }
 }
 
-export function performLogout(context: RouteContext, commands: RouteCommands): never {
-  store.updateState({ networkContext: { token: null } });
+export async function performLogout(context: RouteContext, commands: RouteCommands) {
+  try {
+    await postLogout();
+  } catch (error) {
+    // Local logout must still complete if the service becomes unavailable.
+    console.warn("Failed to invalidate the server session during logout", error);
+  } finally {
+    store.updateState({ networkContext: { token: null } });
+  }
   return commands.redirect("/login");
 }
 

@@ -24,10 +24,22 @@ interface VersionPayload {
   version: Record<string, unknown>;
 }
 
+function isVersionPayload(payload: unknown): payload is VersionPayload {
+  if (typeof payload !== "object" || payload === null || !("version" in payload)) {
+    return false;
+  }
+
+  return typeof payload.version === "object" && payload.version !== null;
+}
+
 // Response hooks
 const bumpVersionHook: ResponseHook = {
-  'bump-version': (payload: VersionPayload) => {
-      payload.version.release = "v.9000"
-    return payload
+  'bump-version': (payload: unknown) => {
+    if (!isVersionPayload(payload)) {
+      return payload;
+    }
+
+    payload.version.release = "v.9000";
+    return payload;
   }
 }

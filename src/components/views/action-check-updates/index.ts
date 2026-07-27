@@ -48,6 +48,7 @@ export class CheckUpdatesView extends LitElement {
   declare _updates: unknown[];
   declare _has_updates: boolean;
   declare _inflight_checking: boolean;
+  declare _check_error: boolean;
   declare _confirmation_checked: boolean;
   declare _inflight_update: boolean;
   declare _update_commenced: boolean;
@@ -70,6 +71,7 @@ export class CheckUpdatesView extends LitElement {
       _updates: { type: Array },
       _has_updates: { type: Boolean },
       _inflight_checking: { type: Boolean },
+      _check_error: { type: Boolean },
       _confirmation_checked: { type: Boolean },
       _inflight_update: { type: Boolean},
       _update_commenced: { type: Boolean },
@@ -89,6 +91,9 @@ export class CheckUpdatesView extends LitElement {
     this._page = PAGE_ONE;
     this._logs = [];
     this._updates = [];
+    this._has_updates = false;
+    this._inflight_checking = false;
+    this._check_error = false;
     this._systemJobId = "";
     this._updatePollId = null;
   }
@@ -118,25 +123,33 @@ export class CheckUpdatesView extends LitElement {
   async fetchUpdates() {
     // Reset
     this._updates = [];
+    this._updatablePackages = [];
+    this._has_updates = false;
+    this._check_error = false;
     this._inflight_checking = true;
 
-    // Fetch
-    const updateResponse = await checkForUpdates();
+    try {
+      // Fetch
+      const updateResponse = await checkForUpdates();
 
-    // Find any packages that have updates
-    const updatablePackages: ResolvedUpdatablePackage[] = Object.keys(updateResponse.packages).filter(pkg => {
-      return updateResponse.packages[pkg].latestUpdate !== updateResponse.packages[pkg].currentVersion
-    }).map(pkg => ({
-      ...updateResponse.packages[pkg],
-      latestUpdate: updateResponse.packages[pkg].updates.find((update) => update.version === updateResponse.packages[pkg].latestUpdate)
-    }))
+      // Find any packages that have updates
+      this._updatablePackages = Object.keys(updateResponse.packages).filter(pkg => {
+        return updateResponse.packages[pkg].latestUpdate !== updateResponse.packages[pkg].currentVersion
+      }).map(pkg => ({
+        ...updateResponse.packages[pkg],
+        latestUpdate: updateResponse.packages[pkg].updates.find((update) => update.version === updateResponse.packages[pkg].latestUpdate)
+      }));
 
-    this._updatablePackages = updatablePackages || [];
-    await asyncTimeout(1000);
+      await asyncTimeout(1000);
 
-    // Toggle UI according to whether there are updates or not.
-    this._has_updates = this._updatablePackages.length > 0;
-    this._inflight_checking = false;
+      // Toggle UI according to whether there are updates or not.
+      this._has_updates = this._updatablePackages.length > 0;
+    } catch (error) {
+      console.error("Failed to check for system updates:", error);
+      this._check_error = true;
+    } finally {
+      this._inflight_checking = false;
+    }
   }
 
   handleReviewUpdates() {
@@ -313,7 +326,19 @@ export class CheckUpdatesView extends LitElement {
         </p>
         `: nothing}
 
-        ${!this._inflight_checking && !this._has_updates ? html`
+        ${!this._inflight_checking && this._check_error ? html`
+        <sl-alert open variant="danger" style="text-align: left">
+          <small style="display:inline-block; margin-bottom: 4px;">Check failed</small>
+          <sl-progress-bar value="100" style="--indicator-color: var(--sl-color-danger-600)"></sl-progress-bar>
+        </sl-alert>
+
+        <p style="line-height: 1.1; color: #777">
+          <small>Unable to check for updates. Please try again.</small>
+          <sl-button size="small" variant="text" @click=${this.fetchUpdates}>Check again</sl-button>
+        </p>
+        `: nothing}
+
+        ${!this._inflight_checking && !this._check_error && !this._has_updates ? html`
         <sl-alert open variant="primary" style="text-align: left">
           <small style="display:inline-block; margin-bottom: 4px;">Check complete</small>
           <sl-progress-bar value="100"></sl-progress-bar>
@@ -325,7 +350,7 @@ export class CheckUpdatesView extends LitElement {
         </p>
         `: nothing}
 
-        ${!this._inflight_checking && this._has_updates ? html`
+        ${!this._inflight_checking && !this._check_error && this._has_updates ? html`
         <sl-alert open variant="primary" style="text-align: left">
           <small style="display:inline-block; margin-bottom: 4px;">Update available</small>
           <sl-progress-bar value="100"></sl-progress-bar>

@@ -48,7 +48,7 @@ export class CheckUpdatesView extends LitElement {
   declare _updates: unknown[];
   declare _has_updates: boolean;
   declare _inflight_checking: boolean;
-  declare _check_error: boolean;
+  declare _check_error: string | null;
   declare _confirmation_checked: boolean;
   declare _inflight_update: boolean;
   declare _update_commenced: boolean;
@@ -71,7 +71,7 @@ export class CheckUpdatesView extends LitElement {
       _updates: { type: Array },
       _has_updates: { type: Boolean },
       _inflight_checking: { type: Boolean },
-      _check_error: { type: Boolean },
+      _check_error: { type: String },
       _confirmation_checked: { type: Boolean },
       _inflight_update: { type: Boolean},
       _update_commenced: { type: Boolean },
@@ -93,7 +93,7 @@ export class CheckUpdatesView extends LitElement {
     this._updates = [];
     this._has_updates = false;
     this._inflight_checking = false;
-    this._check_error = false;
+    this._check_error = null;
     this._systemJobId = "";
     this._updatePollId = null;
   }
@@ -125,7 +125,7 @@ export class CheckUpdatesView extends LitElement {
     this._updates = [];
     this._updatablePackages = [];
     this._has_updates = false;
-    this._check_error = false;
+    this._check_error = null;
     this._inflight_checking = true;
 
     try {
@@ -146,7 +146,9 @@ export class CheckUpdatesView extends LitElement {
       this._has_updates = this._updatablePackages.length > 0;
     } catch (error) {
       console.error("Failed to check for system updates:", error);
-      this._check_error = true;
+      this._check_error = error instanceof Error
+        ? error.message
+        : String(error);
     } finally {
       this._inflight_checking = false;
     }
@@ -333,7 +335,7 @@ export class CheckUpdatesView extends LitElement {
         </sl-alert>
 
         <p style="line-height: 1.1; color: #777">
-          <small>Unable to check for updates. Please try again.</small>
+          <small>Unable to check for updates: ${this._check_error}</small>
           <sl-button size="small" variant="text" @click=${this.fetchUpdates}>Check again</sl-button>
         </p>
         `: nothing}

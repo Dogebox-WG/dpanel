@@ -45,7 +45,7 @@ describe("CheckUpdatesView", () => {
     expect(failureAlert).to.exist;
     expect(failureAlert.textContent).to.contain("Check failed");
     expect(el.shadowRoot.textContent).to.contain(
-      "Unable to check for updates. Please try again.",
+      "Unable to check for updates: Simulated error returned from /system/updates",
     );
     expect(retryButton).to.exist;
     expect(retryButton.hasAttribute("disabled")).to.equal(false);
@@ -60,7 +60,7 @@ describe("CheckUpdatesView", () => {
     );
     await el.updateComplete;
 
-    expect(el._check_error).to.equal(false);
+    expect(el._check_error).to.equal(null);
     expect(el.shadowRoot.textContent).to.contain("Update available");
     expect(el.shadowRoot.querySelector('sl-alert[variant="danger"]')).not.to.exist;
   });

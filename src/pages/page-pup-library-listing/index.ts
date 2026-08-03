@@ -34,6 +34,7 @@ import { canCopyToClipboard } from "/utils/clipboard.js";
 
 import type { EnrichedPup, PupComputedVals } from "/types/pup-model";
 import type { ActionProgress } from "/types/jobs";
+import type { PropertyDeclaration } from "lit";
 
 /** Computed labels spread from pkg.computed; may be empty when not yet derived. */
 export type PupLabels = Partial<PupComputedVals>;
@@ -64,6 +65,7 @@ export class PupPage extends LitElement {
   open_page_label: string;
   pupId?: string | null;
   _missingPupRedirectTimer: ReturnType<typeof setTimeout> | null;
+  _rollbackCheckedPupId: string | null;
 
   renderDialog: () => unknown;
   renderActions: (labels: PupLabels, hasLogs: number) => unknown;
@@ -111,6 +113,7 @@ export class PupPage extends LitElement {
     this.renderActions = renderActions.bind(this);
     this.renderStatus = renderStatus.bind(this);
     this._missingPupRedirectTimer = null;
+    this._rollbackCheckedPupId = null;
   }
 
   getPup() {
@@ -134,18 +137,32 @@ export class PupPage extends LitElement {
     super.disconnectedCallback();
   }
 
-  requestUpdate(options?: unknown) {
+  requestUpdate(
+    nameOrOptions?: unknown,
+    oldValue?: unknown,
+    options?: PropertyDeclaration,
+  ) {
     if (
       this.pkgController &&
-      typeof options === 'object' &&
-      options !== null &&
-      'type' in options &&
-      options.type === 'activity'
+      typeof nameOrOptions === 'object' &&
+      nameOrOptions !== null &&
+      'type' in nameOrOptions &&
+      nameOrOptions.type === 'activity'
     ) {
       if (this.context.store.pupContext?.state?.id) {
         this.updateActivityLogs();
       }
     }
+
+    if (
+      typeof nameOrOptions === 'string' ||
+      typeof nameOrOptions === 'number' ||
+      typeof nameOrOptions === 'symbol'
+    ) {
+      super.requestUpdate(nameOrOptions, oldValue, options);
+      return;
+    }
+
     super.requestUpdate();
   }
 
@@ -358,10 +375,19 @@ export class PupPage extends LitElement {
   async updated(changedProperties: Map<PropertyKey, unknown>) {
     super.updated(changedProperties);
     
-    // Check for rollback availability when pup becomes broken
+    // Check once each time a pup enters the broken state. Set the guard before
+    // awaiting so activity updates cannot start concurrent requests.
     const pkg = this.getPup();
-    if (pkg && pkg.state?.installation === 'broken') {
-      await this.checkRollbackAvailability();
+    const brokenPupId = pkg?.state?.installation === 'broken'
+      ? pkg.state.id
+      : null;
+    if (brokenPupId && this._rollbackCheckedPupId !== brokenPupId) {
+      this._rollbackCheckedPupId = brokenPupId;
+      this.rollbackAvailable = false;
+      await this.checkRollbackAvailability(brokenPupId);
+    } else if (!brokenPupId) {
+      this._rollbackCheckedPupId = null;
+      this.rollbackAvailable = false;
     }
 
     // If we're still on a pup route but the pup disappeared (purged),
@@ -390,17 +416,18 @@ export class PupPage extends LitElement {
     }
   }
 
-  async checkRollbackAvailability() {
-    const pupId = this.context.store.pupContext?.state?.id;
-    if (!pupId) return;
-    
+  async checkRollbackAvailability(pupId: string) {
     try {
       const { getPreviousVersion } = await import('/api/pup-updates/pup-updates.js');
       const result = await getPreviousVersion(pupId);
-      this.rollbackAvailable = result.rollbackPossible || false;
+      if (this._rollbackCheckedPupId === pupId) {
+        this.rollbackAvailable = result.rollbackPossible || false;
+      }
     } catch (error) {
       console.error('Failed to check rollback availability:', error);
-      this.rollbackAvailable = false;
+      if (this._rollbackCheckedPupId === pupId) {
+        this.rollbackAvailable = false;
+      }
     }
   }
 

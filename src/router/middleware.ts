@@ -3,6 +3,7 @@ import { store } from "/state/store.js";
 import { pkgController } from "/controllers/package/index.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { getStoreListing } from "/api/sources/sources.js";
+import { clearSessionExpiryTimer } from "/state/session-expiry.js";
 import type { RouteContext, RouteCommands } from "./router.js";
 
 export async function loadPup(context: RouteContext, commands: RouteCommands) {
@@ -80,7 +81,8 @@ export function isAuthed(context: RouteContext, commands: RouteCommands): undefi
 }
 
 export function performLogout(context: RouteContext, commands: RouteCommands): never {
-  store.updateState({ networkContext: { token: null } });
+  clearSessionExpiryTimer();
+  store.updateState({ networkContext: { token: null, sessionExpiresAt: null } });
   return commands.redirect("/login");
 }
 

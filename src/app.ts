@@ -45,6 +45,10 @@ import { setRouterInstance } from "/router/index.js";
 import debounce from "/utils/debounce.js";
 import { bindToClass } from "/utils/class-bind.js";
 import { isUnauthedRoute, hasFlushParam } from "/utils/url-utils.js";
+import {
+  clearSessionExpiryTimer,
+  scheduleSessionExpiry,
+} from "/state/session-expiry.js";
 
 // Apis
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
@@ -125,6 +129,8 @@ export class DPanelApp extends LitElement {
     // Initial check to set orientation on load
     this._handleResize();
 
+    scheduleSessionExpiry();
+
     // Instanciate a web socket connection and add app as an observer
     this.mainChannel.addObserver(this);
 
@@ -140,6 +146,7 @@ export class DPanelApp extends LitElement {
     this.removeEventListener("menu-toggle-request", this._handleMenuToggleRequest);
     this.mainChannel.removeObserver(this);
     jobWebSocket.disconnect();
+    clearSessionExpiryTimer();
     super.disconnectedCallback();
   }
 

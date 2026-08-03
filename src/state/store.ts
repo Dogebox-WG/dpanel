@@ -35,6 +35,7 @@ export interface NetworkContext {
   reqLogs: boolean;
   status: string;
   token: string | false | null;
+  sessionExpiresAt?: number | null;
   demoSystemPrompt: string;
   logStatsUpdates: boolean;
   logStateUpdates: boolean;
@@ -177,6 +178,7 @@ class Store implements StoreState {
       reqLogs: false,
       status: "online",
       token: false,
+      sessionExpiresAt: null,
       demoSystemPrompt: "",
       logStatsUpdates: false,
       logStateUpdates: false,

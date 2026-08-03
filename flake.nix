@@ -48,7 +48,7 @@
           name = "dpanel";
           src = ./.;
 
-          npmDepsHash = "sha256-8u5TAf4uE+twwR0/F9NxB6PDbv55ngmSLTWXxHy3iO8=";
+          npmDepsHash = "sha256-9djGsnvcLu6mbP8MDN3FdH7Rtmw3HfB7p7H+kZDeptE=";
 
           nativeBuildInputs = [ pkgs.protobuf ];
 

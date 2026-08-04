@@ -31,6 +31,12 @@ import { renderActions } from "./renders/actions.js";
 import { renderStatus } from "./renders/status.js";
 import { addSidebarPup, removeSidebarPup } from "/api/system/sidebar-preferences.js";
 import { canCopyToClipboard } from "/utils/clipboard.js";
+import {
+  closePupDialog,
+  handlePupDialogAfterHide,
+  handlePupDialogHide,
+  openPupDialog,
+} from "/pages/pup-dialog-lifecycle.js";
 
 import type { EnrichedPup, PupComputedVals } from "/types/pup-model";
 import type { ActionProgress } from "/types/jobs";
@@ -47,7 +53,8 @@ interface HealthCheckDef {
 export class PupPage extends LitElement {
   declare ready: boolean; // Page is loading or not.
   declare result: string; // 200, 404, 500.
-  declare open_dialog: string | false;
+  declare dialog_open: boolean;
+  declare open_dialog: string;
   declare open_dialog_label: string;
   declare checks: HealthCheckDef[];
   declare pupEnabled: boolean;
@@ -80,7 +87,8 @@ export class PupPage extends LitElement {
     return {
       ready: { type: Boolean }, // Page is loading or not.
       result: { type: String }, // 200, 404, 500.
-      open_dialog: { type: Boolean },
+      dialog_open: { type: Boolean },
+      open_dialog: { type: String },
       open_dialog_label: { type: String },
       checks: { type: Object },
       pupEnabled: { type: Boolean },
@@ -99,6 +107,7 @@ export class PupPage extends LitElement {
     bindToClass(renderMethods, this);
     this.pkgController = pkgController;
     this.context = new StoreSubscriber(this, store);
+    this.dialog_open = false;
     this.open_dialog = "";
     this.open_dialog_label = "";
     this.open_page = false;
@@ -200,22 +209,20 @@ export class PupPage extends LitElement {
     `;
   }
 
-  async firstUpdated() {
-    this.addEventListener("sl-hide", this.handleDialogClose);
+  handleDialogHide(event: Event) {
+    handlePupDialogHide(this, event);
   }
 
-  handleDialogClose() {
-    this.clearDialog();
+  handleDialogAfterHide(event: Event) {
+    handlePupDialogAfterHide(this, event);
   }
 
   clearDialog() {
-    this.open_dialog = false;
-    this.open_dialog_label = "";
+    closePupDialog(this);
   }
 
   handleMenuClick = (event: Event, el: HTMLElement) => {
-    this.open_dialog = el.getAttribute("name") ?? "";
-    this.open_dialog_label = el.getAttribute("label") ?? "";
+    openPupDialog(this, el);
   };
 
   submitConfig = async (
@@ -777,8 +784,10 @@ export class PupPage extends LitElement {
         <sl-dialog
           class="distinct-header"
           id="PupMgmtDialog"
-          ?open=${this.open_dialog}
+          ?open=${this.dialog_open}
           label=${this.open_dialog_label}
+          @sl-hide=${this.handleDialogHide}
+          @sl-after-hide=${this.handleDialogAfterHide}
         >
           ${this.renderDialog()}
         </sl-dialog>

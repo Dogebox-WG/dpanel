@@ -1,17 +1,16 @@
 import { html, css, nothing } from "/lib/lit-all.js";
+import { showPupDialog } from "/pages/pup-dialog-lifecycle.js";
 import { doBootstrap } from "/api/bootstrap/bootstrap.js";
 import { pupUpdates } from "/state/pup-updates.js";
 
 import type { PupLabels, PupPage } from "../index.js";
 
 export function openConfig(this: PupPage) {
-  this.open_dialog = "configure";
-  this.open_dialog_label = "Configure";
+  showPupDialog(this, "configure", "Configure");
 }
 
 export function openDeps(this: PupPage) {
-  this.open_dialog = "deps";
-  this.open_dialog_label = "Dependencies";
+  showPupDialog(this, "deps", "Dependencies");
 }
 
 export async function handlePurgeFunction(this: PupPage) {

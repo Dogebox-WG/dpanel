@@ -34,6 +34,7 @@ import { canCopyToClipboard } from "/utils/clipboard.js";
 
 import type { EnrichedPup, PupComputedVals } from "/types/pup-model";
 import type { ActionProgress } from "/types/jobs";
+import type { ShoelaceDialogElement } from "/types/shoelace";
 import type { PropertyDeclaration } from "lit";
 
 /** Computed labels spread from pkg.computed; may be empty when not yet derived. */
@@ -66,6 +67,7 @@ export class PupPage extends LitElement {
   pupId?: string | null;
   _missingPupRedirectTimer: ReturnType<typeof setTimeout> | null;
   _rollbackCheckedPupId: string | null;
+  dialog_closing: boolean;
 
   renderDialog: () => unknown;
   renderActions: (labels: PupLabels, hasLogs: number) => unknown;
@@ -114,6 +116,7 @@ export class PupPage extends LitElement {
     this.renderStatus = renderStatus.bind(this);
     this._missingPupRedirectTimer = null;
     this._rollbackCheckedPupId = null;
+    this.dialog_closing = false;
   }
 
   getPup() {
@@ -200,17 +203,23 @@ export class PupPage extends LitElement {
     `;
   }
 
-  async firstUpdated() {
-    this.addEventListener("sl-hide", this.handleDialogClose);
+  handleDialogHide(event: Event) {
+    if (event.target !== event.currentTarget) return;
+    this.dialog_closing = true;
   }
 
-  handleDialogClose() {
-    this.clearDialog();
+  handleDialogAfterHide(event: Event) {
+    if (event.target !== event.currentTarget) return;
+    this.open_dialog = false;
+    this.open_dialog_label = "";
+    this.dialog_closing = false;
   }
 
   clearDialog() {
-    this.open_dialog = false;
-    this.open_dialog_label = "";
+    const dialog = this.shadowRoot?.querySelector<ShoelaceDialogElement>(
+      "#PupMgmtDialog",
+    );
+    void dialog?.hide();
   }
 
   handleMenuClick = (event: Event, el: HTMLElement) => {
@@ -777,8 +786,10 @@ export class PupPage extends LitElement {
         <sl-dialog
           class="distinct-header"
           id="PupMgmtDialog"
-          ?open=${this.open_dialog}
+          ?open=${Boolean(this.open_dialog) && !this.dialog_closing}
           label=${this.open_dialog_label}
+          @sl-hide=${this.handleDialogHide}
+          @sl-after-hide=${this.handleDialogAfterHide}
         >
           ${this.renderDialog()}
         </sl-dialog>

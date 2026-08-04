@@ -15,14 +15,11 @@ import { StoreSubscriber } from "/state/subscribe.js";
 import { pkgController } from "/controllers/package/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { canCopyToClipboard } from "/utils/clipboard.js";
+import type { ShoelaceDialogElement } from "/types/shoelace";
 import "/components/common/action-row/action-row.js";
 import "/components/common/reveal-row/reveal-row.js";
 import "/components/common/page-container.js";
 import "/components/views/x-log-viewer/index.js";
-
-interface SlDialogElement extends HTMLElement {
-  hide(): Promise<void>;
-}
 
 export class PupInstallPage extends LitElement {
   declare open_dialog: string | false;
@@ -114,7 +111,7 @@ export class PupInstallPage extends LitElement {
   }
 
   clearDialog() {
-    const dialog = this.shadowRoot?.querySelector<SlDialogElement>(
+    const dialog = this.shadowRoot?.querySelector<ShoelaceDialogElement>(
       "#PupMgmtDialog",
     );
     void dialog?.hide();

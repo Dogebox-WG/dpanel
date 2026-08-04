@@ -34,6 +34,7 @@ import { canCopyToClipboard } from "/utils/clipboard.js";
 
 import type { EnrichedPup, PupComputedVals } from "/types/pup-model";
 import type { ActionProgress } from "/types/jobs";
+import type { ShoelaceDialogElement } from "/types/shoelace";
 import type { PropertyDeclaration } from "lit";
 
 /** Computed labels spread from pkg.computed; may be empty when not yet derived. */
@@ -42,10 +43,6 @@ export type PupLabels = Partial<PupComputedVals>;
 interface HealthCheckDef {
   status?: string;
   [key: string]: unknown;
-}
-
-interface SlDialogElement extends HTMLElement {
-  hide(): Promise<void>;
 }
 
 export class PupPage extends LitElement {
@@ -219,7 +216,7 @@ export class PupPage extends LitElement {
   }
 
   clearDialog() {
-    const dialog = this.shadowRoot?.querySelector<SlDialogElement>(
+    const dialog = this.shadowRoot?.querySelector<ShoelaceDialogElement>(
       "#PupMgmtDialog",
     );
     void dialog?.hide();

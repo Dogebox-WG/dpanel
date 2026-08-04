@@ -845,6 +845,7 @@ export class AppModeApp extends LitElement {
                         () =>
                           html`<x-action-system-settings
                             .setupData=${this._setupData}
+                            .devMode=${this.devMode ?? false}
                             .onBack=${() => this._goToStep(STEP_INTRO)}
                             .onSuccess=${this._nextStep}
                           ></x-action-system-settings>`,

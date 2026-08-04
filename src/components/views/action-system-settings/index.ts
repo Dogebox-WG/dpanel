@@ -60,6 +60,7 @@ function isSlCheckedEl(target: EventTarget | null): target is SlCheckedEl {
 
 class SystemSettings extends LitElement {
   declare onBack: (() => void) | null;
+  declare devMode: boolean;
   declare _loading: boolean;
   declare _inflight: boolean;
   declare _timezones: FormattedTimezone[];
@@ -70,6 +71,7 @@ class SystemSettings extends LitElement {
   declare _show_disk_in_use_warning: boolean;
   declare _is_boot_media: boolean;
   declare _confirmation_checked: boolean;
+  declare _skip_storage_selection: boolean;
 
   // Assigned by the hosting page, not declared as reactive properties.
   declare onSuccess: (() => void | Promise<void>) | undefined;
@@ -131,6 +133,7 @@ class SystemSettings extends LitElement {
   static get properties() {
     return {
       onBack: { type: Object },
+      devMode: { type: Boolean },
       _loading: { type: Boolean },
       _inflight: { type: Boolean },
       _timezones: { type: Array },
@@ -141,12 +144,14 @@ class SystemSettings extends LitElement {
       _show_disk_in_use_warning: { type: Boolean },
       _is_boot_media: { type: Boolean },
       _confirmation_checked: { type: Boolean },
+      _skip_storage_selection: { type: Boolean },
     };
   }
 
   constructor() {
     super();
     this.onBack = null;
+    this.devMode = false;
     this._timezones = [];
     this._timezoneFields = buildTimezoneFields(this._inflight, this._timezones);
     this._disks = [];
@@ -161,6 +166,7 @@ class SystemSettings extends LitElement {
     this._show_disk_in_use_warning = false;
     this._is_boot_media = false;
     this._confirmation_checked = false;
+    this._skip_storage_selection = false;
   }
 
   async connectedCallback() {
@@ -241,7 +247,9 @@ class SystemSettings extends LitElement {
       }
       await setKeymap({ keymap: this._changes.keymap });
       await setTimezone({ timezone: this._changes.timezone! });
-      await setStorageDisk({ storageDevice: this._changes.disk });
+      await setStorageDisk({
+        storageDevice: this.devMode && this._skip_storage_selection ? '' : this._changes.disk,
+      });
       didSucceed = true;
     } catch (err) {
       console.error('Error occurred when saving config during setup', err);
@@ -323,6 +331,12 @@ class SystemSettings extends LitElement {
     this._confirmation_checked = e.target.checked;
   }
 
+  _handleSkipStorageChange(e: Event) {
+    if (!isSlCheckedEl(e.target)) return;
+    this._skip_storage_selection = e.target.checked;
+    this._confirmation_checked = false;
+  }
+
   _handleOsCacheChange(e: Event) {
     if (!isSlCheckedEl(e.target)) return;
     this._changes.use_fdn_os_binary_cache = e.target.checked;
@@ -345,6 +359,8 @@ class SystemSettings extends LitElement {
     if (this._loading) {
       return html`<sl-spinner></sl-spinner>`;
     }
+    const skipStorageSelection = this.devMode && this._skip_storage_selection;
+
     return html`
       <div class="page">
         <div class="padded">
@@ -377,31 +393,54 @@ class SystemSettings extends LitElement {
             ></de-form>
           </div>
 
-          <div class="form-control">
-            <sl-select
-              name="disk"
-              required
-              label="Select Mass Storage Disk"
-              ?disabled=${this._inflight}
-              help-text="To sync the Dogecoin Blockchain, a disk with >300GB capacity is required"
-              data-field="disk"
-              value=${this._changes.disk}
-              @sl-change=${this._handleInputChange}
-            >
-              ${this._disks
-                .filter((disk) => disk?.suitability?.storage?.usable)
-                .map((disk) =>
-                  html`
-                    <sl-option value=${disk.name}>${disk.name} (${disk.sizePretty}) ${disk.bootMedia ? "[Running Dogebox OS]" : ""}</sl-option>
-                  `,
-              )}
-            </sl-select>
+          ${this.devMode
+            ? html`
+                <div class="form-control">
+                  <sl-checkbox
+                    ?checked=${this._skip_storage_selection}
+                    ?disabled=${this._inflight}
+                    @sl-change=${this._handleSkipStorageChange}
+                  >
+                    Skip mass storage disk selection (development mode)
+                  </sl-checkbox>
+                </div>
+              `
+            : nothing}
 
-            <sl-alert variant="primary" ?open=${this._show_disk_size_warning} style="margin: 1em 0em;">
-              <sl-icon slot="icon" name="info-circle"></sl-icon>
-              You have selected a disk with less than 300GB capacity.  You can proceed, however syncing the Blockchain could exhaust your disk.
-            </sl-alert>
-          </div>
+          ${!skipStorageSelection
+            ? html`
+                <div class="form-control">
+                  <sl-select
+                    name="disk"
+                    required
+                    label="Select Mass Storage Disk"
+                    ?disabled=${this._inflight}
+                    help-text="To sync the Dogecoin Blockchain, a disk with >300GB capacity is required"
+                    data-field="disk"
+                    value=${this._changes.disk}
+                    @sl-change=${this._handleInputChange}
+                  >
+                    ${this._disks
+                      .filter((disk) => disk?.suitability?.storage?.usable)
+                      .map((disk) =>
+                        html`
+                          <sl-option value=${disk.name}>${disk.name} (${disk.sizePretty}) ${disk.bootMedia ? "[Running Dogebox OS]" : ""}</sl-option>
+                        `,
+                      )}
+                  </sl-select>
+
+                  <sl-alert variant="primary" ?open=${this._show_disk_size_warning} style="margin: 1em 0em;">
+                    <sl-icon slot="icon" name="info-circle"></sl-icon>
+                    You have selected a disk with less than 300GB capacity.  You can proceed, however syncing the Blockchain could exhaust your disk.
+                  </sl-alert>
+                </div>
+              `
+            : html`
+                <sl-alert variant="warning" open style="margin: 1em 0em;">
+                  <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+                  No mass storage disk will be configured. Dogebox data will remain on the current system disk.
+                </sl-alert>
+              `}
 
           <sl-details class="advanced" summary="Advanced Settings">
             <h4>Binary Caches
@@ -443,7 +482,7 @@ class SystemSettings extends LitElement {
 
           <sl-divider style="--spacing: 2rem;"></sl-divider>
 
-          <sl-alert variant="warning" ?open=${this._changes.disk && !this._is_boot_media} style="margin: 1em 0em;">
+          <sl-alert variant="warning" ?open=${!skipStorageSelection && this._changes.disk && !this._is_boot_media} style="margin: 1em 0em;">
             <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
             ${this._show_disk_in_use_warning
               ? html`Warning. The selected disk appears to have data present. The contents of this disk <strong>(${this._changes.disk})</strong> will be erased to prepare it for use as a mass storage drive for your Dogebox.`
@@ -464,7 +503,7 @@ class SystemSettings extends LitElement {
                 `
               : nothing}
             <div class="action-wrap-end">
-              ${this._changes.disk && !this._is_boot_media ? html`
+              ${!skipStorageSelection && this._changes.disk && !this._is_boot_media ? html`
                 <sl-checkbox @sl-change=${this.handleCheckboxChange}>I understand</sl-checkbox>
                 `: nothing 
               }
@@ -472,7 +511,7 @@ class SystemSettings extends LitElement {
               <sl-button
                 class="next-button"
                 variant="primary"
-                ?disabled=${this._inflight || (this._changes.disk && !this._is_boot_media && !this._confirmation_checked)}
+                ?disabled=${this._inflight || (!skipStorageSelection && this._changes.disk && !this._is_boot_media && !this._confirmation_checked)}
                 ?loading=${this._inflight}
                 @click=${this._attemptSubmit}
                 >Next</sl-button

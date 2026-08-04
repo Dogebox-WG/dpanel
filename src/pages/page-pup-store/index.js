@@ -4,6 +4,10 @@ import { pkgController } from '/controllers/package/index.js'
 import { PaginationController } from '/components/common/paginator/paginator-controller.js';
 import { bindToClass } from '/utils/class-bind.js'
 import { asyncTimeout } from '/utils/timeout.js'
+import {
+  parsePupSearchFromUrl,
+  getStoreSearchableText,
+} from '/components/utils/pup-search.js';
 import * as renderMethods from './renders/index.js';
 import '/components/views/card-pup-install/index.js'
 import '/components/common/paginator/paginator-ui.js';
@@ -30,6 +34,8 @@ class StoreView extends LitElement {
       busy: { type: Boolean },
       inspectedPup: { type: String },
       searchValue: { type: String },
+      searchInDescription: { type: Boolean },
+      searchInInterfaces: { type: Boolean },
       _showSourceManagementDialog: { type: Boolean },
       _hasSourceErrors: { type: Boolean }
     }
@@ -50,6 +56,8 @@ class StoreView extends LitElement {
 
     this.inspectedPup;
     this.searchValue = '';
+    this.searchInDescription = false;
+    this.searchInInterfaces = false;
     this.showCategories = false;
     this.categories = [
       { name: "all", label: "All" },
@@ -61,26 +69,21 @@ class StoreView extends LitElement {
       { name: "Write", label: "Write" },
       { name: "host", label: "Host" },
     ]
+    // Stable filter: query via setQuery; option flags read live from `this`.
     this.packageList.setFilter((pkg, query) => {
       const q = (query || '').trim().toLowerCase();
       if (!q) return true;
-      const key = (pkg.def?.key || '').toLowerCase();
-      const meta = pkg.def?.versions?.[pkg.def?.latestVersion]?.meta;
-      const name = (meta?.name || '').toLowerCase();
-      const short = (meta?.shortDescription || '').toLowerCase();
-      const installedName = (pkg.state?.manifest?.meta?.name || '').toLowerCase();
-      return (
-        key.includes(q) ||
-        name.includes(q) ||
-        short.includes(q) ||
-        installedName.includes(q)
-      );
+      return getStoreSearchableText(pkg, {
+        description: this.searchInDescription,
+        interfaces: this.searchInInterfaces,
+      }).includes(q);
     });
     bindToClass(renderMethods, this);
   }
 
   connectedCallback() {
     super.connectedCallback();
+    this.applySearchFromUrl();
     this.pkgController.addObserver(this);
     this.addEventListener('busy-start', this.handleBusyStart.bind(this));
     this.addEventListener('busy-stop', this.handleBusyStop.bind(this));
@@ -101,6 +104,23 @@ class StoreView extends LitElement {
     this.removeEventListener('source-change', this.updatePups.bind(this));
     this.pkgController.removeObserver(this);
     super.disconnectedCallback();
+  }
+
+  // Prefill from URL, e.g. /explore?search=wallet&interfaces=1&description=1
+  applySearchFromUrl() {
+    const {
+      searchValue,
+      searchInDescription,
+      searchInInterfaces,
+    } = parsePupSearchFromUrl();
+
+    this.searchValue = searchValue;
+    this.searchInDescription = searchInDescription;
+    this.searchInInterfaces = searchInInterfaces;
+
+    if ((this.searchValue || "").trim() !== "") {
+      this.packageList.setQuery(this.searchValue);
+    }
   }
 
   handleManageSourcesClosed() {
@@ -196,6 +216,17 @@ class StoreView extends LitElement {
     this.packageList.setQuery(this.searchValue);
   }
 
+  handleSearchOptionChange(event) {
+    const option = event.target.dataset.option;
+    if (option === 'description') {
+      this.searchInDescription = event.target.checked;
+    } else if (option === 'interfaces') {
+      this.searchInInterfaces = event.target.checked;
+    }
+    // Re-apply current query so the stable filter re-reads option flags.
+    this.packageList.setQuery(this.searchValue);
+  }
+
   checkForSourceErrors() {
     const sources = this.pkgController.getSourceList();
     this._hasSourceErrors = sources.some(source => source.error);
@@ -230,17 +261,39 @@ class StoreView extends LitElement {
       </page-banner>
 
       <div class="row search-wrap">
-        <sl-input
-          class="constrained w55"
-          type="search"
-          size="large"
-          placeholder="Search"
-          clearable
-          .value=${this.searchValue}
-          @input=${this.handleSearchInput}
-        >
-          <sl-icon name="search" slot="prefix"></sl-icon>
-        </sl-input>
+        <div class="constrained w55 search-inner">
+          <sl-input
+            type="search"
+            size="large"
+            placeholder="Search"
+            clearable
+            .value=${this.searchValue}
+            @sl-input=${this.handleSearchInput}
+          >
+            <sl-icon name="search" slot="prefix"></sl-icon>
+          </sl-input>
+          <div class="search-options">
+            <span class="search-options-label">Also search:</span>
+            <div class="search-options-checks">
+              <sl-switch
+                size="small"
+                data-option="description"
+                ?checked=${this.searchInDescription}
+                @sl-change=${this.handleSearchOptionChange}
+              >
+                Descriptions
+              </sl-switch>
+              <sl-switch
+                size="small"
+                data-option="interfaces"
+                ?checked=${this.searchInInterfaces}
+                @sl-change=${this.handleSearchOptionChange}
+              >
+                Interfaces Provided
+              </sl-switch>
+            </div>
+          </div>
+        </div>
       </div>
 
       ${this.showCategories ? html`
@@ -285,6 +338,36 @@ class StoreView extends LitElement {
         &.w55 { width: 55% }
         &.w80 { width: 80% }
       }
+    }
+
+    .search-inner sl-input {
+      width: 100%;
+    }
+
+    .search-options {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1em;
+      line-height: 0;
+      margin-top: 0.6em;
+      padding-left: 0.25em;
+    }
+
+    .search-options-checks {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1em;
+    }
+
+    .search-options-label {
+      text-transform: uppercase;
+      font-weight: bold;
+      color: var(--sl-color-neutral-500);
+      padding-left: 0.25em;
     }
 
     .tab-wrap {

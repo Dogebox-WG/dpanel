@@ -1,12 +1,12 @@
 import { html, css, nothing } from "/lib/lit-all.js";
 import "/components/common/version-selector/index.js";
 import { sortVersionsDescending } from "/utils/version.js";
-import { showPupDialog } from "/pages/pup-dialog-lifecycle.js";
 
 import type { PupInstallPage } from "../index.js";
 
 export function openConfig(this: PupInstallPage) {
-  showPupDialog(this, "configure", "Configure");
+  this.open_dialog = "configure";
+  this.open_dialog_label = "Configure";
 }
 
 export function renderActions(this: PupInstallPage) {

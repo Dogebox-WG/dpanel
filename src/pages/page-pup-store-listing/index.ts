@@ -15,20 +15,17 @@ import { StoreSubscriber } from "/state/subscribe.js";
 import { pkgController } from "/controllers/package/index.js";
 import { asyncTimeout } from "/utils/timeout.js";
 import { canCopyToClipboard } from "/utils/clipboard.js";
-import {
-  closePupDialog,
-  handlePupDialogAfterHide,
-  handlePupDialogHide,
-  openPupDialog,
-} from "/pages/pup-dialog-lifecycle.js";
 import "/components/common/action-row/action-row.js";
 import "/components/common/reveal-row/reveal-row.js";
 import "/components/common/page-container.js";
 import "/components/views/x-log-viewer/index.js";
 
+interface SlDialogElement extends HTMLElement {
+  hide(): Promise<void>;
+}
+
 export class PupInstallPage extends LitElement {
-  declare dialog_open: boolean;
-  declare open_dialog: string;
+  declare open_dialog: string | false;
   declare open_dialog_label: string;
   declare busy: boolean;
   declare inflight: boolean;
@@ -42,6 +39,7 @@ export class PupInstallPage extends LitElement {
   context: StoreSubscriber;
   open_page: boolean;
   open_page_label: string;
+  dialog_closing: boolean;
 
   // Render chunks mixed in via bindToClass(renderMethods, this).
   declare renderStatus: () => unknown;
@@ -51,7 +49,6 @@ export class PupInstallPage extends LitElement {
 
   static get properties() {
     return {
-      dialog_open: { type: Boolean },
       open_dialog: { type: String },
       open_dialog_label: { type: String },
       busy: { type: Boolean },
@@ -70,11 +67,11 @@ export class PupInstallPage extends LitElement {
     this.pkgController = pkgController;
     this._renderedJobId = null;
     this.context = new StoreSubscriber(this, store);
-    this.dialog_open = false;
     this.open_dialog = "";
     this.open_dialog_label = "";
     this.open_page = false;
     this.open_page_label = "";
+    this.dialog_closing = false;
     this.busy = false;
     this.inflight = false;
     this.autoInstallDependencies = true;
@@ -105,19 +102,27 @@ export class PupInstallPage extends LitElement {
   }
 
   handleDialogHide(event: Event) {
-    handlePupDialogHide(this, event);
+    if (event.target !== event.currentTarget) return;
+    this.dialog_closing = true;
   }
 
   handleDialogAfterHide(event: Event) {
-    handlePupDialogAfterHide(this, event);
+    if (event.target !== event.currentTarget) return;
+    this.open_dialog = false;
+    this.open_dialog_label = "";
+    this.dialog_closing = false;
   }
 
   clearDialog() {
-    closePupDialog(this);
+    const dialog = this.shadowRoot?.querySelector<SlDialogElement>(
+      "#PupMgmtDialog",
+    );
+    void dialog?.hide();
   }
 
   handleMenuClick = (event: Event, el: HTMLElement) => {
-    openPupDialog(this, el);
+    this.open_dialog = el.getAttribute("name") ?? "";
+    this.open_dialog_label = el.getAttribute("label") ?? "";
   };
 
   handleLogViewerClosed = () => {
@@ -356,7 +361,7 @@ export class PupInstallPage extends LitElement {
         <sl-dialog
           class="distinct-header"
           id="PupMgmtDialog"
-          ?open=${this.dialog_open}
+          ?open=${Boolean(this.open_dialog) && !this.dialog_closing}
           label=${this.open_dialog_label}
           @sl-hide=${this.handleDialogHide}
           @sl-after-hide=${this.handleDialogAfterHide}

@@ -1,0 +1,343 @@
+import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
+import '/components/views/card-pup-manage/index.js'
+import '/components/common/paginator/paginator-ui.js';
+import { getBootstrapV2 } from '/api/bootstrap/bootstrap.js';
+import { pkgController } from '/controllers/package/index.js'
+import { PaginationController } from '/components/common/paginator/paginator-controller.js';
+import { bindToClass } from '/utils/class-bind.js'
+import * as renderMethods from './renders/index.js';
+
+import type { EnrichedPup } from '/types/pup-model';
+
+const initialSort = (a: EnrichedPup, b: EnrichedPup) => {
+  const nameA = a?.state?.manifest?.meta?.name || '';
+  const nameB = b?.state?.manifest?.meta?.name || '';
+  
+  // Default alphabetical sort
+  if (nameA < nameB) return -1;
+  if (nameA > nameB) return 1;
+  return 0;
+}
+
+export class LibraryView extends LitElement {
+  declare fetchLoading: boolean;
+  declare fetchError: boolean;
+  declare packageList: unknown[] | null;
+  declare busy: boolean;
+  declare inspectedPup: string | undefined;
+
+  busyQueue: EventTarget[];
+  itemsPerPage: number;
+  pkgController: typeof pkgController;
+  installedList: PaginationController<EnrichedPup>;
+
+  // Render chunks mixed in via bindToClass(renderMethods, this).
+  declare renderSectionInstalledHeader: (ready: unknown) => unknown;
+  declare renderSectionInstalledBody: (ready: unknown, SKELS: unknown[], hasItems: (nickname: string) => boolean | undefined) => unknown;
+
+  static properties = {
+    fetchLoading: { type: Boolean },
+    fetchError: { type: Boolean },
+    packageList: { type: Array },
+    busy: { type: Boolean },
+    inspectedPup: { type: String }
+  }
+
+  constructor() {
+    super();
+    this.busy = false;
+    this.busyQueue = [];
+    this.fetchLoading = true;
+    this.fetchError = false;
+    this.itemsPerPage = 20;
+    this.pkgController = pkgController;
+    this.installedList = new PaginationController<EnrichedPup>(this, undefined, this.itemsPerPage, { initialSort });
+    // this.availableList = new PaginationController(this, undefined, this.itemsPerPage);
+    this.inspectedPup;
+    bindToClass(renderMethods, this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.pkgController.addObserver(this);
+    this.addEventListener('busy-start', this.handleBusyStart.bind(this));
+    this.addEventListener('busy-stop', this.handleBusyStop.bind(this));
+    this.addEventListener('pup-installed', this.handlePupInstalled.bind(this));
+    this.addEventListener('forced-tab-show', this.handleForcedTabShow.bind(this));
+    this.fetchBootstrap();
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener('busy-start', this.handleBusyStart.bind(this));
+    this.removeEventListener('busy-stop', this.handleBusyStop.bind(this));
+    this.removeEventListener('pup-installed', this.handlePupInstalled.bind(this));
+    this.removeEventListener('forced-tab-show', this.handleForcedTabShow.bind(this));
+    this.pkgController.removeObserver(this);
+    super.disconnectedCallback();
+  }
+
+  reset() {
+    this.fetchLoading = true;
+    this.fetchError = false;
+    this.packageList = null;
+  }
+
+  updateBusyState() {
+    this.busy = this.busyQueue.length > 0;
+  }
+
+  handleBusyStart(event: Event) {
+    if (event.target) this.busyQueue.push(event.target);
+    this.updateBusyState();
+  }
+
+  handleBusyStop(event: Event) {
+    // Remove the identifier of the event source from the queue
+    const index = event.target ? this.busyQueue.indexOf(event.target) : -1;
+    if (index > -1) {
+      this.busyQueue.splice(index, 1);
+    }
+    setTimeout(() => {
+      this.updateBusyState();
+    }, 500);
+  }
+
+  handlePupInstalled(event: Event) {
+    event.stopPropagation();
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { pupid: string } = event.detail;
+    // installPkg no longer exists on pkgController; guarded so a stray
+    // pup-installed event (legacy card-pup-snapshot) cannot throw.
+    const controller = this.pkgController;
+    if ('installPkg' in controller && typeof controller.installPkg === 'function') {
+      controller.installPkg(detail.pupid);
+    }
+    this.requestUpdate();
+  }
+
+  handlePupClick(event: Event) {
+    const el = event.currentTarget;
+    if (el instanceof HTMLElement && 'pupId' in el) {
+      this.inspectedPup = typeof el.pupId === 'string' ? el.pupId : undefined;
+    }
+  }
+
+  handleForcedTabShow(event: Event) {
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { pupId: string } = event.detail;
+    this.inspectedPup = detail.pupId
+  }
+
+  async fetchBootstrap() {
+    this.reset();
+    // Emit busy start event which adds this action to a busy-queue.
+    this.dispatchEvent(new CustomEvent('busy-start', {}));
+
+    try {
+      const res = await getBootstrapV2()
+      this.pkgController.setData(res);
+      this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    } catch (err) {
+      console.error(err);
+      this.fetchError = true;
+    } finally {
+      // Emit a busy stop event which removes this action from the busy-queue.
+      this.dispatchEvent(new CustomEvent('busy-stop', {}));
+      this.fetchLoading = false
+    }
+  }
+
+  updatePups() {
+    this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    this.requestUpdate();
+  }
+
+  handleActionsMenuSelect(event: Event) {
+    if (!(event instanceof CustomEvent)) return;
+    const detail: { item: { value: string } } = event.detail;
+    const selectedItemValue = detail.item.value;
+    switch (selectedItemValue) {
+      case 'refresh':
+        this.fetchBootstrap();
+        break;
+    }
+  }
+
+  render() {
+    const ready = (
+      !this.fetchLoading &&
+      !this.fetchError &&
+      this.installedList.data
+    )
+
+    const hasItems = (listNickname: string) => {
+      switch(listNickname) {
+        case 'installed':
+          return Boolean(this.installedList.data.length)
+          break;
+      }
+    }
+
+    const SKELS = Array.from({ length: 1 })
+    const totalPages = this.installedList.data ? Math.max(this.installedList.getTotalPages(), 1) : 1;
+    const paginationDisabled = this.busy || this.fetchLoading || this.fetchError || !this.installedList.data;
+
+    return html`
+      <div class="padded">
+        ${this.fetchLoading 
+          ? html`<sl-spinner style="--indicator-color:#777;"></sl-spinner>
+        ` : this.renderSectionInstalledBody(ready, SKELS, hasItems) }
+      </div>
+
+      <div class="pagination-dock">
+        <paginator-ui
+          ?disabled=${paginationDisabled}
+          @go-next=${this.installedList.nextPage}
+          @go-prev=${this.installedList.previousPage}
+          currentPage=${this.installedList.currentPage}
+          totalPages=${totalPages}
+        ></paginator-ui>
+      </div>
+
+    `;
+  }
+
+  static styles = css`
+    :host {
+      --pagination-dock-height: 72px;
+      box-sizing: border-box;
+      display: block;
+      padding-bottom: var(--pagination-dock-height);
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    .padded {
+      background: #23252a;
+      margin: 1em;
+    }
+
+    .pagination-dock {
+      position: fixed;
+      left: var(--page-margin-left);
+      right: 0;
+      bottom: 0;
+      z-index: 90;
+      height: var(--pagination-dock-height);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      box-sizing: border-box;
+      padding: 0 20px;
+      background: #23252a;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .pagination-dock paginator-ui {
+      width: 100%;
+    }
+
+    .banner {
+      color: white;
+      background-color: var(--sl-color-indigo-400);
+      background-image: linear-gradient(to bottom right, var(--sl-color-indigo-400), var(--sl-color-indigo-300));
+      position: relative;
+      overflow: hidden;
+    }
+    .banner main {
+      max-width: 65%;
+      padding: 0.5em;
+    }
+
+    .banner main p {
+      font-family: unset;
+    }
+    .banner aside {
+      position: absolute;
+      right: -68%;
+      top: -35px;
+      width: 100%;
+      height: 128%;
+
+      @media (min-width: 768px) {
+        top: -65px;
+        height: 180%;
+      }
+
+      @media (min-width: 1024px) {
+        right: -55%;
+        top: -165px;
+        height: 280%;
+      }
+    }
+    .banner aside img.doge-store-bg {
+      height: 100%;
+      width: auto;
+      transform: rotate(-4deg);
+    }
+
+    .banner h1,
+    .banner h2 {
+      color: white;
+      font-family: 'Comic Neue', sans-serif;
+      margin: 0px;
+    }
+    .banner p:first-of-type {
+      margin-top: 0px;
+    }
+
+    h1, h2 {
+      font-family: 'Comic Neue', sans-serif;
+      color: #ffd807;
+    }
+
+    header {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.8rem;
+      margin: 1em 0em;
+    }
+
+    header .heading-wrap {
+      display: flex;
+      gap: 0.8rem;
+      align-items: baseline;
+      margin-bottom: 1em;
+    }
+
+    header .heading-wrap h2 {
+      margin-top: 0px;
+      @media (min-width: 1024px) {
+        margin-top: 1em;
+      }
+    }
+
+    header .header-actions {
+      display: flex;
+      flex-direction: row;
+      gap: 0.85em;
+      margin-left: auto;
+    }
+
+    /* Details toggle */
+    .details-group pup-snapshot:not(:last-of-type),
+    .details-group pup-snapshot-skeleton:not(:last-of-type) {
+      margin-bottom: var(--sl-spacing-x-small);
+    }
+
+    .empty {
+      width: 100%;
+      color: var(--sl-color-neutral-600);
+      box-sizing: border-box;
+      border: dashed 1px var(--sl-color-neutral-200);
+      border-radius: var(--sl-border-radius-medium);
+      padding: var(--sl-spacing-x-large) var(--sl-spacing-medium);
+      font-family: 'Comic Neue', sans-serif;
+      text-align: center;
+    }
+  `
+}
+
+customElements.define('x-page-pup-library', LibraryView);

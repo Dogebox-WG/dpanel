@@ -65,19 +65,17 @@ export function buildSearchableText({
   return parts.join(" ").toLowerCase();
 }
 
-/** Older sources used descShort/descLong for the meta description keys. */
-interface SearchMeta {
-  name?: string;
-  shortDescription?: string;
-  longDescription?: string;
-  descShort?: string;
-  descLong?: string;
+/** Read optional legacy string fields (e.g. descShort) without type assertions. */
+function legacyString(obj: object | null | undefined, key: string): string {
+  if (!obj) return "";
+  const value = Reflect.get(obj, key);
+  return typeof value === "string" ? value : "";
 }
 
-function descriptionPartsFromMeta(meta: SearchMeta): string[] {
+function descriptionPartsFromMeta(meta: object | null | undefined): string[] {
   return [
-    meta.shortDescription || meta.descShort || "",
-    meta.longDescription || meta.descLong || "",
+    legacyString(meta, "shortDescription") || legacyString(meta, "descShort"),
+    legacyString(meta, "longDescription") || legacyString(meta, "descLong"),
   ];
 }
 
@@ -95,10 +93,10 @@ export function getStoreSearchableText(
   const def = pkg?.def;
   const latestVersion = def?.latestVersion ?? "";
   const version = def?.versions?.[latestVersion];
-  const meta: SearchMeta = (version?.meta as SearchMeta | undefined) ?? {};
+  const meta = version?.meta;
 
   return buildSearchableText({
-    baseParts: [def?.key || "", meta.name || ""],
+    baseParts: [def?.key || "", meta?.name || ""],
     descriptionParts: descriptionPartsFromMeta(meta),
     // Only interfaces this pup provides (not ones it depends on).
     interfaceNames: interfaceNamesFromList(version?.interfaces ?? []),
@@ -112,10 +110,10 @@ export function getLibrarySearchableText(
   options: PupSearchOptions = {},
 ): string {
   const manifest = pkg?.state?.manifest;
-  const meta: SearchMeta = (manifest?.meta as SearchMeta | undefined) ?? {};
+  const meta = manifest?.meta;
 
   return buildSearchableText({
-    baseParts: [meta.name || "", pkg?.state?.id || ""],
+    baseParts: [meta?.name || "", pkg?.state?.id || ""],
     descriptionParts: descriptionPartsFromMeta(meta),
     interfaceNames: interfaceNamesFromList(manifest?.interfaces ?? []),
     options,

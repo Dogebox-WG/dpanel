@@ -1,18 +1,7 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement } from 'lit/decorators.js';
 import { StoreSubscriber } from '../../../state/subscribe.js';
 import { store } from '../../../state/store.js';
-
-interface Job {
-  status: string;
-  [key: string]: any;
-}
-
-interface JobsContext {
-  jobs: Job[];
-  loading: boolean;
-  error: string | null;
-}
 
 @customElement('job-indicator')
 export class JobIndicator extends LitElement {
@@ -114,10 +103,9 @@ export class JobIndicator extends LitElement {
   }
   
   render() {
-    const jobsContext = this.context.store.jobsContext as JobsContext; // TS-TODO : Remove 'as' when we have a better type for jobsContext
-    const { jobs } = jobsContext;
+    const { jobs } = this.context.store.jobsContext;
     const activeCount = jobs.filter(j => j.status === 'in_progress').length;
-    const pendingCount = jobs.filter(j => j.status === 'queued' || j.status === 'pending').length;
+    const pendingCount = jobs.filter(j => j.status === 'queued').length;
     const activeOrPendingCount = activeCount + pendingCount;
     const isActive = window.location.pathname.startsWith('/activity');
     

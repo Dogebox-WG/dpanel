@@ -10,7 +10,7 @@ import {
 import "/components/common/action-row/action-row.js";
 import "/components/views/x-check/index.js";
 import "/components/common/page-container.js";
-import "/components/common/sparkline-chart/sparkline-chart-v2.js";
+import "/components/common/sparkline-chart/sparkline-chart.js";
 import "/components/views/x-metric/metric.js";
 import "/components/views/x-activity-log.js";
 import "/components/common/reveal-row/reveal-row.js";
@@ -34,6 +34,8 @@ import { canCopyToClipboard } from "/utils/clipboard.js";
 
 import type { EnrichedPup, PupComputedVals } from "/types/pup-model";
 import type { ActionProgress } from "/types/jobs";
+import type { ShoelaceDialogElement } from "/types/shoelace";
+import type { PropertyDeclaration } from "lit";
 
 /** Computed labels spread from pkg.computed; may be empty when not yet derived. */
 export type PupLabels = Partial<PupComputedVals>;
@@ -64,6 +66,8 @@ export class PupPage extends LitElement {
   open_page_label: string;
   pupId?: string | null;
   _missingPupRedirectTimer: ReturnType<typeof setTimeout> | null;
+  _rollbackCheckedPupId: string | null;
+  dialog_closing: boolean;
 
   renderDialog: () => unknown;
   renderActions: (labels: PupLabels, hasLogs: number) => unknown;
@@ -111,6 +115,8 @@ export class PupPage extends LitElement {
     this.renderActions = renderActions.bind(this);
     this.renderStatus = renderStatus.bind(this);
     this._missingPupRedirectTimer = null;
+    this._rollbackCheckedPupId = null;
+    this.dialog_closing = false;
   }
 
   getPup() {
@@ -134,18 +140,32 @@ export class PupPage extends LitElement {
     super.disconnectedCallback();
   }
 
-  requestUpdate(options?: unknown) {
+  requestUpdate(
+    nameOrOptions?: unknown,
+    oldValue?: unknown,
+    options?: PropertyDeclaration,
+  ) {
     if (
       this.pkgController &&
-      typeof options === 'object' &&
-      options !== null &&
-      'type' in options &&
-      options.type === 'activity'
+      typeof nameOrOptions === 'object' &&
+      nameOrOptions !== null &&
+      'type' in nameOrOptions &&
+      nameOrOptions.type === 'activity'
     ) {
       if (this.context.store.pupContext?.state?.id) {
         this.updateActivityLogs();
       }
     }
+
+    if (
+      typeof nameOrOptions === 'string' ||
+      typeof nameOrOptions === 'number' ||
+      typeof nameOrOptions === 'symbol'
+    ) {
+      super.requestUpdate(nameOrOptions, oldValue, options);
+      return;
+    }
+
     super.requestUpdate();
   }
 
@@ -183,17 +203,23 @@ export class PupPage extends LitElement {
     `;
   }
 
-  async firstUpdated() {
-    this.addEventListener("sl-hide", this.handleDialogClose);
+  handleDialogHide(event: Event) {
+    if (event.target !== event.currentTarget) return;
+    this.dialog_closing = true;
   }
 
-  handleDialogClose() {
-    this.clearDialog();
+  handleDialogAfterHide(event: Event) {
+    if (event.target !== event.currentTarget) return;
+    this.open_dialog = false;
+    this.open_dialog_label = "";
+    this.dialog_closing = false;
   }
 
   clearDialog() {
-    this.open_dialog = false;
-    this.open_dialog_label = "";
+    const dialog = this.shadowRoot?.querySelector<ShoelaceDialogElement>(
+      "#PupMgmtDialog",
+    );
+    void dialog?.hide();
   }
 
   handleMenuClick = (event: Event, el: HTMLElement) => {
@@ -358,10 +384,19 @@ export class PupPage extends LitElement {
   async updated(changedProperties: Map<PropertyKey, unknown>) {
     super.updated(changedProperties);
     
-    // Check for rollback availability when pup becomes broken
+    // Check once each time a pup enters the broken state. Set the guard before
+    // awaiting so activity updates cannot start concurrent requests.
     const pkg = this.getPup();
-    if (pkg && pkg.state?.installation === 'broken') {
-      await this.checkRollbackAvailability();
+    const brokenPupId = pkg?.state?.installation === 'broken'
+      ? pkg.state.id
+      : null;
+    if (brokenPupId && this._rollbackCheckedPupId !== brokenPupId) {
+      this._rollbackCheckedPupId = brokenPupId;
+      this.rollbackAvailable = false;
+      await this.checkRollbackAvailability(brokenPupId);
+    } else if (!brokenPupId) {
+      this._rollbackCheckedPupId = null;
+      this.rollbackAvailable = false;
     }
 
     // If we're still on a pup route but the pup disappeared (purged),
@@ -390,17 +425,18 @@ export class PupPage extends LitElement {
     }
   }
 
-  async checkRollbackAvailability() {
-    const pupId = this.context.store.pupContext?.state?.id;
-    if (!pupId) return;
-    
+  async checkRollbackAvailability(pupId: string) {
     try {
       const { getPreviousVersion } = await import('/api/pup-updates/pup-updates.js');
       const result = await getPreviousVersion(pupId);
-      this.rollbackAvailable = result.rollbackPossible || false;
+      if (this._rollbackCheckedPupId === pupId) {
+        this.rollbackAvailable = result.rollbackPossible || false;
+      }
     } catch (error) {
       console.error('Failed to check rollback availability:', error);
-      this.rollbackAvailable = false;
+      if (this._rollbackCheckedPupId === pupId) {
+        this.rollbackAvailable = false;
+      }
     }
   }
 
@@ -750,8 +786,10 @@ export class PupPage extends LitElement {
         <sl-dialog
           class="distinct-header"
           id="PupMgmtDialog"
-          ?open=${this.open_dialog}
+          ?open=${Boolean(this.open_dialog) && !this.dialog_closing}
           label=${this.open_dialog_label}
+          @sl-hide=${this.handleDialogHide}
+          @sl-after-hide=${this.handleDialogAfterHide}
         >
           ${this.renderDialog()}
         </sl-dialog>

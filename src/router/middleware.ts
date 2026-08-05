@@ -4,6 +4,7 @@ import { pkgController } from "/controllers/package/index.js";
 import { getBootstrapV2 } from "/api/bootstrap/bootstrap.js";
 import { getStoreListing } from "/api/sources/sources.js";
 import { postLogout } from "/api/session/logout.js";
+import { clearSessionExpiryTimer } from "/state/session-expiry.js";
 import type { RouteContext, RouteCommands } from "./router.js";
 
 export async function loadPup(context: RouteContext, commands: RouteCommands) {
@@ -87,7 +88,8 @@ export async function performLogout(context: RouteContext, commands: RouteComman
     // Local logout must still complete if the service becomes unavailable.
     console.warn("Failed to invalidate the server session during logout", error);
   } finally {
-    store.updateState({ networkContext: { token: null } });
+    clearSessionExpiryTimer();
+    store.updateState({ networkContext: { token: null, sessionExpiresAt: null } });
   }
   return commands.redirect("/login");
 }

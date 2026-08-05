@@ -373,20 +373,22 @@ export class StoreView extends LitElement {
           </sl-input>
           <div class="search-options">
             <span class="search-options-label">Also search:</span>
-            <sl-checkbox
-              size="small"
-              data-option="description"
-              ?checked=${this.searchInDescription}
-              @sl-change=${this.handleSearchOptionChange}>
-              Descriptions
-            </sl-checkbox>
-            <sl-checkbox
-              size="small"
-              data-option="interfaces"
-              ?checked=${this.searchInInterfaces}
-              @sl-change=${this.handleSearchOptionChange}>
-              Interfaces Provided
-            </sl-checkbox>
+            <div class="search-options-checks">
+              <sl-checkbox
+                size="small"
+                data-option="description"
+                ?checked=${this.searchInDescription}
+                @sl-change=${this.handleSearchOptionChange}>
+                Descriptions
+              </sl-checkbox>
+              <sl-checkbox
+                size="small"
+                data-option="interfaces"
+                ?checked=${this.searchInInterfaces}
+                @sl-change=${this.handleSearchOptionChange}>
+                Interfaces Provided
+              </sl-checkbox>
+            </div>
           </div>
         </div>
       </div>
@@ -457,15 +459,24 @@ export class StoreView extends LitElement {
       flex-wrap: wrap;
       align-items: center;
       gap: 1em;
+      line-height: 0;
       margin-top: 0.6em;
       padding-left: 0.25em;
     }
 
+    .search-options-checks {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5em;
+    }
+
     .search-options-label {
-      font-size: 0.75rem;
       text-transform: uppercase;
       font-weight: bold;
       color: var(--sl-color-neutral-500);
+      padding-left: 0.25em;
     }
 
     .tab-wrap {

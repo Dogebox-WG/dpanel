@@ -1,5 +1,5 @@
 import { LitElement, html, css, choose } from '/lib/lit-all.js';
-import "/components/common/sparkline-chart/sparkline-chart-v2.js";
+import "/components/common/sparkline-chart/sparkline-chart.js";
 import { canCopyToClipboard } from '/utils/clipboard.js';
 
 interface Metric {
@@ -85,10 +85,10 @@ class MetricView extends LitElement {
     if (values.length < 2) return this.renderValue();
 
     return html`
-      <sparkline-chart-v2
+      <sparkline-chart
         style="width:100%; background:transparent; --sparkline-height: var(--metric-sparkline-height, clamp(140px, 24vh, 220px));"
         .data=${values}
-      </sparkline-chart-v2>
+      </sparkline-chart>
     `;
   }
 
@@ -141,7 +141,7 @@ class MetricView extends LitElement {
       min-height: var(--metric-sparkline-height, auto);
     }
 
-    .value-container > sparkline-chart-v2 {
+    .value-container > sparkline-chart {
       flex: 1 1 auto;
       min-height: 0;
       width: 100%;

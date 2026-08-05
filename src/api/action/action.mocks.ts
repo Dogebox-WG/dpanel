@@ -7,12 +7,8 @@
 
 import type { MockDescriptor, MockResOptions } from "../client.js";
 
-interface InstallBody {
-  pupName?: string;
-}
-
-function hasPupName(value: unknown): value is InstallBody {
-  return !!value && typeof value === "object";
+interface PupNamePayload {
+  pupName: string;
 }
 
 const postResponse = {
@@ -48,8 +44,8 @@ export const installMock: MockDescriptor = {
   method: 'put',
   group: 'pup actions',
   res: (path: string, config: MockResOptions) => {
-    const parsed: unknown = typeof config.body === 'string' ? JSON.parse(config.body) : config.body;
-    const pupName = (hasPupName(parsed) ? parsed.pupName : undefined) || 'Unknown Pup';
+    const parsed: PupNamePayload = typeof config.body === 'string' ? JSON.parse(config.body) : config.body;
+    const pupName = parsed.pupName.length > 0 ? parsed.pupName : 'Unknown Pup';
     // Backend will create activity via WebSocket
     return { ...postResponse, message: `Install ${pupName} initiated` };
   }
@@ -76,4 +72,3 @@ export const purgeMock: MockDescriptor = {
     return { ...postResponse, message: `Purge ${pupId} initiated` };
   }
 };
-

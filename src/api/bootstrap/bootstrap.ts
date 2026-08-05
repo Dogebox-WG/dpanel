@@ -21,17 +21,25 @@ export async function doBootstrap() {
 }
 
 interface VersionPayload {
-  version?: { release?: string };
+  version: Record<string, unknown>;
 }
 
-function hasVersion(payload: unknown): payload is VersionPayload {
-  return !!payload && typeof payload === "object";
+function isVersionPayload(payload: unknown): payload is VersionPayload {
+  if (typeof payload !== "object" || payload === null || !("version" in payload)) {
+    return false;
+  }
+
+  return typeof payload.version === "object" && payload.version !== null;
 }
 
 // Response hooks
 const bumpVersionHook: ResponseHook = {
-  'bump-version': (payload) => {
-    if (hasVersion(payload) && payload.version) { payload.version.release = "v.9000" }
-    return payload
+  'bump-version': (payload: unknown) => {
+    if (!isVersionPayload(payload)) {
+      return payload;
+    }
+
+    payload.version.release = "v.9000";
+    return payload;
   }
 }

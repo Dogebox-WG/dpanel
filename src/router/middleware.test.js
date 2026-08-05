@@ -7,7 +7,12 @@ describe("performLogout", () => {
   let fetchStub;
 
   beforeEach(() => {
-    store.updateState({ networkContext: { token: "logout-test-token" } });
+    store.updateState({
+      networkContext: {
+        token: "logout-test-token",
+        sessionExpiresAt: Date.now() + 60_000,
+      },
+    });
     fetchStub = stub(window, "fetch").resolves(new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json" } },
@@ -28,6 +33,7 @@ describe("performLogout", () => {
       "Bearer logout-test-token",
     );
     expect(store.networkContext.token).to.equal(null);
+    expect(store.networkContext.sessionExpiresAt).to.equal(null);
     expect(redirect.calledOnceWith("/login")).to.equal(true);
   });
 

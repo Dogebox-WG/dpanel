@@ -3,6 +3,7 @@ import type { AuthenticateResponse } from "/gen/authenticate/v1/authenticate_pb.
 import { AuthenticateService } from "/gen/authenticate/v1/authenticate_pb.js";
 import { getTransport } from "/api/transport.js";
 import { store } from "/state/store.js";
+import { startSessionExpiry } from "/state/session-expiry.js";
 
 interface LoginRequest {
   password: string;
@@ -18,6 +19,7 @@ export async function postLogin(body: LoginRequest): Promise<AuthenticateRespons
     const res = await client.authenticate({ password: body.password });
     if (res.token) {
       store.updateState({ networkContext: { token: res.token } });
+      startSessionExpiry();
     }
     return res;
   } catch (err) {

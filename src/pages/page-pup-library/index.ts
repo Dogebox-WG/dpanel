@@ -1,4 +1,5 @@
-import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
+import { searchBase } from '/components/common/search.js';
+import { html, css, nothing, repeat } from '/lib/lit-all.js';
 import '/components/views/card-pup-manage/index.js'
 import '/components/common/paginator/paginator-ui.js';
 import { getBootstrapV2 } from '/api/bootstrap/bootstrap.js';
@@ -19,7 +20,7 @@ const initialSort = (a: EnrichedPup, b: EnrichedPup) => {
   return 0;
 }
 
-export class LibraryView extends LitElement {
+export class LibraryView extends searchBase {
   declare fetchLoading: boolean;
   declare fetchError: boolean;
   declare packageList: unknown[] | null;
@@ -83,75 +84,10 @@ export class LibraryView extends LitElement {
     super.disconnectedCallback();
   }
 
-  // Pre-fill the search from URL query params, e.g.
-  //   /pups?search=wallet&interfaces=1&description=1
-  applySearchFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-
-    const search = params.get('search') ?? params.get('q');
-    if (search !== null) {
-      this.searchValue = search;
-    }
-
-    const isTruthy = (v) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
-    if (params.has('interfaces')) {
-      this.searchInInterfaces = isTruthy(params.get('interfaces'));
-    }
-    if (params.has('description')) {
-      this.searchInDescription = isTruthy(params.get('description'));
-    }
-  }
-
   reset() {
     this.fetchLoading = true;
     this.fetchError = false;
     this.packageList = null;
-  }
-
-  updateBusyState() {
-    this.busy = this.busyQueue.length > 0;
-  }
-
-  handleBusyStart(event: Event) {
-    if (event.target) this.busyQueue.push(event.target);
-    this.updateBusyState();
-  }
-
-  handleBusyStop(event: Event) {
-    // Remove the identifier of the event source from the queue
-    const index = event.target ? this.busyQueue.indexOf(event.target) : -1;
-    if (index > -1) {
-      this.busyQueue.splice(index, 1);
-    }
-    setTimeout(() => {
-      this.updateBusyState();
-    }, 500);
-  }
-
-  handlePupInstalled(event: Event) {
-    event.stopPropagation();
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { pupid: string } = event.detail;
-    // installPkg no longer exists on pkgController; guarded so a stray
-    // pup-installed event (legacy card-pup-snapshot) cannot throw.
-    const controller = this.pkgController;
-    if ('installPkg' in controller && typeof controller.installPkg === 'function') {
-      controller.installPkg(detail.pupid);
-    }
-    this.requestUpdate();
-  }
-
-  handlePupClick(event: Event) {
-    const el = event.currentTarget;
-    if (el instanceof HTMLElement && 'pupId' in el) {
-      this.inspectedPup = typeof el.pupId === 'string' ? el.pupId : undefined;
-    }
-  }
-
-  handleForcedTabShow(event: Event) {
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { pupId: string } = event.detail;
-    this.inspectedPup = detail.pupId
   }
 
   async fetchBootstrap() {
@@ -184,17 +120,6 @@ export class LibraryView extends LitElement {
     this.requestUpdate();
   }
 
-  handleActionsMenuSelect(event: Event) {
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { item: { value: string } } = event.detail;
-    const selectedItemValue = detail.item.value;
-    switch (selectedItemValue) {
-      case 'refresh':
-        this.fetchBootstrap();
-        break;
-    }
-  }
-
   updated(changedProperties) {
     if (
       changedProperties.has('searchValue') ||
@@ -203,39 +128,6 @@ export class LibraryView extends LitElement {
     ) {
       this.filterInstalledList();
     }
-  }
-
-  handleSearchInput(event) {
-    this.searchValue = event.target.value;
-  }
-
-  handleSearchOptionChange(event) {
-    const option = event.target.dataset.option;
-    if (option === 'description') {
-      this.searchInDescription = event.target.checked;
-    } else if (option === 'interfaces') {
-      this.searchInInterfaces = event.target.checked;
-    }
-  }
-
-  getSearchableText(pkg) {
-    const manifest = pkg?.state?.manifest || {};
-    const meta = manifest.meta || {};
-
-    const parts = [meta.name || "", pkg?.state?.id || ""];
-
-    if (this.searchInDescription) {
-      parts.push(
-        meta.shortDescription || meta.descShort || "",
-        meta.longDescription || meta.descLong || "",
-      );
-    }
-
-    if (this.searchInInterfaces) {
-      (manifest.interfaces || []).forEach((iface) => parts.push(iface?.name || ""));
-    }
-
-    return parts.join(" ").toLowerCase();
   }
 
   filterInstalledList() {

@@ -119,16 +119,6 @@ class PupInstallCard extends LitElement {
     `
   }
 
-  /** Shorten long URLs for layout; full string in title tooltip. */
-  truncateMiddle(text, maxLen = 52) {
-    if (!text || text.length <= maxLen) return text;
-    const gap = "…";
-    const room = maxLen - gap.length;
-    const left = Math.ceil(room / 2);
-    const right = Math.floor(room / 2);
-    return text.slice(0, left) + gap + text.slice(text.length - right);
-  }
-
   render() {
     const { 
       defaultIcon, pupName, version, logoBase64, 
@@ -172,7 +162,7 @@ class PupInstallCard extends LitElement {
                 <span class="description">${short}</span>
                 <span class="source" title=${source?.location ?? ""}>
                   ${this.renderSourceIcon(source?.type)}
-                  <span class="source-location">${this.truncateMiddle(source?.location || "")}</span>
+                  <span class="source-location">${source?.location || ""}</span>
                   ${source?.error ? html`
                     <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600); margin-left: 4px;"></sl-icon>
                   ` : nothing}
@@ -365,9 +355,14 @@ class PupInstallCard extends LitElement {
     }
     .source-location {
       min-width: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      line-height: 1.2;
+      max-height: 2.4em;
+      word-break: break-all;
     }
   `;
 }

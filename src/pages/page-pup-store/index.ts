@@ -1,4 +1,4 @@
-import { searchBase } from '/components/common/search.js';
+import { searchBase } from '/utils/search';
 import { html, css, nothing, repeat } from '/lib/lit-all.js';
 import { getStoreListing } from '/api/sources/sources.js';
 import { pkgController } from '/controllers/package/index.js'

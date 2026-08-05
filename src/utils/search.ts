@@ -1,6 +1,30 @@
 import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
+import { pkgController } from '/controllers/package/index.js'
+
+import type { EnrichedPup } from '/types/pup-model';
 
 export class searchBase extends LitElement {
+
+  declare busy: boolean;
+  declare inspectedPup: string | undefined;
+  declare searchValue: string;
+  declare searchInDescription: boolean;
+  declare searchInInterfaces: boolean;
+
+  busyQueue: EventTarget[];
+  pkgController: typeof pkgController;
+
+  constructor() {
+    super();
+    this.busyQueue = [];
+    this.pkgController = pkgController;
+  }
+
+  // Stub
+  fetchBootstrap() {
+
+  }
+
   // Pre-fill the search from URL query params if they exist, e.g.
   //   /explore?search=core-network&interfaces=1&description=1
   applySearchFromUrl() {
@@ -11,7 +35,7 @@ export class searchBase extends LitElement {
       this.searchValue = search;
     }
 
-    const isTruthy = (v) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
+    const isTruthy = (v: string | null) => v !== null && ['1', 'true', 'yes'].includes(v.toLowerCase());
     if (params.has('interfaces')) {
       this.searchInInterfaces = isTruthy(params.get('interfaces'));
     }

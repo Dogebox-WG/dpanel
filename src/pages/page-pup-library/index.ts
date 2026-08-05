@@ -1,4 +1,4 @@
-import { searchBase } from '/components/common/search.js';
+import { searchBase } from '/utils/search';
 import { html, css, nothing, repeat } from '/lib/lit-all.js';
 import '/components/views/card-pup-manage/index.js'
 import '/components/common/paginator/paginator-ui.js';
@@ -120,7 +120,7 @@ export class LibraryView extends searchBase {
     this.requestUpdate();
   }
 
-  updated(changedProperties) {
+  updated(changedProperties: Map<PropertyKey, unknown>) {
     if (
       changedProperties.has('searchValue') ||
       changedProperties.has('searchInDescription') ||

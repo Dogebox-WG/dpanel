@@ -11,3 +11,6 @@ dev/package-lock.json
 # Build artifacts
 dist/
 result
+
+# Generated protobuf files
+src/gen/

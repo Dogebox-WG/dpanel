@@ -1,4 +1,5 @@
-import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
+import { searchBase } from '/utils/search';
+import { html, css, nothing, repeat } from '/lib/lit-all.js';
 import '/components/views/card-pup-manage/index.js'
 import '/components/common/paginator/paginator-ui.js';
 import { getBootstrapV2 } from '/api/bootstrap/bootstrap.js';
@@ -19,7 +20,7 @@ const initialSort = (a: EnrichedPup, b: EnrichedPup) => {
   return 0;
 }
 
-export class LibraryView extends LitElement {
+export class LibraryView extends searchBase {
   declare fetchLoading: boolean;
   declare fetchError: boolean;
   declare packageList: unknown[] | null;
@@ -40,7 +41,10 @@ export class LibraryView extends LitElement {
     fetchError: { type: Boolean },
     packageList: { type: Array },
     busy: { type: Boolean },
-    inspectedPup: { type: String }
+    inspectedPup: { type: String },
+    searchValue: { type: String },
+    searchInDescription: { type: Boolean },
+    searchInInterfaces: { type: Boolean },
   }
 
   constructor() {
@@ -49,6 +53,9 @@ export class LibraryView extends LitElement {
     this.busyQueue = [];
     this.fetchLoading = true;
     this.fetchError = false;
+    this.searchValue = "";
+    this.searchInDescription = false;
+    this.searchInInterfaces = false;
     this.itemsPerPage = 20;
     this.pkgController = pkgController;
     this.installedList = new PaginationController<EnrichedPup>(this, undefined, this.itemsPerPage, { initialSort });
@@ -59,6 +66,7 @@ export class LibraryView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.applySearchFromUrl();
     this.pkgController.addObserver(this);
     this.addEventListener('busy-start', this.handleBusyStart.bind(this));
     this.addEventListener('busy-stop', this.handleBusyStop.bind(this));
@@ -82,52 +90,6 @@ export class LibraryView extends LitElement {
     this.packageList = null;
   }
 
-  updateBusyState() {
-    this.busy = this.busyQueue.length > 0;
-  }
-
-  handleBusyStart(event: Event) {
-    if (event.target) this.busyQueue.push(event.target);
-    this.updateBusyState();
-  }
-
-  handleBusyStop(event: Event) {
-    // Remove the identifier of the event source from the queue
-    const index = event.target ? this.busyQueue.indexOf(event.target) : -1;
-    if (index > -1) {
-      this.busyQueue.splice(index, 1);
-    }
-    setTimeout(() => {
-      this.updateBusyState();
-    }, 500);
-  }
-
-  handlePupInstalled(event: Event) {
-    event.stopPropagation();
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { pupid: string } = event.detail;
-    // installPkg no longer exists on pkgController; guarded so a stray
-    // pup-installed event (legacy card-pup-snapshot) cannot throw.
-    const controller = this.pkgController;
-    if ('installPkg' in controller && typeof controller.installPkg === 'function') {
-      controller.installPkg(detail.pupid);
-    }
-    this.requestUpdate();
-  }
-
-  handlePupClick(event: Event) {
-    const el = event.currentTarget;
-    if (el instanceof HTMLElement && 'pupId' in el) {
-      this.inspectedPup = typeof el.pupId === 'string' ? el.pupId : undefined;
-    }
-  }
-
-  handleForcedTabShow(event: Event) {
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { pupId: string } = event.detail;
-    this.inspectedPup = detail.pupId
-  }
-
   async fetchBootstrap() {
     this.reset();
     // Emit busy start event which adds this action to a busy-queue.
@@ -137,6 +99,9 @@ export class LibraryView extends LitElement {
       const res = await getBootstrapV2()
       this.pkgController.setData(res);
       this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+      if ((this.searchValue || "").trim() !== "") {
+        this.filterInstalledList();
+      }
     } catch (err) {
       console.error(err);
       this.fetchError = true;
@@ -149,18 +114,33 @@ export class LibraryView extends LitElement {
 
   updatePups() {
     this.installedList.setData(this.pkgController.pups.filter(p => p.state));
+    if ((this.searchValue || "").trim() !== "") {
+      this.filterInstalledList();
+    }
     this.requestUpdate();
   }
 
-  handleActionsMenuSelect(event: Event) {
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { item: { value: string } } = event.detail;
-    const selectedItemValue = detail.item.value;
-    switch (selectedItemValue) {
-      case 'refresh':
-        this.fetchBootstrap();
-        break;
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (
+      changedProperties.has('searchValue') ||
+      changedProperties.has('searchInDescription') ||
+      changedProperties.has('searchInInterfaces')
+    ) {
+      this.filterInstalledList();
     }
+  }
+
+  filterInstalledList() {
+    const query = (this.searchValue || "").trim().toLowerCase();
+
+    this.installedList.currentPage = 1;
+
+    if (query === "") {
+      this.installedList.setFilter();
+      return;
+    }
+
+    this.installedList.setFilter((pkg) => this.getSearchableText(pkg).includes(query));
   }
 
   render() {
@@ -184,6 +164,39 @@ export class LibraryView extends LitElement {
 
     return html`
       <div class="padded">
+        <div class="row search-wrap">
+          <div class="constrained w55 search-inner">
+            <sl-input
+              type="search"
+              size="large"
+              placeholder="Search"
+              clearable
+              .value=${this.searchValue}
+              @sl-input=${this.handleSearchInput}>
+              <sl-icon name="search" slot="prefix"></sl-icon>
+            </sl-input>
+            <div class="search-options">
+              <span class="search-options-label">Also search:</span>
+              <div class="search-options-checks">
+                <sl-checkbox
+                  size="small"
+                  data-option="description"
+                  ?checked=${this.searchInDescription}
+                  @sl-change=${this.handleSearchOptionChange}>
+                  Descriptions
+                </sl-checkbox>
+                <sl-checkbox
+                  size="small"
+                  data-option="interfaces"
+                  ?checked=${this.searchInInterfaces}
+                  @sl-change=${this.handleSearchOptionChange}>
+                  Interfaces Provided
+                </sl-checkbox>
+              </div>
+            </div>
+          </div>
+        </div>
+
         ${this.fetchLoading 
           ? html`<sl-spinner style="--indicator-color:#777;"></sl-spinner>
         ` : this.renderSectionInstalledBody(ready, SKELS, hasItems) }
@@ -215,6 +228,51 @@ export class LibraryView extends LitElement {
     .padded {
       background: #23252a;
       margin: 1em;
+    }
+
+    div.row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2em;
+      width: 100%;
+    }
+
+    .constrained {
+      width: 100%;
+      @media (min-width:576px) {
+        &.w55 { width: 55% }
+      }
+    }
+
+    .search-inner sl-input {
+      width: 100%;
+    }
+
+    .search-options {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1em;
+      line-height: 0;
+      margin-top: 0.6em;
+      padding-left: 0.25em;
+    }
+
+    .search-options-checks {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5em;
+    }
+
+    .search-options-label {
+      text-transform: uppercase;
+      font-weight: bold;
+      color: var(--sl-color-neutral-500);
+      padding-left: 0.25em;
     }
 
     .pagination-dock {

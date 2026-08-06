@@ -1,12 +1,9 @@
-import { LitElement, html, css, nothing, repeat } from '/lib/lit-all.js';
+import { searchBase } from '/utils/search';
+import { html, css, nothing, repeat } from '/lib/lit-all.js';
 import { getStoreListing } from '/api/sources/sources.js';
 import { pkgController } from '/controllers/package/index.js'
 import { PaginationController } from '/components/common/paginator/paginator-controller.js';
 import { bindToClass } from '/utils/class-bind.js'
-import {
-  parsePupSearchFromUrl,
-  getStoreSearchableText,
-} from '/components/utils/pup-search.js';
 import * as renderMethods from './renders/index.js';
 import '/components/views/card-pup-install/index.js'
 import '/components/common/paginator/paginator-ui.js';
@@ -31,7 +28,7 @@ interface StoreCategory {
   disabled?: boolean;
 }
 
-export class StoreView extends LitElement {
+export class StoreView extends searchBase {
   declare pups: EnrichedPup[];
   declare fetchLoading: boolean;
   declare fetchError: boolean;
@@ -100,10 +97,7 @@ export class StoreView extends LitElement {
     this.packageList.setFilter((pkg, query) => {
       const q = (query || "").trim().toLowerCase();
       if (!q) return true;
-      return getStoreSearchableText(pkg, {
-        description: this.searchInDescription,
-        interfaces: this.searchInInterfaces,
-      }).includes(q);
+      return this.getSearchableText(pkg).includes(q);
     });
     bindToClass(renderMethods, this);
   }
@@ -122,18 +116,9 @@ export class StoreView extends LitElement {
     this.checkForSourceErrors();
   }
 
-  // Prefill from URL, e.g. /explore?search=wallet&interfaces=1&description=1
+  // Prefill from URL, then sync the pagination query.
   applySearchFromUrl() {
-    const {
-      searchValue,
-      searchInDescription,
-      searchInInterfaces,
-    } = parsePupSearchFromUrl();
-
-    this.searchValue = searchValue;
-    this.searchInDescription = searchInDescription;
-    this.searchInInterfaces = searchInInterfaces;
-
+    super.applySearchFromUrl();
     if ((this.searchValue || "").trim() !== "") {
       this.packageList.setQuery(this.searchValue);
     }
@@ -157,52 +142,6 @@ export class StoreView extends LitElement {
   reset() {
     this.fetchLoading = true;
     this.fetchError = false;
-  }
-
-  updateBusyState() {
-    this.busy = this.busyQueue.length > 0;
-  }
-
-  handleBusyStart(event: Event) {
-    if (event.target) this.busyQueue.push(event.target);
-    this.updateBusyState();
-  }
-
-  handleBusyStop(event: Event) {
-    // Remove the identifier of the event source from the queue
-    const index = event.target ? this.busyQueue.indexOf(event.target) : -1;
-    if (index > -1) {
-      this.busyQueue.splice(index, 1);
-    }
-    setTimeout(() => {
-      this.updateBusyState();
-    }, 500);
-  }
-
-  handlePupInstalled(event: Event) {
-    event.stopPropagation();
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { pupid: string } = event.detail;
-    // installPkg no longer exists on pkgController; guarded so a stray
-    // pup-installed event (legacy card-pup-snapshot) cannot throw.
-    const controller = this.pkgController;
-    if ('installPkg' in controller && typeof controller.installPkg === 'function') {
-      controller.installPkg(detail.pupid);
-    }
-    this.requestUpdate();
-  }
-
-  handlePupClick(event: Event) {
-    const el = event.currentTarget;
-    if (el instanceof HTMLElement && 'pupId' in el) {
-      this.inspectedPup = typeof el.pupId === 'string' ? el.pupId : undefined;
-    }
-  }
-
-  handleForcedTabShow(event: Event) {
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { pupId: string } = event.detail;
-    this.inspectedPup = detail.pupId
   }
 
   async fetchBootstrap() {
@@ -231,17 +170,6 @@ export class StoreView extends LitElement {
     this.requestUpdate('pups');
   }
 
-  handleActionsMenuSelect(event: Event) {
-    if (!(event instanceof CustomEvent)) return;
-    const detail: { item: { value: string } } = event.detail;
-    const selectedItemValue = detail.item.value;
-    switch (selectedItemValue) {
-      case 'refresh':
-        this.fetchBootstrap();
-        break;
-    }
-  }
-
   updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('pups')) {
       this.packageList.setData(this.pups);
@@ -249,23 +177,12 @@ export class StoreView extends LitElement {
   }
 
   handleSearchInput(event: Event) {
-    const target = event.target;
-    if (target instanceof HTMLElement && 'value' in target && typeof target.value === 'string') {
-      this.searchValue = target.value;
-      this.packageList.setQuery(this.searchValue);
-    }
+    super.handleSearchInput(event);
+    this.packageList.setQuery(this.searchValue);
   }
 
   handleSearchOptionChange(event: Event) {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const option = target.dataset.option;
-    const checked = 'checked' in target ? Boolean(target.checked) : false;
-    if (option === 'description') {
-      this.searchInDescription = checked;
-    } else if (option === 'interfaces') {
-      this.searchInInterfaces = checked;
-    }
+    super.handleSearchOptionChange(event);
     // Re-apply current query so the stable filter re-reads option flags.
     this.packageList.setQuery(this.searchValue);
   }

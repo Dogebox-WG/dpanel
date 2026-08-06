@@ -57,8 +57,12 @@ export function renderSectionInstalledBody(this: LibraryView, ready: unknown, SK
 
     ${ready && !hasItems('installed') ? html`
       <div class="empty">
-        Such empty.<br>
-        No pups available in this repository.
+        ${(this.searchValue || "").trim() !== "" ? html`
+          No installed pups match your search.
+        ` : html`
+          Such empty.<br>
+          No pups available in this repository.
+        `}
       </div>
       ` : nothing 
     }

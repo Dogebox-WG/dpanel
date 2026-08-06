@@ -160,9 +160,9 @@ class PupInstallCard extends LitElement {
               <div class="inner">
                 <span class="name">${pupName}  <small style="color: #777">v${version}</small></span>
                 <span class="description">${short}</span>
-                <span class="source">
+                <span class="source" title=${source?.location ?? ""}>
                   ${this.renderSourceIcon(source?.type)}
-                  ${source?.location}
+                  <span class="source-location">${source?.location || ""}</span>
                   ${source?.error ? html`
                     <sl-icon name="exclamation-triangle-fill" style="color: var(--sl-color-danger-600); margin-left: 4px;"></sl-icon>
                   ` : nothing}
@@ -251,6 +251,7 @@ class PupInstallCard extends LitElement {
       display: flex;
       flex-direction: row;
       gap: 1em;
+      flex: 1 1 auto;
     }
 
     .details-wrap.secondary-details {
@@ -258,6 +259,7 @@ class PupInstallCard extends LitElement {
       justify-content: end;
       top: -30px;
       right: 8px;
+      flex: 0 0 auto;
       @media (min-width: 576px) {
         position: relative;
         justify-content: center;
@@ -279,6 +281,8 @@ class PupInstallCard extends LitElement {
       flex-direction: column;
       align-items: start;
       line-height: 1.3;
+      min-width: 0;
+      width: 100%;
     }
 
     span.name {
@@ -336,15 +340,30 @@ class PupInstallCard extends LitElement {
     }
 
     span.source {
-      margin-top: 2px;
+      margin-top: 0;
       display: flex;
       flex-direction: row;
       align-items: center;
       gap: 4px;
       font-size: 0.85rem;
       color: #b5a1ff;
+      min-width: 0;
+      max-width: 100%;
     }
-    span.source sl-icon { position: relative; top: -1px; }
+    span.source sl-icon {
+      flex-shrink: 0;
+    }
+    .source-location {
+      min-width: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+      max-height: 2.4em;
+      word-break: break-all;
+    }
   `;
 }
 

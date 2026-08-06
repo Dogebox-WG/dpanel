@@ -43,8 +43,12 @@ export class PaginationController<T = unknown> {
       this.data = newData;
       this.initial_data = newData;
     }
-    this.currentPage = 1;
+    // Re-apply an existing query filter without recreating it.
     this.applyFilter();
+    // Keep the current page across data refreshes (e.g. pkgController notify).
+    // Only clamp down if the new dataset has fewer pages.
+    const totalPages = this.getTotalPages();
+    this.currentPage = Math.min(this.currentPage, Math.max(totalPages, 1));
     this.host.requestUpdate();
   }
 

@@ -6,6 +6,8 @@ export interface PaginationOptions<T> {
   initialSort?: (a: T, b: T) => number;
 }
 
+export type PaginationFilterFn<T> = (item: T, query: string) => boolean;
+
 export class PaginationController<T = unknown> {
   host: PaginationHost;
   data: T[];
@@ -13,6 +15,8 @@ export class PaginationController<T = unknown> {
   itemsPerPage: number;
   currentPage: number;
   options?: PaginationOptions<T>;
+  filterFn: PaginationFilterFn<T> | null;
+  query: string;
 
   constructor(
     host: PaginationHost,
@@ -26,6 +30,8 @@ export class PaginationController<T = unknown> {
     this.itemsPerPage = itemsPerPage;
     this.currentPage = 1;
     this.options = options;
+    this.filterFn = null;
+    this.query = "";
   }
 
   setData(newData: T[]) {
@@ -37,6 +43,8 @@ export class PaginationController<T = unknown> {
       this.data = newData;
       this.initial_data = newData;
     }
+    // Re-apply an existing query filter without recreating it.
+    this.applyFilter();
     // Keep the current page across data refreshes (e.g. pkgController notify).
     // Only clamp down if the new dataset has fewer pages.
     const totalPages = this.getTotalPages();
@@ -77,13 +85,38 @@ export class PaginationController<T = unknown> {
     }
   }
 
-  setFilter(filterFn?: ((item: T) => boolean) | null) {
-    if (!filterFn) {
+  /**
+   * Register a stable filter once as (item, query) => boolean.
+   * Update the query via setQuery() instead of recreating the filter.
+   * Call with no args / null to clear.
+   */
+  setFilter(filterFn?: PaginationFilterFn<T> | null) {
+    this.filterFn = filterFn || null;
+    this.currentPage = 1;
+    this.applyFilter();
+    this.host.requestUpdate();
+  }
+
+  setQuery(query: string) {
+    this.query = query ?? "";
+    this.currentPage = 1;
+    this.applyFilter();
+    this.host.requestUpdate();
+  }
+
+  applyFilter() {
+    if (!this.filterFn) {
       this.data = this.initial_data;
-      this.host.requestUpdate();
       return;
     }
-    this.data = this.initial_data.filter(filterFn);
+    this.data = this.initial_data.filter((item) => this.filterFn!(item, this.query));
+  }
+
+  clearFilter() {
+    this.filterFn = null;
+    this.query = "";
+    this.data = this.initial_data;
+    this.currentPage = 1;
     this.host.requestUpdate();
   }
 }

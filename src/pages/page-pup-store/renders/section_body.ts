@@ -48,8 +48,9 @@ export function renderSectionBody(this: StoreView, ready: unknown, SKELS: unknow
 
     ${ready && !hasItems('packages') ? html`
       <div class="empty">
-        Such empty.<br>
-        No pups available in this repository.
+        ${(this.searchValue || "").trim()
+          ? html`No pups match your search.`
+          : html`Such empty.<br>No pups available in this repository.`}
       </div>
       ` : nothing 
     }

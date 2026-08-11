@@ -4,7 +4,6 @@ import { getStoreListing } from '/api/sources/sources.js';
 import { pkgController } from '/controllers/package/index.js'
 import { PaginationController } from '/components/common/paginator/paginator-controller.js';
 import { bindToClass } from '/utils/class-bind.js'
-import { asyncTimeout } from '/utils/timeout.js'
 import * as renderMethods from './renders/index.js';
 import '/components/views/card-pup-install/index.js'
 import '/components/common/paginator/paginator-ui.js';
@@ -94,6 +93,12 @@ export class StoreView extends searchBase {
       { name: "Write", label: "Write" },
       { name: "host", label: "Host" },
     ]
+    // Stable filter: query via setQuery; option flags read live from `this`.
+    this.packageList.setFilter((pkg, query) => {
+      const q = (query || "").trim().toLowerCase();
+      if (!q) return true;
+      return this.getSearchableText(pkg).includes(q);
+    });
     bindToClass(renderMethods, this);
   }
 
@@ -109,6 +114,14 @@ export class StoreView extends searchBase {
     this.addEventListener('source-change', this.updatePups.bind(this));
     this.fetchBootstrap();
     this.checkForSourceErrors();
+  }
+
+  // Prefill from URL, then sync the pagination query.
+  applySearchFromUrl() {
+    super.applySearchFromUrl();
+    if ((this.searchValue || "").trim() !== "") {
+      this.packageList.setQuery(this.searchValue);
+    }
   }
 
   disconnectedCallback() {
@@ -140,11 +153,6 @@ export class StoreView extends searchBase {
       const storeListingRes = await getStoreListing()
       this.pkgController.setStoreData(storeListingRes);
       this.packageList.setData(this.pkgController.pups);
-      // setData() clears any active filter, so re-apply a search that was
-      // pre-filled from the URL (or typed) before the data finished loading.
-      if ((this.searchValue || "").trim() !== "") {
-        this.filterPackageList();
-      }
       this.checkForSourceErrors();
     } catch (err) {
       console.error(err);
@@ -165,33 +173,18 @@ export class StoreView extends searchBase {
   updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('pups')) {
       this.packageList.setData(this.pups);
-      // setData() replaces initial_data and clears any active filter, so a
-      // periodic controller refresh (stats/activity notify) would otherwise
-      // wipe the user's search. Re-apply the current search if one is active.
-      if ((this.searchValue || "").trim() !== "") {
-        this.filterPackageList();
-      }
-    } else if (
-      changedProperties.has('searchValue') ||
-      changedProperties.has('searchInDescription') ||
-      changedProperties.has('searchInInterfaces')
-    ) {
-      this.filterPackageList();
     }
   }
 
-  filterPackageList() {
-    const query = (this.searchValue || "").trim().toLowerCase();
+  handleSearchInput(event: Event) {
+    super.handleSearchInput(event);
+    this.packageList.setQuery(this.searchValue);
+  }
 
-    // Reset to first page so results aren't hidden on an out-of-range page.
-    this.packageList.currentPage = 1;
-
-    if (query === "") {
-      this.packageList.setFilter();
-      return;
-    }
-
-    this.packageList.setFilter((pkg: EnrichedPup) => this.getSearchableText(pkg).includes(query));
+  handleSearchOptionChange(event: Event) {
+    super.handleSearchOptionChange(event);
+    // Re-apply current query so the stable filter re-reads option flags.
+    this.packageList.setQuery(this.searchValue);
   }
 
   handleManageSourcesClick() {
@@ -247,20 +240,20 @@ export class StoreView extends searchBase {
           <div class="search-options">
             <span class="search-options-label">Also search:</span>
             <div class="search-options-checks">
-              <sl-checkbox
+              <sl-switch
                 size="small"
                 data-option="description"
                 ?checked=${this.searchInDescription}
                 @sl-change=${this.handleSearchOptionChange}>
                 Descriptions
-              </sl-checkbox>
-              <sl-checkbox
+              </sl-switch>
+              <sl-switch
                 size="small"
                 data-option="interfaces"
                 ?checked=${this.searchInInterfaces}
                 @sl-change=${this.handleSearchOptionChange}>
                 Interfaces Provided
-              </sl-checkbox>
+              </sl-switch>
             </div>
           </div>
         </div>
@@ -342,7 +335,7 @@ export class StoreView extends searchBase {
       flex-direction: row;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5em;
+      gap: 1em;
     }
 
     .search-options-label {
